@@ -1,0 +1,23 @@
+#!/bin/bash
+
+echo "Starting build"
+
+cmake --build build --target all
+cmake --install build
+cmake --build build --target copy_sysroot
+
+echo "Starting QEMU"
+
+qemu-system-x86_64 -s -m 8G \
+			-smp 4 \
+			-device VGA,vgamem_mb=64 \
+			-device ich9-ahci,id=ahci \
+			-drive file=build/hdd.img,id=hddisk,if=none,format=raw \
+			-device ide-hd,drive=hddisk,bus=ahci.0 \
+			-usb \
+			-soundhw pcspk \
+			-device sb16 \
+			-serial stdio \
+			-no-reboot \
+			-no-shutdown \
+			-S

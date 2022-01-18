@@ -1,0 +1,6 @@
+cross
+build
+
+*.bin
+*.sys
+*.EFI

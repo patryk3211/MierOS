@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.watcherExclude": {
+			"**/build/**": true,
+			"**/cross/**": true,
+			"**/limine/**": true
+		}
+	}
+}

@@ -1,0 +1,42 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch QEMU",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/bin/true",
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "targetArchitecture": "x86",
+            "MIMode": "gdb",
+            "miDebuggerArgs": "",
+            "customLaunchSetupCommands": [
+                {
+                    "text": "target remote localhost:1234",
+                    "description": "Connect to QEMU remote debugger"
+                }
+            ],
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "text": "file ${workspaceFolder}/sysroot/kernel.bin",
+                    "description": "Load binary."
+                },
+                {
+                    "text": "break isr_handler",
+                    "description": "Break on exception handler."
+                }
+            ],
+            "preLaunchTask": "Start QEMU",
+            "miDebuggerPath": "/usr/bin/gdb"
+        }
+    ]
+}

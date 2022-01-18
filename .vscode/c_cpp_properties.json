@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Kernel",
+            "includePath": [
+                "${workspaceFolder}/kernel/include"
+            ],
+            "compilerArgs": [
+                "-g",
+                "-nostdlib",
+                "-ffreestanding",
+                "-Wall",
+                "-Wextra",
+                "-fno-exceptions",
+                "-fno-rtti",
+                "-mcmodel=kernel"
+            ],
+            "compilerPath": "${workspaceFolder}/cross/kern/bin/x86_64-elf-gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        }
+    ],
+    "version": 4
+}
