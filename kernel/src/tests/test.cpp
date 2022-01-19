@@ -20,6 +20,6 @@ void kernel::tests::do_tests() {
         dmesg("\033[1;31mTEST FAILED!\033[0m (SL) Standard Library test has failed!\n");
         while(true);
     } else {
-        dmesg("\033[1;32mTEST SUCCESFUL!\033[0m (SL) Standard Library test succesful!\n");
+        dmesg("\033[1;32mTEST SUCCESSFUL!\033[0m (SL) Standard Library test succesful!\n");
     }
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <types.h>
+#include <stivale.h>
 
 namespace kernel {
     class Pager {
@@ -9,6 +9,6 @@ namespace kernel {
         Pager();
         ~Pager();
 
-        static void init(physaddr_t kernel_base, virtaddr_t kernel_base_v);
+        static void init(physaddr_t kernel_base_p, virtaddr_t kernel_base_v, stivale2_stag_pmrs* pmrs);
     };
 }

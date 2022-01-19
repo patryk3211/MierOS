@@ -28,8 +28,24 @@ struct stivale2_tag_base {
 
 struct stivale2_stag_kernel_base {
     struct stivale2_tag_base base;
-    u64_t physical_base;
-    u64_t virtual_base;
+    u64_t physical_base_address;
+    u64_t virtual_base_address;
+};
+
+#define STIVALE2_PMR_EXECUTABLE ((u64_t)1 << 0)
+#define STIVALE2_PMR_WRITABLE   ((u64_t)1 << 1)
+#define STIVALE2_PMR_READABLE   ((u64_t)1 << 2)
+
+struct stivale2_pmr {
+    u64_t base;
+    u64_t length;
+    u64_t permissions;
+};
+
+struct stivale2_stag_pmrs {
+    struct stivale2_tag_base base;
+    u64_t entry_count;
+    struct stivale2_pmr entries[];
 };
 
 #define STIVALE2_MEMMAP_TYPE_USABLE 1
@@ -51,7 +67,7 @@ struct stivale2_memmap_entry {
 struct stivale2_stag_memmap {
     struct stivale2_tag_base base;
     u64_t entry_count;
-    struct stivale2_memmap_entry entries[0];
+    struct stivale2_memmap_entry entries[];
 };
 
 #if defined(__cplusplus)

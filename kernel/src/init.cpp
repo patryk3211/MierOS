@@ -1,15 +1,14 @@
 #include <stivale.h>
 #include <sections.h>
 #include <dmesg.h>
+#include <cpu.h>
 #include <memory/liballoc.h>
 #include <memory/physical.h>
-#include <cpu.h>
+#include <memory/virtual.hpp>
 
 #include <assert.h>
 
 #include <tests/test.hpp>
-
-#include <function.hpp>
 
 FREE_AFTER_INIT u8_t temp_stack[8192];
 
@@ -34,11 +33,23 @@ extern "C" void _start() {
 
     stivale2_stag_memmap* mem_map = 0;
 
+    physaddr_t phys_base = 0;
+    virtaddr_t virt_base = 0;
+
+    stivale2_stag_pmrs* pmrs = 0;
+
     // Get all required tags from structure
     for(stivale2_tag_base* tag = (stivale2_tag_base*)structure->tags; tag != 0; tag = (stivale2_tag_base*)tag->next) {
         switch(tag->identifier) {
             case 0x2187f79e8612de07: // Memory Map Tag
                 mem_map = (stivale2_stag_memmap*)tag;
+                break;
+            case 0x060d78874a2a8af0: // Kernel Base Address Tag
+                phys_base = ((stivale2_stag_kernel_base*)tag)->physical_base_address;
+                virt_base = ((stivale2_stag_kernel_base*)tag)->virtual_base_address;
+                break;
+            case 0x5df266a64047b6bd: // Protected Memory Ranges Tag
+                pmrs = (stivale2_stag_pmrs*)tag;
                 break;
         }
     }
@@ -47,6 +58,8 @@ extern "C" void _start() {
     init_pmm(mem_map);
 
     init_cpu();
+
+    kernel::Pager::init(phys_base, virt_base, pmrs);
 
     kernel::tests::do_tests();
 
