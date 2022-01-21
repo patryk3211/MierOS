@@ -1,5 +1,5 @@
 #include <cpu.h>
-
+#include <sections.h>
 #include <types.h>
 
 u64_t rdmsr(u32_t msr) {
@@ -16,7 +16,7 @@ void wrmsr(u32_t msr, u64_t value) {
 
 #define EFER_REG 0xC0000080
 
-void init_cpu() {
+TEXT_FREE_AFTER_INIT void init_cpu() {
     u64_t EFER = rdmsr(EFER_REG);
     EFER |= (1 << 11); // Enable Execute Disable Bit
     wrmsr(EFER_REG, EFER);

@@ -17,6 +17,11 @@ SECTIONS {
 		*(.text.*)
 	} :text
 
+	.text_free_after_init : ALIGN(4096) {
+		*(.text_free_after_init)
+		*(.text_free_after_init.*)
+	} :text
+
 	.stivale2hdr : ALIGN(4096) {
 		KEEP(*(.stivale2hdr))
 	} :rodata

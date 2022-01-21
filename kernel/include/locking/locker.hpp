@@ -1,11 +1,11 @@
 #pragma once
 
 namespace kernel {
-    template <class Lock> class Locker {
-        Lock& lock;
+    template <class Lockable> class Locker {
+        Lockable& lock;
 
     public:
-        Locker(Lock& lock) : lock(lock) {
+        Locker(Lockable& lock) : lock(lock) {
             lock.lock();
         }
 

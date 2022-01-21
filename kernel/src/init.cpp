@@ -23,7 +23,7 @@ static stivale2_header stivalehdr {
     .tags = 0
 };
 
-extern "C" void _start() {
+extern "C" TEXT_FREE_AFTER_INIT void _start() {
     stivale2_struct* structure;
     asm volatile("mov %%rdi, %0" : "=a"(structure));
 
@@ -60,6 +60,8 @@ extern "C" void _start() {
     init_cpu();
 
     kernel::Pager::init(phys_base, virt_base, pmrs);
+    kernel::Pager pager = kernel::Pager();
+    pager.enable();
 
     kernel::tests::do_tests();
 

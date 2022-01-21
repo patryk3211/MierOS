@@ -1,5 +1,5 @@
 set(CMAKE_CXX_FLAGS "-g -nostdlib -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti -mcmodel=kernel -fno-use-cxa-atexit")
-set(CMAKE_C_FLAGS "-g -nostdlib -ffreestanding -Wall -Wextra -mcmodel=kernel -fno-use-cxa-atexit")
+set(CMAKE_C_FLAGS "-g -nostdlib -ffreestanding -Wall -Wextra -mcmodel=kernel")
 
 set(CMAKE_CXX_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-g++")
 set(CMAKE_C_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-gcc")

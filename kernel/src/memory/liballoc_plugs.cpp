@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <locking/spinlock.hpp>
 #include <locking/locker.hpp>
+#include <sections.h>
 
 using namespace kernel;
 
@@ -38,7 +39,7 @@ inline void set_page_used(u32_t page_idx, bool status) {
     heap_usage_bitmap[byte_idx] |= status << bit_idx;
 }
 
-extern "C" void init_heap() {
+extern "C" TEXT_FREE_AFTER_INIT void init_heap() {
     heap_first_potential_page = 0;
     memset(heap_usage_bitmap, 0, sizeof(heap_usage_bitmap));
     heap_lock = SpinLock();
@@ -94,10 +95,10 @@ void operator delete[](void* ptr) {
     free(ptr);
 }
 
-void operator delete(void* ptr, size_t size) {
+void operator delete(void* ptr, __attribute__((unused)) size_t size) {
     free(ptr);
 }
 
-void operator delete[](void* ptr, size_t size) {
+void operator delete[](void* ptr, __attribute__((unused)) size_t size) {
     free(ptr);
 }

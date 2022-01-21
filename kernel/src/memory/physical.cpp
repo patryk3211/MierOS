@@ -3,6 +3,7 @@
 #include <memory/liballoc.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <sections.h>
 
 #include <locking/spinlock.hpp>
 #include <locking/locker.hpp>
@@ -32,7 +33,7 @@ int is_page_used(u64_t address) {
 
 SpinLock pmm_lock;
 
-extern "C" void init_pmm(stivale2_stag_memmap* memory_map) {
+extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) {
     ASSERT_F(memory_map != 0, "\033[1;37mmemory_map\033[0m is null");
     // Output the memory map on serial and count how much 4 GB pages there are.
     kprintf("[Kernel] Memory Map:\n[Kernel] Base             Length           Type    \n");
