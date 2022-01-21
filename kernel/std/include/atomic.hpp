@@ -2,7 +2,7 @@
 
 //#include <stdatomic.h>
 
-namespace kernel {
+namespace std {
     template<typename T> class Atomic {
         T value;
     public:

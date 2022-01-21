@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <memory/liballoc.h>
 
-namespace kernel {
+namespace std {
     template<typename T> class SharedPtr {
         
     };

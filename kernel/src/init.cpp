@@ -1,14 +1,15 @@
 #include <stivale.h>
 #include <sections.h>
 #include <dmesg.h>
-#include <cpu.h>
+#include <arch/cpu.h>
 #include <memory/liballoc.h>
 #include <memory/physical.h>
 #include <memory/virtual.hpp>
-
-#include <assert.h>
-
 #include <tests/test.hpp>
+
+#ifdef x86_64
+    #include <arch/x86_64/acpi.h>
+#endif
 
 FREE_AFTER_INIT u8_t temp_stack[8192];
 
@@ -38,6 +39,8 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
 
     stivale2_stag_pmrs* pmrs = 0;
 
+    u64_t rsdp = 0;
+
     // Get all required tags from structure
     for(stivale2_tag_base* tag = (stivale2_tag_base*)structure->tags; tag != 0; tag = (stivale2_tag_base*)tag->next) {
         switch(tag->identifier) {
@@ -51,6 +54,9 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
             case 0x5df266a64047b6bd: // Protected Memory Ranges Tag
                 pmrs = (stivale2_stag_pmrs*)tag;
                 break;
+            case 0x9e1786930a375e78:
+                rsdp = ((stivale2_stag_rsdp*)tag)->rsdp_addr;
+                break;
         }
     }
 
@@ -59,9 +65,12 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
 
     init_cpu();
 
+    // We have to get all the information from bootloader before pager initialization because only the kernel will be mapped after this point.
     kernel::Pager::init(phys_base, virt_base, pmrs);
-    kernel::Pager pager = kernel::Pager();
-    pager.enable();
+
+#ifdef x86_64
+    init_acpi(rsdp);
+#endif
 
     kernel::tests::do_tests();
 
@@ -69,6 +78,6 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
 }
 
 extern "C" void __cxa_pure_virtual() {
-    ASSERT_F(false, "You shouldn't be here");
+    ASSERT_NOT_REACHED("You shouldn't be here");
     asm("int3");
 }

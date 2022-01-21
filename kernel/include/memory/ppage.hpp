@@ -6,7 +6,7 @@
 namespace kernel {
     class PhysicalPage {
         physaddr_t _addr;
-        Atomic<u32_t> _ref_count;
+        std::Atomic<u32_t> _ref_count;
     public:
         PhysicalPage();
         ~PhysicalPage();

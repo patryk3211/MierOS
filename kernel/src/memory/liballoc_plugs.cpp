@@ -4,6 +4,7 @@
 #include <locking/spinlock.hpp>
 #include <locking/locker.hpp>
 #include <sections.h>
+#include <memory/virtual.hpp>
 
 using namespace kernel;
 
@@ -65,7 +66,7 @@ extern "C" void* liballoc_alloc(size_t page_count) {
         }
     fail:;
     }
-    return 0; // For now fail if the initial stack has ran out. We don't have a way to allocate any more memory.
+    return (void*)Pager::active().kalloc(page_count);
 }
 
 extern "C" int liballoc_free(void* ptr, size_t page_count) {
@@ -76,7 +77,8 @@ extern "C" int liballoc_free(void* ptr, size_t page_count) {
         if(page < heap_first_potential_page) heap_first_potential_page = page;
         return 0;
     }
-    return 1; // Fail to free memory from outside of the initial heap.
+    Pager::active().free((virtaddr_t)ptr, page_count);
+    return 0;
 }
 
 void* operator new(size_t size) {

@@ -70,6 +70,11 @@ struct stivale2_stag_memmap {
     struct stivale2_memmap_entry entries[];
 };
 
+struct stivale2_stag_rsdp {
+    struct stivale2_tag_base base;
+    u64_t rsdp_addr;
+};
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

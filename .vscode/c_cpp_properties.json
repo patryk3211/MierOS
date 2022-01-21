@@ -3,7 +3,8 @@
         {
             "name": "Kernel",
             "includePath": [
-                "${workspaceFolder}/kernel/include"
+                "${workspaceFolder}/kernel/include",
+                "${workspaceFolder}/kernel/std/include"
             ],
             "compilerArgs": [
                 "-g",

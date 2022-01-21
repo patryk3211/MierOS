@@ -2,6 +2,7 @@
 #include <memory/physical.h>
 #include <stdlib.h>
 #include <sections.h>
+#include <locking/locker.hpp>
 
 using namespace kernel;
 
@@ -30,9 +31,15 @@ union PageStructuresEntry {
 #define CONTROL_PAGE ((PageStructuresEntry*)0xFFFFFFFFFFFFF000)
 #define WORKPAGE(i) ((PageStructuresEntry*)(0xFFFFFFFFFFE00000 | ((i) << 12)))
 
+#define BASE_MAPPING_ADDRESS 0x1000
+#define KERNEL_START 0xFFFFFFFF80000000
+
 #define REFRESH_TLB asm volatile("mov %cr3, %rax; mov %rax, %cr3");
 
 physaddr_t Pager::kernel_pd[2] = { 0, 0 };
+std::List<Pager*> Pager::pagers;
+SpinLock Pager::kernel_locker;
+virtaddr_t Pager::first_potential_kernel_page;
 
 Pager::Pager() {
     this->pml4 = palloc(1);
@@ -58,21 +65,37 @@ Pager::Pager() {
     releaseWorkpageIndex(index);
     releaseWorkpageIndex(index2);
 
-    for(int i = 0; i < 6; ++i) work_pages[i] = -1;
+    for(int i = 0; i < MAX_WORK_PAGES; ++i) work_pages[i] = -1;
+
+    first_potential_page = BASE_MAPPING_ADDRESS;
+
+    pagers.push_back(this);
 }
 
 Pager::~Pager() {
+    for(auto iter = pagers.begin(); iter != pagers.end(); ++iter) {
+        if((*iter)->pml4 == pml4) {
+            pagers.erase(iter);
+            break;
+        }
+    }
     // TODO: [21.01.2022] Free all page structures
 }
 
 extern "C" void* _kernel_end;
 TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kernel_base_v, stivale2_stag_pmrs* pmrs) {
     // We can access the addresses directly here, since the bootloader provides us with identity mappings.
+    physaddr_t init_pml4 = palloc(1);
+    physaddr_t init_pdpt = palloc(1);
     kernel_pd[0] = palloc(1);
     kernel_pd[1] = palloc(1);
 
     memset((void*)kernel_pd[0], 0, 4096);
     memset((void*)kernel_pd[1], 0, 4096);
+
+    ((PageStructuresEntry*)init_pml4)[511].raw = init_pdpt    | 0x03;
+    ((PageStructuresEntry*)init_pdpt)[510].raw = kernel_pd[0] | 0x03;
+    ((PageStructuresEntry*)init_pdpt)[511].raw = kernel_pd[1] | 0x03;
 
     for(u64_t i = 0; i < pmrs->entry_count; ++i) {
         for(u64_t offset = 0; offset < pmrs->entries[i].length; offset += 0x1000) {
@@ -100,6 +123,19 @@ TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kerne
     memset((void*)control_page, 0, 4096);
     ((PageStructuresEntry*)kernel_pd[1])[511].raw = control_page | 0x03;
     ((PageStructuresEntry*)control_page)[511].raw = control_page | 0x8000000000000103;
+
+    kernel_locker = SpinLock();
+    pagers = std::List<Pager*>();
+
+    asm volatile("mov %0, %%cr3" : : "a"(init_pml4));
+
+    first_potential_kernel_page = (virtaddr_t)&_kernel_end;
+
+    // Create the first pager.
+    Pager* p = new Pager();
+    p->enable();
+    pfree(init_pml4, 1);
+    pfree(init_pdpt, 1);
 }
 
 int Pager::aquireWorkpageIndex() {
@@ -125,7 +161,7 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
     int pml4_work = work_pages[0];
     if(pml4_work == -1) {
         pml4_work = getWorkpage(0);
-        CONTROL_PAGE[pml4_work].raw = pml4_work | 0x8000000000000103;
+        CONTROL_PAGE[pml4_work].raw = pml4 | 0x8000000000000103;
         REFRESH_TLB;
     }
 
@@ -134,29 +170,53 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
     // Remap the PDPT if required
     if(current_pml4e != new_pml4e) {
         remap = true;
-        physaddr_t pdpt_addr = WORKPAGE(pml4_work)[new_pml4e].structured.address << 12;
         pdpt_work = getWorkpage(1);
-        CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000103;
-        REFRESH_TLB;
+        if(WORKPAGE(pml4_work)[new_pml4e].structured.present) {
+            physaddr_t pdpt_addr = WORKPAGE(pml4_work)[new_pml4e].structured.address << 12;
+            CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000103;
+            REFRESH_TLB;
+        } else {
+            physaddr_t pdpt_addr = palloc(1);
+            WORKPAGE(pml4_work)[new_pml4e].raw = pdpt_addr | 0x07;
+            CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000103;
+            REFRESH_TLB;
+            memset(WORKPAGE(pdpt_work), 0, 4096);
+        }
     }
 
     int pd_work;
     // Remap the PD if required
     if(current_pdpte != new_pdpte || remap) {
         remap = true;
-        physaddr_t pd_addr = WORKPAGE(pdpt_work)[new_pdpte].structured.address << 12;
         pd_work = getWorkpage(2);
-        CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000103;
-        REFRESH_TLB;
+        if(WORKPAGE(pdpt_work)[new_pdpte].structured.present) {
+            physaddr_t pd_addr = WORKPAGE(pdpt_work)[new_pdpte].structured.address << 12;
+            CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000103;
+            REFRESH_TLB;
+        } else {
+            physaddr_t pd_addr = palloc(1);
+            WORKPAGE(pdpt_work)[new_pdpte].raw = pd_addr | 0x07;
+            CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000103;
+            REFRESH_TLB;
+            memset(WORKPAGE(pd_work), 0, 4096);
+        }
     }
 
     int pt_work;
     // Remap the PT if required
     if(current_pde != new_pde || remap) {
-        physaddr_t pt_addr = WORKPAGE(pd_work)[new_pde].structured.address << 12;
         pt_work = getWorkpage(3);
-        CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000103;
-        REFRESH_TLB;
+        if(WORKPAGE(pd_work)[new_pde].structured.present) {
+            physaddr_t pt_addr = WORKPAGE(pd_work)[new_pde].structured.address << 12;
+            CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000103;
+            REFRESH_TLB;
+        } else {
+            physaddr_t pt_addr = palloc(1);
+            WORKPAGE(pd_work)[new_pde].raw = pt_addr | 0x07;
+            CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000103;
+            REFRESH_TLB;
+            memset(WORKPAGE(pt_work), 0, 4096);
+        }
     }
 }
 
@@ -173,7 +233,7 @@ void Pager::lock() {
 }
 
 void Pager::unlock() {
-    for(int i = 0; i < 6; ++i) {
+    for(int i = 0; i < MAX_WORK_PAGES; ++i) {
         if(work_pages[i] != -1) {
             releaseWorkpageIndex(work_pages[i]);
             work_pages[i] = -1;
@@ -184,4 +244,150 @@ void Pager::unlock() {
 
 void Pager::enable() {
     asm volatile("mov %0, %%cr3" : : "a"(pml4));
+}
+
+void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags) {
+    ASSERT_F(locker.is_locked(), "Using an unlocked pager");
+    ASSERT_F(virt == 0, "Mapping to address 0");
+
+    bool kernel = virt >= KERNEL_START || virt+(length<<12) > KERNEL_START;
+    if(kernel) kernel_locker.lock();
+
+    virt >>= 12;
+    phys >>= 12;
+    int pt_work = getWorkpage(3);
+    for(size_t i = 0; i < length; ++i) {
+        int pml4e = ((virt+i) >> 27) & 0x1FF;
+        int pdpte = ((virt+i) >> 18) & 0x1FF;
+        int pde = ((virt+i) >> 9) & 0x1FF;
+        int pte = ((virt+i) >> 0) & 0x1FF;
+
+        mapStructures(pml4e, pdpte, pde);
+
+        PageStructuresEntry& entry = WORKPAGE(pt_work)[pte];
+        entry.structured.address = phys+i;
+        entry.structured.present = 1;
+        entry.structured.write = flags.writable;
+        entry.structured.user = flags.user_accesible;
+        entry.structured.execute_disable = !flags.executable;
+    }
+    REFRESH_TLB;
+
+    if(kernel) kernel_locker.unlock();
+}
+
+physaddr_t Pager::unmap(virtaddr_t virt, size_t length) {
+    ASSERT_F(locker.is_locked(), "Using an unlocked pager");
+
+    bool kernel = virt >= KERNEL_START || virt+(length<<12) > KERNEL_START;
+    if(kernel) kernel_locker.lock();
+
+    physaddr_t addr = 0;
+
+    virt >>= 12;
+    int pt_work = getWorkpage(3);
+    for(size_t i = 0; i < length; ++i) {
+        int pml4e = ((virt+i) >> 27) & 0x1FF;
+        int pdpte = ((virt+i) >> 18) & 0x1FF;
+        int pde = ((virt+i) >> 9) & 0x1FF;
+        int pte = ((virt+i) >> 0) & 0x1FF;
+
+        mapStructures(pml4e, pdpte, pde);
+
+        PageStructuresEntry& entry = WORKPAGE(pt_work)[pte];
+        if(addr == 0) addr = entry.structured.address << 12;
+        entry.structured.present = 0;
+    }
+
+    if(kernel) kernel_locker.unlock();
+    return addr;
+}
+
+physaddr_t Pager::getPhysicalAddress(virtaddr_t virt) {
+    int pml4e = ((virt) >> 39) & 0x1FF;
+    int pdpte = ((virt) >> 30) & 0x1FF;
+    int pde = ((virt) >> 21) & 0x1FF;
+    int pte = ((virt) >> 12) & 0x1FF;
+
+    mapStructures(pml4e, pdpte, pde);
+
+    PageStructuresEntry& entry = WORKPAGE(getWorkpage(3))[pte];
+    return entry.structured.address << 12;
+}
+
+PageFlags Pager::getFlags(virtaddr_t virt) {
+    int pml4e = ((virt) >> 39) & 0x1FF;
+    int pdpte = ((virt) >> 30) & 0x1FF;
+    int pde = ((virt) >> 21) & 0x1FF;
+    int pte = ((virt) >> 12) & 0x1FF;
+
+    mapStructures(pml4e, pdpte, pde);
+
+    PageStructuresEntry& entry = WORKPAGE(getWorkpage(3))[pte];
+    PageFlags flags { };
+    flags.present = entry.structured.present;
+    if(flags.present) {
+        flags.writable = entry.structured.write;
+        flags.user_accesible = entry.structured.user;
+        flags.executable = !entry.structured.execute_disable;
+    }
+    return flags;
+}
+
+virtaddr_t Pager::kalloc(size_t length) {
+    ASSERT_F(locker.is_locked(), "Using an unlocked pager");
+
+    Locker<SpinLock> locker(kernel_locker);
+    virtaddr_t start = getFreeRange(KERNEL_START, length);
+    if(start == 0) return 0;
+
+    for(size_t i = 0; i < length; ++i) map(palloc(1), start+(i<<12), 1, PageFlags { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0 });
+    return start;
+}
+
+void Pager::free(virtaddr_t ptr, size_t length) {
+    ASSERT_F(locker.is_locked(), "Using an unlocked pager");
+    for(size_t i = 0; i < length; ++i) {
+        physaddr_t addr = unmap(ptr+(i<<12), 1);
+        pfree(addr, 1);
+    }
+}
+
+virtaddr_t Pager::getFreeRange(virtaddr_t start, size_t length) {
+    bool kernel = false;
+    for(virtaddr_t addr = start; addr != 0; addr += 0x1000) {
+        if((addr >= KERNEL_START || addr+(length<<12) > KERNEL_START) && !kernel) {
+            kernel_locker.lock();
+            kernel = true;
+        }
+
+        bool found = true;
+        virtaddr_t offset;
+        for(offset = 0; offset < (length << 12); offset += 0x1000) {
+            if(getFlags(addr+offset).present) {
+                found = false;
+                break;
+            }
+        }
+        if(found) {
+            if(addr == first_potential_page) first_potential_page = addr + (length << 12);
+            if(addr == first_potential_kernel_page) first_potential_kernel_page = addr + (length << 12);
+            if(kernel) kernel_locker.unlock();
+            return addr;
+        }
+        addr += offset-0x1000;
+    }
+    if(kernel) kernel_locker.unlock();
+    return 0;
+}
+
+Pager& Pager::active() {
+    u64_t cr3;
+    asm volatile("mov %%cr3, %0" : "=a"(cr3));
+    cr3 &= ~0xFFF;
+    for(auto& pager : pagers) {
+        if(pager->pml4 == cr3) return *pager;
+    }
+    ASSERT_NOT_REACHED("Invalid CR3 value (no pager associated)");
+    while(true);
 }

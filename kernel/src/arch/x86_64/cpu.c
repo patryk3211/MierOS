@@ -1,6 +1,8 @@
-#include <cpu.h>
+#include <arch/cpu.h>
 #include <sections.h>
 #include <types.h>
+
+#include <arch/x86_64/acpi.h>
 
 u64_t rdmsr(u32_t msr) {
     u32_t a, d;

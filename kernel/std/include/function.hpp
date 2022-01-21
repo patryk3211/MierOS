@@ -2,10 +2,10 @@
 
 #include <stdlib.h>
 #include <pointer.hpp>
-#include <cpplib.hpp>
+#include <utility.hpp>
 #include <assert.h>
 
-namespace kernel {
+namespace std {
     template<typename> class Function;
     template<typename Ret, typename... Args> class Function<Ret(Args...)> {
     public:
@@ -30,12 +30,12 @@ namespace kernel {
         public:
             virtual ~CallableBase() = default;
             virtual Ret invoke(Args... args) {
-                ASSERT_F(false, "You should not be here");
+                ASSERT_NOT_REACHED("You should not be here");
                 return Ret();
             }
 
             virtual UniquePtr<CallableBase> copy() const {
-                ASSERT_F(false, "You should not be here");
+                ASSERT_NOT_REACHED("You should not be here");
                 return UniquePtr<CallableBase>();
             }
         };

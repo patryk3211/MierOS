@@ -29,5 +29,6 @@ add_compile_definitions(${ARCH}=1)
 
 target_link_options(kernel.bin PUBLIC -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -z max-page-size=0x1000)
 target_include_directories(kernel.bin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(kernel.bin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/std/include)
 
 install(TARGETS kernel.bin DESTINATION ${SYSROOT_DIR}/)
