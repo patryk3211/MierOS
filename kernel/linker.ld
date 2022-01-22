@@ -29,6 +29,10 @@ SECTIONS {
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)
+
+		_global_constructor_start = .;
+		*(.ctors)
+		_global_constructor_end = .;
 	} :rodata
 
 	.data : ALIGN(4096) {
@@ -51,4 +55,8 @@ SECTIONS {
 
 	. = ALIGN(4096);
 	_kernel_end = .;
+
+	/DISCARD/ : {
+		*(.dtors)
+	}
 }

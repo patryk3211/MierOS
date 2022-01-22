@@ -5,7 +5,11 @@
 extern "C" {
 #endif
 
+extern void early_init_cpu();
 extern void init_cpu();
+
+extern int core_count();
+extern int current_core();
 
 #if defined(__cplusplus)
 } // extern "C"

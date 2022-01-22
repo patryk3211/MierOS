@@ -24,6 +24,9 @@ static stivale2_header stivalehdr {
     .tags = 0
 };
 
+extern "C" void (*_global_constructor_start)();
+extern "C" void (*_global_constructor_end)();
+
 extern "C" TEXT_FREE_AFTER_INIT void _start() {
     stivale2_struct* structure;
     asm volatile("mov %%rdi, %0" : "=a"(structure));
@@ -54,22 +57,28 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
             case 0x5df266a64047b6bd: // Protected Memory Ranges Tag
                 pmrs = (stivale2_stag_pmrs*)tag;
                 break;
-            case 0x9e1786930a375e78:
+            case 0x9e1786930a375e78: // ACPI RSDP Tag
                 rsdp = ((stivale2_stag_rsdp*)tag)->rsdp_addr;
                 break;
         }
     }
 
     init_heap();
+
+    // Call global constructors
+    for(void (**contructor)() = &_global_constructor_start; contructor < &_global_constructor_end; ++contructor) {
+        (*contructor)();
+    }
+
     init_pmm(mem_map);
 
-    init_cpu();
+    early_init_cpu();
 
     // We have to get all the information from bootloader before pager initialization because only the kernel will be mapped after this point.
     kernel::Pager::init(phys_base, virt_base, pmrs);
 
 #ifdef x86_64
-    init_acpi(rsdp);
+    init_acpi(rsdp & 0x7FFFFFFFFFFF);
 #endif
 
     kernel::tests::do_tests();

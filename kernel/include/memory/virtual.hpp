@@ -44,11 +44,15 @@ namespace kernel {
         void map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags);
         physaddr_t unmap(virtaddr_t virt, size_t length);
 
+        virtaddr_t kmap(physaddr_t phys, size_t length, PageFlags flags);
+
         physaddr_t getPhysicalAddress(virtaddr_t virt);
         PageFlags getFlags(virtaddr_t virt);
 
         virtaddr_t kalloc(size_t length);
         void free(virtaddr_t ptr, size_t length);
+
+        u64_t cr3() { return pml4; }
 
         virtaddr_t getFreeRange(virtaddr_t start, size_t length);
 

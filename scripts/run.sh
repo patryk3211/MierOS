@@ -8,7 +8,7 @@ cmake --build build --target copy_sysroot
 
 echo "Starting QEMU"
 
-qemu-system-x86_64 -s -m 8G \
+qemu-system-x86_64 -s -m 1G \
 			-smp 4 \
 			-device VGA,vgamem_mb=64 \
 			-device ich9-ahci,id=ahci \

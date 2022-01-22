@@ -79,7 +79,7 @@ Pager::~Pager() {
             break;
         }
     }
-    // TODO: [21.01.2022] Free all page structures
+    /// TODO: [21.01.2022] Free all page structures
 }
 
 extern "C" void* _kernel_end;
@@ -125,7 +125,7 @@ TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kerne
     ((PageStructuresEntry*)control_page)[511].raw = control_page | 0x8000000000000103;
 
     kernel_locker = SpinLock();
-    pagers = std::List<Pager*>();
+    //pagers = std::List<Pager*>();
 
     asm volatile("mov %0, %%cr3" : : "a"(init_pml4));
 
@@ -248,7 +248,7 @@ void Pager::enable() {
 
 void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags) {
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
-    ASSERT_F(virt == 0, "Mapping to address 0");
+    ASSERT_F(virt != 0, "Mapping to address 0");
 
     bool kernel = virt >= KERNEL_START || virt+(length<<12) > KERNEL_START;
     if(kernel) kernel_locker.lock();
@@ -274,6 +274,14 @@ void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags
     REFRESH_TLB;
 
     if(kernel) kernel_locker.unlock();
+}
+
+virtaddr_t Pager::kmap(physaddr_t phys, size_t length, PageFlags flags) {
+    ASSERT_F(locker.is_locked(), "Using an unlocked pager");
+
+    virtaddr_t start = getFreeRange(KERNEL_START, length);
+    map(phys, start, length, flags);
+    return start + (phys & 0xFFF);
 }
 
 physaddr_t Pager::unmap(virtaddr_t virt, size_t length) {
@@ -375,7 +383,7 @@ virtaddr_t Pager::getFreeRange(virtaddr_t start, size_t length) {
             if(kernel) kernel_locker.unlock();
             return addr;
         }
-        addr += offset-0x1000;
+        addr += offset;
     }
     if(kernel) kernel_locker.unlock();
     return 0;
@@ -386,7 +394,9 @@ Pager& Pager::active() {
     asm volatile("mov %%cr3, %0" : "=a"(cr3));
     cr3 &= ~0xFFF;
     for(auto& pager : pagers) {
-        if(pager->pml4 == cr3) return *pager;
+        if(pager->pml4 == cr3) {
+            return *pager;
+        }
     }
     ASSERT_NOT_REACHED("Invalid CR3 value (no pager associated)");
     while(true);

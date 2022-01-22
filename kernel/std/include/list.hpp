@@ -5,12 +5,18 @@
 
 namespace std {
     template<typename T, class Allocator = std::heap_allocator> class List {
-        struct Entry {
-            Entry* next;
-            Entry* prev;
+        struct EntryBase {
+            EntryBase* next;
+            EntryBase* prev;
+        };
+
+        /*struct NullEntry {
+
+        };*/
+
+        struct Entry : public EntryBase {
             T value;
 
-            Entry() { }
             Entry(T value) : value(value) { }
         };
     public:
@@ -24,17 +30,17 @@ namespace std {
             T& operator*() { return value->value; }
             T* operator->() { return &value->value; }
 
-            iterator& operator++() { value = value->next; return *this; }
+            iterator& operator++() { value = static_cast<Entry*>(value->next); return *this; }
             iterator operator++(int) {
                 iterator old = *this;
-                value = value->next;
+                value = static_cast<Entry*>(value->next);
                 return old;
             }
 
-            iterator& operator--() { value = value->prev; return *this; }
+            iterator& operator--() { value = static_cast<Entry*>(value->prev); return *this; }
             iterator operator--(int) {
                 iterator old = *this;
-                value = value->prev;
+                value = static_cast<Entry*>(value->prev);
                 return old;
             }
 
@@ -82,10 +88,88 @@ namespace std {
             length = 0;
         }
 
-        ~List() {
+        List(const List<T>& other) {
+            head.prev = 0;
+            head.next = &tail;
+            tail.prev = &head;
+            tail.next = 0;
+            length = other.length;
+
+            Entry* last = &head;
+            for(Entry* entry = other.head.next; entry != &other.tail; entry = entry->next) {
+                Entry* e = allocator.template alloc<Entry>(entry->value);
+                
+                e->next = last->next;
+                e->prev = last;
+
+                last->next->prev = e;
+                last->next = e;
+            }
+        }
+
+        List<T>& operator=(const List<T>& other) {
             Entry* e = head.next;
             while(e != &tail) {
                 Entry* n = e->next;
+                allocator.free(e);
+                e = n;
+            }
+
+            head.prev = 0;
+            head.next = &tail;
+            tail.prev = &head;
+            tail.next = 0;
+            length = other.length;
+
+            Entry* last = &head;
+            for(Entry* entry = other.head.next; entry != &other.tail; entry = entry->next) {
+                Entry* e = allocator.template alloc<Entry>(entry->value);
+                
+                e->next = last->next;
+                e->prev = last;
+
+                last->next->prev = e;
+                last->next = e;
+            }
+        }
+
+        List(List<T>&& other) {
+            head.prev = 0;
+            head.next = other.head.next;
+            tail.prev = other.tail.prev;
+            tail.next = 0;
+            length = other.length;
+
+            other.head.next = &other.tail;
+            other.tail.prev = &other.head;
+            other.length = 0;
+        }
+
+        List<T>& operator=(List<T>&& other) {
+            Entry* e = head.next;
+            while(e != &tail) {
+                Entry* n = e->next;
+                allocator.free(e);
+                e = n;
+            }
+
+            head.prev = 0;
+            head.next = other.head.next;
+            tail.prev = other.tail.prev;
+            tail.next = 0;
+            length = other.length;
+
+            other.head.next = &other.tail;
+            other.tail.prev = &other.head;
+            other.length = 0;
+
+            return *this;
+        }
+
+        ~List() {
+            Entry* e = static_cast<Entry*>(head.next);
+            while(e != &tail) {
+                Entry* n = static_cast<Entry*>(e->next);
                 allocator.free(e);
                 e = n;
             }
@@ -110,16 +194,15 @@ namespace std {
             tail.prev = &head;
         }
 
-        iterator begin() { return iterator(head.next); }
-        iterator end() { return iterator(&tail); }
+        iterator begin() { return iterator(static_cast<Entry*>(head.next)); }
+        iterator end() { return iterator(static_cast<Entry*>(&tail)); }
 
         reverse_iterator rbegin() { return reverse_iterator(tail.prev); }
         reverse_iterator rend() { return reverse_iterator(&head); }
 
         iterator insert(iterator pos, const T& value) {
             Entry* cur = pos.value;
-            Entry* en = allocator.template alloc<Entry>();
-            en->value = value;
+            Entry* en = allocator.template alloc<Entry>(value);
             en->next = cur;
             en->prev = cur->prev;
 
@@ -132,11 +215,11 @@ namespace std {
 
         iterator erase(iterator pos) {
             Entry* cur = pos.value;
-            if(cur == &tail) return iterator(&tail);
+            if(cur == &tail) return iterator(static_cast<Entry*>(&tail));
 
             cur->prev->next = cur->next;
             cur->next->prev = cur->prev;
-            Entry* next = cur->next;
+            Entry* next = static_cast<Entry*>(cur->next);
 
             length--;
             delete cur;
@@ -151,14 +234,14 @@ namespace std {
 
         void sort() { sort(std::less<T>()); }
         template<class Comp> void sort(Comp comparator) {
-            Entry* current = head.next;
+            Entry* current = static_cast<Entry*>(head.next);
             tail.prev->next = 0;
             head.next = &tail;
             tail.prev = &head;
 
             while(current != 0) {
-                Entry* next = current->next;
-                for(auto iter = iterator(head.next); iter != iterator(&tail); ++iter) {
+                Entry* next = static_cast<Entry*>(current->next);
+                for(auto iter = iterator(static_cast<Entry*>(head.next)); iter != iterator(static_cast<Entry*>(&tail)); ++iter) {
                     if(comparator(current->value, *iter)) {
                         current->prev = iter.value->prev;
                         current->next = iter.value;
@@ -176,8 +259,8 @@ namespace std {
             }
         }
     private:
-        Entry head;
-        Entry tail;
+        EntryBase head;
+        EntryBase tail;
         size_t length;
     };
 }

@@ -50,6 +50,11 @@ void kprintf(const char* format, ...) {
     va_end(list);
 }
 
+void panic(const char* msg) {
+    kprintf("\033[1;31mKERNEL PANIC! %s\n", msg);
+    while(1) asm volatile("cli; hlt");
+}
+
 const char lookup_lower[] = "0123456789abcdef";
 const char lookup_upper[] = "0123456789ABCDEF";
 
