@@ -3,6 +3,7 @@
 #include <types.h>
 
 #include <arch/x86_64/acpi.h>
+#include <arch/x86_64/cpu.h>
 
 u64_t rdmsr(u32_t msr) {
     u32_t a, d;

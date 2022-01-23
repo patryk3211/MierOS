@@ -161,7 +161,7 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
     int pml4_work = work_pages[0];
     if(pml4_work == -1) {
         pml4_work = getWorkpage(0);
-        CONTROL_PAGE[pml4_work].raw = pml4 | 0x8000000000000103;
+        CONTROL_PAGE[pml4_work].raw = pml4 | 0x8000000000000003;
         REFRESH_TLB;
     }
 
@@ -173,12 +173,12 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
         pdpt_work = getWorkpage(1);
         if(WORKPAGE(pml4_work)[new_pml4e].structured.present) {
             physaddr_t pdpt_addr = WORKPAGE(pml4_work)[new_pml4e].structured.address << 12;
-            CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000103;
+            CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000003;
             REFRESH_TLB;
         } else {
             physaddr_t pdpt_addr = palloc(1);
             WORKPAGE(pml4_work)[new_pml4e].raw = pdpt_addr | 0x07;
-            CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000103;
+            CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000003;
             REFRESH_TLB;
             memset(WORKPAGE(pdpt_work), 0, 4096);
         }
@@ -191,12 +191,12 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
         pd_work = getWorkpage(2);
         if(WORKPAGE(pdpt_work)[new_pdpte].structured.present) {
             physaddr_t pd_addr = WORKPAGE(pdpt_work)[new_pdpte].structured.address << 12;
-            CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000103;
+            CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000003;
             REFRESH_TLB;
         } else {
             physaddr_t pd_addr = palloc(1);
             WORKPAGE(pdpt_work)[new_pdpte].raw = pd_addr | 0x07;
-            CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000103;
+            CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000003;
             REFRESH_TLB;
             memset(WORKPAGE(pd_work), 0, 4096);
         }
@@ -208,12 +208,12 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
         pt_work = getWorkpage(3);
         if(WORKPAGE(pd_work)[new_pde].structured.present) {
             physaddr_t pt_addr = WORKPAGE(pd_work)[new_pde].structured.address << 12;
-            CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000103;
+            CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000003;
             REFRESH_TLB;
         } else {
             physaddr_t pt_addr = palloc(1);
             WORKPAGE(pd_work)[new_pde].raw = pt_addr | 0x07;
-            CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000103;
+            CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000003;
             REFRESH_TLB;
             memset(WORKPAGE(pt_work), 0, 4096);
         }
@@ -270,6 +270,7 @@ void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags
         entry.structured.write = flags.writable;
         entry.structured.user = flags.user_accesible;
         entry.structured.execute_disable = !flags.executable;
+        entry.structured.global = flags.global;
     }
     REFRESH_TLB;
 
@@ -338,6 +339,7 @@ PageFlags Pager::getFlags(virtaddr_t virt) {
         flags.writable = entry.structured.write;
         flags.user_accesible = entry.structured.user;
         flags.executable = !entry.structured.execute_disable;
+        flags.global = entry.structured.global;
     }
     return flags;
 }
@@ -345,11 +347,10 @@ PageFlags Pager::getFlags(virtaddr_t virt) {
 virtaddr_t Pager::kalloc(size_t length) {
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
 
-    Locker<SpinLock> locker(kernel_locker);
     virtaddr_t start = getFreeRange(KERNEL_START, length);
     if(start == 0) return 0;
 
-    for(size_t i = 0; i < length; ++i) map(palloc(1), start+(i<<12), 1, PageFlags { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0 });
+    for(size_t i = 0; i < length; ++i) map(palloc(1), start+(i<<12), 1, PageFlags { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1 });
     return start;
 }
 

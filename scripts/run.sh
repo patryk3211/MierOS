@@ -20,4 +20,6 @@ qemu-system-x86_64 -s -m 1G \
 			-serial stdio \
 			-no-reboot \
 			-no-shutdown \
+			-d guest_errors \
+			-d int \
 			-S

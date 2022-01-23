@@ -19,7 +19,7 @@ namespace kernel {
         ~Scheduler();
 
         static void init(int core_count);
-
+        static Scheduler& scheduler(int core);
     private:
         static void idle();
     };

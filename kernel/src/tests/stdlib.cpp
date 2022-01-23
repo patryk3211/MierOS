@@ -4,6 +4,8 @@
 #include <functional.hpp>
 #include <assert.h>
 #include <list.hpp>
+#include <unordered_map.hpp>
+#include <string.hpp>
 
 using namespace std;
 
@@ -70,6 +72,31 @@ bool kernel::tests::stdlib_test() {
         }
 
         TEST(arr[0] == 1 && arr[1] == 2 && arr[2] == 4 && arr[3] == 5 && arr[4] == 8, "(SL4.2) std::List sort test failed");
+    }
+
+    { // String test
+        String<> str1 = "Testing String";
+
+        String<> copy1 = str1;
+        copy1 += "12321";
+
+        String<> copy2 = str1;
+        copy2 = copy1 + copy2;
+
+        str1 = "";
+
+        TEST(str1 == "" && copy1 == "Testing String12321" && copy2 == "Testing String12321Testing String", "(SL5.1) std::String test failed");
+    }
+
+    { // Unordered Map test
+        UnorderedMap<String<>, int> map = UnorderedMap<String<>, int>();
+        map.insert({ "Five", 5 });
+        map.insert({ "Nine", 9 });
+        map.insert({ "Zero", 0 });
+        map.insert({ "Eleven", 11 });
+        map.insert({ "Fifty", 50 });
+
+        TEST(*map.at("Five") == 5 && *map.at("Nine") == 9 && *map.at("Zero") == 0 && *map.at("Eleven") == 11 && *map.at("Fifty") == 50, "(SL6.1) std::UnorderedMap test failed");
     }
 
     return true;

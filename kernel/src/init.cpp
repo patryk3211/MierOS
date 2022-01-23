@@ -81,6 +81,8 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
     init_acpi(rsdp & 0x7FFFFFFFFFFF);
 #endif
 
+    init_cpu();
+
     kernel::tests::do_tests();
 
     while(true);

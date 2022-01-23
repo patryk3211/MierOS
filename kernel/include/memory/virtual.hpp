@@ -12,6 +12,7 @@ namespace kernel {
         bool writable:1;
         bool user_accesible:1;
         bool executable:1;
+        bool global:1;
     };
 
     class Pager {

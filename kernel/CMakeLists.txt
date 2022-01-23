@@ -28,9 +28,17 @@ endif()
 
 add_executable(kernel.bin ${KERNEL_SOURCES} ${ARCH_SOURCES})
 
+add_custom_command(TARGET kernel.bin PRE_BUILD 
+                    COMMAND nasm ARGS -o ap_starter ${CMAKE_CURRENT_SOURCE_DIR}/ap_starter.s -f bin
+                    COMMAND ld ARGS -r -b binary -o ap_starter.o ap_starter
+                    VERBATIM
+                    BYPRODUCTS ap_starter ap_starter.o
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                    COMMENT "Assembling Application Core starter...")
+
 add_compile_definitions(${ARCH}=1)
 
-target_link_options(kernel.bin PUBLIC -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -z max-page-size=0x1000)
+target_link_options(kernel.bin PUBLIC -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -z max-page-size=0x1000 ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o)
 target_include_directories(kernel.bin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(kernel.bin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/std/include)
 

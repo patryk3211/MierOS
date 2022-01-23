@@ -21,16 +21,9 @@ struct ACPI_SDTHeader {
     u32_t creatorRevision;
 }__attribute__((packed));
 
-struct ACPI_MADT {
-    struct ACPI_SDTHeader header;
-
-    u32_t localApicAddr;
-    u32_t flags;
-
-    u8_t records[0];
-}__attribute__((packed));
 
 extern void init_acpi(physaddr_t rsdp);
+extern physaddr_t get_table(const char* sign);
 
 #if defined(__cplusplus)
 } // extern "C"

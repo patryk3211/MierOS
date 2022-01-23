@@ -36,7 +36,7 @@ struct ACPI_XSDT {
     u64_t other[0];
 }__attribute__((packed));
 
-std::UnorderedMap<std::string<>, physaddr_t> acpi_tables = std::UnorderedMap<std::string<>, physaddr_t>();
+std::UnorderedMap<std::String<>, physaddr_t> acpi_tables = std::UnorderedMap<std::String<>, physaddr_t>();
 
 extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
     Pager& pager = Pager::active();
@@ -107,4 +107,10 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
     }
 
     pager.unmap(mapped_addr, 2);
+}
+
+extern "C" physaddr_t get_table(const char* sign) {
+    auto value = acpi_tables.at(sign);
+    if(value) return *value;
+    else return 0;
 }

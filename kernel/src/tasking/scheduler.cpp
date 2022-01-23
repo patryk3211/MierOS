@@ -26,3 +26,7 @@ void Scheduler::init(int core_count) {
 void Scheduler::idle() {
     while(true) asm volatile("hlt");
 }
+
+Scheduler& Scheduler::scheduler(int core) {
+    return schedulers[core];
+}

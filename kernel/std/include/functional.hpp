@@ -21,7 +21,7 @@ namespace std {
         }
         return (hash%m + m) % m;
     } };
-    template<> struct hash<string<>> { size_t operator()(const string<>& key) {
+    template<> struct hash<String<>> { size_t operator()(const String<>& key) {
         const int p = 31;
         const int m = 1e9 + 9;
         
@@ -32,5 +32,11 @@ namespace std {
             pp = (pp * p) % m;
         }
         return (hash%m + m) % m;
+    } };
+    template<> struct hash<int> { size_t operator()(const int& key) {
+        size_t x = ((key >> 16) ^ key) * 0x45d9f3b;
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = (x >> 16) ^ x;
+        return x;
     } };
 }
