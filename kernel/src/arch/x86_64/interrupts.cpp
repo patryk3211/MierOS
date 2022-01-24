@@ -2,6 +2,9 @@
 #include <arch/x86_64/int_handlers.h>
 #include <dmesg.h>
 #include <stdlib.h>
+#include <sections.h>
+#include <arch/x86_64/cpu.h>
+#include <arch/cpu.h>
 
 struct interrupt_descriptor {
     u16_t offset_015;
@@ -15,7 +18,7 @@ struct interrupt_descriptor {
 
 interrupt_descriptor idt[256];
 
-void create_descriptor(interrupt_descriptor& entry, void (*handler)(), u8_t type, u8_t dpl) {
+TEXT_FREE_AFTER_INIT void create_descriptor(interrupt_descriptor& entry, void (*handler)(), u8_t type, u8_t dpl) {
     entry.offset_015 = (u64_t)handler;
     entry.offset_1631 = (u64_t)handler >> 16;
     entry.offset_3263 = (u64_t)handler >> 32;
@@ -43,7 +46,7 @@ handler_entry* handlers[256];
 CPUState* (*_tsh)(CPUState* current_state);
 u32_t (*_sh)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t);
 
-extern "C" void init_interrupts() {
+extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     memset(handlers, 0, sizeof(handlers));
     _tsh = 0;
 
@@ -91,7 +94,8 @@ extern "C" void init_interrupts() {
 extern "C" u64_t interrupt_handle(u64_t rsp) {
     CPUState* state = (CPUState*)rsp;
     if(state->int_num == 0xFE) {
-        return (u64_t)_tsh(state);
+        rsp = (u64_t)_tsh(state);
+        set_kernel_stack(current_core(), rsp+sizeof(CPUState));
     } else if(state->int_num == 0x8F) {
         state->rax = _sh(state->rbx,
                          state->rcx,
@@ -99,7 +103,6 @@ extern "C" u64_t interrupt_handle(u64_t rsp) {
                          state->rsi,
                          state->rdi,
                          state->rbp);
-        return rsp;
     } else {
         for(handler_entry* handler = handlers[state->int_num]; handler != 0; handler = handler->next)
             handler->handler();

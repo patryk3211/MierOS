@@ -49,5 +49,7 @@ namespace kernel {
         bool try_wakeup();
 
         static Thread* current();
+
+        friend class Scheduler;
     };
 }

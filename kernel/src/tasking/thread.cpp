@@ -1,4 +1,6 @@
 #include <tasking/thread.hpp>
+#include <tasking/scheduler.hpp>
+#include <arch/cpu.h>
 
 using namespace kernel;
 
@@ -38,5 +40,5 @@ bool Thread::try_wakeup() {
 }
 
 Thread* Thread::current() {
-    return 0;
+    return Scheduler::scheduler(current_core()).thread();
 }

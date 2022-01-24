@@ -24,6 +24,12 @@ namespace kernel {
             locked = false;
         }
 
+        bool try_lock() {
+            if(locked) return false;
+            locked = true;
+            return true;
+        }
+
         bool is_locked() const {
             return locked;
         }

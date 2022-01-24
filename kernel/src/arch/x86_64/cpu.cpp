@@ -281,7 +281,8 @@ void core_init() {
         "mov %%ax, %%es\n"
         "mov %%ax, %%fs\n"
         "mov %%ax, %%gs\n"
-        "ltr %%cx"
+        "ltr %%cx\n"
+        "sti"
     : : "m"(gdt_ptr), "c"(0x2B+(core_id*16)));
     while(true);
 }
