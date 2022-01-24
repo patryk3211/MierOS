@@ -235,6 +235,10 @@ void init_gdt() {
     : : "m"(gdt_ptr));
 }
 
+extern "C" void set_kernel_stack(int core, u64_t rsp) {
+    tsses[core].rsp0 = rsp;
+}
+
 static inline void outb(u16_t port, u8_t data) {
     asm volatile("outb %0, %1" : : "a"(data), "Nd"(port));
 }
@@ -259,7 +263,10 @@ void crude_delay_1msec() {
 extern "C" u8_t _binary_ap_starter_start[];
 extern "C" u8_t _binary_ap_starter_end[];
 
+extern "C" u64_t idtr;
+
 void core_init() {
+    asm volatile("lidt %0" : : "m"(idtr));
     int core_id = current_core();
     *((u32_t*)0x2004) = 1;
 
@@ -275,7 +282,7 @@ void core_init() {
         "mov %%ax, %%fs\n"
         "mov %%ax, %%gs\n"
         "ltr %%cx"
-    : : "m"(gdt_ptr), "c"(0x2B+(core_id*8)));
+    : : "m"(gdt_ptr), "c"(0x2B+(core_id*16)));
     while(true);
 }
 

@@ -10,6 +10,8 @@ extern "C" {
 extern void wrmsr(u32_t msr, u64_t value);
 extern u64_t rdmsr(u32_t msr);
 
+extern void set_kernel_stack(int core, u64_t rsp);
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif
