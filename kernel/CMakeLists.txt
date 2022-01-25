@@ -14,7 +14,8 @@ set(KERNEL_SOURCES src/init.cpp
                    src/memory/ppage.cpp
                    src/memory/kbuffer.cpp
                    src/tasking/thread.cpp
-                   src/tasking/scheduler.cpp)
+                   src/tasking/scheduler.cpp
+                   src/tasking/process.cpp)
 
 set(TESTS_SOURCES src/tests/test.cpp
                   src/tests/memory.cpp

@@ -3,6 +3,8 @@
 #include <tasking/thread_queue.hpp>
 #include <tasking/cpu_state.h>
 
+#include <tasking/process.hpp>
+
 namespace kernel {
     class Scheduler {
         static ThreadQueue wait_queue;
@@ -27,6 +29,8 @@ namespace kernel {
 
         static void init(int core_count);
         static Scheduler& scheduler(int core);
+
+        static void schedule_process(Process& proc);
     private:
         static void idle();
     };

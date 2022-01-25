@@ -49,6 +49,8 @@ int_c  0x1D
 int_c  0x1E
 int_nc 0x1F
 
+int_nc 0xFE
+
 handle_int:
     pushq %rbp
     

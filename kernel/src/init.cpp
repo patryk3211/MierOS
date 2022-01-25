@@ -83,6 +83,8 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
 
     init_cpu();
 
+    pmm_release_bootloader_resources();
+
     kernel::tests::do_tests();
 
     while(true);

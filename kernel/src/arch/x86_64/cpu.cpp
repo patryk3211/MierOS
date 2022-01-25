@@ -5,6 +5,7 @@
 #include <unordered_map.hpp>
 #include <arch/x86_64/cpu.h>
 #include <arch/interrupts.h>
+#include <memory/physical.h>
 #include <tasking/scheduler.hpp>
 
 using namespace kernel;
@@ -32,11 +33,11 @@ std::UnorderedMap<int, int> core_map(16);
 
 #define LAPIC_VIRTUAL_ADDRESS 0xFFFFFFFFFFDFF000
 
-void write_lapic(u32_t offset, u32_t value) {
+extern "C" void write_lapic(u32_t offset, u32_t value) {
     *((volatile u32_t*)(LAPIC_VIRTUAL_ADDRESS+offset)) = value;
 }
 
-u32_t read_lapic(u32_t offset) {
+extern "C" u32_t read_lapic(u32_t offset) {
     return *((volatile u32_t*)(LAPIC_VIRTUAL_ADDRESS+offset));
 }
 

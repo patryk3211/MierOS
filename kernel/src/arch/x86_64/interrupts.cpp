@@ -85,6 +85,8 @@ extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     create_descriptor(idt[0x1E], &interrupt0x1E, 0xE, 0);
     create_descriptor(idt[0x1F], &interrupt0x1F, 0xE, 0);
 
+    create_descriptor(idt[0xFE], &interrupt0xFE, 0xE, 0);
+
     idtr.length = sizeof(idt);
     idtr.ptr = (u64_t)idt;
 
@@ -107,6 +109,8 @@ extern "C" u64_t interrupt_handle(u64_t rsp) {
         for(handler_entry* handler = handlers[state->int_num]; handler != 0; handler = handler->next)
             handler->handler();
     }
+
+    write_lapic(0xB0, 0);
     return rsp;
 }
 
@@ -129,4 +133,8 @@ extern "C" void register_task_switch_handler(CPUState* (*handler)(CPUState* curr
 
 extern "C" void register_syscall_handler(u32_t (*handler)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t)) {
     _sh = handler;
+}
+
+extern "C" void force_task_switch() {
+    asm volatile("int $0xFE");
 }

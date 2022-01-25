@@ -14,6 +14,8 @@ extern void register_handler(u8_t vector, void (*handler)());
 extern void register_task_switch_handler(CPUState* (*handler)(CPUState* current_state));
 extern void register_syscall_handler(u32_t (*handler)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t));
 
+extern void force_task_switch();
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

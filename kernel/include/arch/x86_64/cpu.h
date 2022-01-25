@@ -12,6 +12,9 @@ extern u64_t rdmsr(u32_t msr);
 
 extern void set_kernel_stack(int core, u64_t rsp);
 
+extern void write_lapic(u32_t offset, u32_t value);
+extern u32_t read_lapic(u32_t offset);
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

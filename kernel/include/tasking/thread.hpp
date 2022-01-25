@@ -15,6 +15,7 @@ namespace kernel {
         SLEEPING
     };
 
+    class Process;
     class Thread {
         KBuffer kernel_stack;
         // Kernel Stack Pointer
@@ -25,12 +26,14 @@ namespace kernel {
         std::List<std::Function<bool()>> blockers;
 
         ThreadState state;
+
+        Process& parent;
     public:
         Thread* next;
 
         int preferred_core;
     
-        Thread(u64_t ip, bool isKernel, Pager& pager);
+        Thread(u64_t ip, bool isKernel, Process& process);
         ~Thread();
 
         /**

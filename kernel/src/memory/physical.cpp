@@ -7,6 +7,7 @@
 
 #include <locking/spinlock.hpp>
 #include <locking/locker.hpp>
+#include <range_map.hpp>
 
 using namespace kernel;
 
@@ -33,6 +34,8 @@ int is_page_used(u64_t address) {
 
 SpinLock pmm_lock;
 
+std::RangeMap<physaddr_t>* freeable_mem;
+
 extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) {
     ASSERT_F(memory_map != 0, "\033[1;37mmemory_map\033[0m is null");
     // Output the memory map on serial and count how much 4 GB pages there are.
@@ -42,11 +45,13 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
         kprintf("[Kernel] %x16 %x16 %x8\n", memory_map->entries[i].base, memory_map->entries[i].length, memory_map->entries[i].type);
         if(max_address < memory_map->entries[i].base) max_address = memory_map->entries[i].base;
     }
-    u32_t gb_page_count = max_address >> 32;
+    u32_t gb_page_count = (max_address >> 32) + ((max_address & 0xFFFFFFFF) == 0 ? 0 : 1);
 
     // Allocate the required status pages and set all memory as used.
     status_pages = new page_4gb_status_struct[gb_page_count];
     for(u32_t i = 0; i < gb_page_count; ++i) memset(status_pages[i].used_bitmap, 0xFF, sizeof(page_4gb_status_struct));
+
+    freeable_mem = new std::RangeMap<physaddr_t>();
 
     u64_t free_mem = 0;
     // Look for usable memory regions and mark them as free.
@@ -59,12 +64,29 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
             for(u64_t page = 0; page < memory_map->entries[i].length; page += 4096) set_page_status(memory_map->entries[i].base+page, 0);
 
             free_mem += memory_map->entries[i].length;
+        } else if(memory_map->entries[i].type == STIVALE2_MEMMAP_TYPE_BOOTLOADER_RECLAIMABLE) {
+            // Add bootloader chunks to freeable range map.
+            freeable_mem->add(memory_map->entries[i].base, memory_map->entries[i].base+memory_map->entries[i].length);
         }
     }
+
+    // Mark the first MiB as used since it could be utilized in the startup of AP cores.
+    for(u64_t page = 0; page < 1024*1024; page += 4096) set_page_status(page, 1);
+    freeable_mem->add(0, 1024*1024);
 
     kprintf("[Kernel] Found %d KiB of free memory\n", free_mem/1024);
 
     pmm_lock = SpinLock();
+}
+
+extern "C" void pmm_release_bootloader_resources() {
+    u64_t freed_mem = 0;
+    for(auto iter = freeable_mem->begin(); iter != freeable_mem->end(); ++iter) {
+        freed_mem += iter->end - iter->start;
+        pfree(iter->start, (iter->end - iter->start) >> 12);
+    }
+    delete freeable_mem;
+    kprintf("[Kernel] Freed %d KiB of bootloader memory\n", freed_mem/1024);
 }
 
 extern "C" physaddr_t palloc(size_t page_count) {
@@ -92,6 +114,17 @@ extern "C" physaddr_t palloc(size_t page_count) {
         return addr;
     }
 }
+
+/*extern "C" void preserve(physaddr_t addr, size_t page_count) {
+    Locker lock(pmm_lock);
+
+    // Mark the block as used.
+    for(size_t i = 0; i < page_count; ++i) set_page_status(addr + (i << 12), 1);
+    if(addr == pmm_first_potential_page) {
+        // Bump address past this reservation.
+        pmm_first_potential_page += page_count << 12;
+    }
+}*/
 
 extern "C" void pfree(physaddr_t addr, size_t page_count) {
     addr &= ~0xFFF;

@@ -39,6 +39,8 @@ extern void interrupt0x1D();
 extern void interrupt0x1E();
 extern void interrupt0x1F();
 
+extern void interrupt0xFE();
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

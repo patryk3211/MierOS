@@ -1,5 +1,6 @@
 #include <tasking/scheduler.hpp>
 #include <sections.h>
+#include <arch/cpu.h>
 
 using namespace kernel;
 
@@ -61,7 +62,10 @@ TEXT_FREE_AFTER_INIT void Scheduler::init(int core_count) {
 }
 
 void Scheduler::idle() {
-    while(true) asm volatile("hlt");
+    int core_id = current_core();
+    while(true) {
+        asm volatile("hlt");
+    }
 }
 
 Scheduler& Scheduler::scheduler(int core) {
