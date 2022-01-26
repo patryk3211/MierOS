@@ -1,5 +1,5 @@
 #include <tasking/scheduler.hpp>
-#include <sections.h>
+#include <defines.h>
 #include <arch/cpu.h>
 #include <arch/interrupts.h>
 

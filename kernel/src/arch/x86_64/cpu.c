@@ -1,5 +1,5 @@
 #include <arch/cpu.h>
-#include <sections.h>
+#include <defines.h>
 #include <types.h>
 
 #include <arch/x86_64/acpi.h>

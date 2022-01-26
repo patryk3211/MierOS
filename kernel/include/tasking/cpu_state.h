@@ -2,6 +2,7 @@
 #define _MIEROS_KERNEL_TASKING_CPU_STATE_H
 
 #include <types.h>
+#include <defines.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -40,7 +41,7 @@ struct CPUState {
 
     u64_t rsp;
     u64_t ss;
-}__attribute__((packed));
+} PACKED;
 
 #if defined(__cplusplus)
 } // extern "C"

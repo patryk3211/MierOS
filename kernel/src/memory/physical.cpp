@@ -3,7 +3,7 @@
 #include <memory/liballoc.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <sections.h>
+#include <defines.h>
 
 #include <locking/spinlock.hpp>
 #include <locking/locker.hpp>

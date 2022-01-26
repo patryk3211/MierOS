@@ -2,6 +2,7 @@
 #define _MIEROS_KERNEL_ARCH_X86_64_ACPI_H
 
 #include <types.h>
+#include <defines.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -19,8 +20,7 @@ struct ACPI_SDTHeader {
 
     u32_t creatorId;
     u32_t creatorRevision;
-}__attribute__((packed));
-
+} PACKED;
 
 extern void init_acpi(physaddr_t rsdp);
 extern physaddr_t get_table(const char* sign);

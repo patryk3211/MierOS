@@ -1,7 +1,7 @@
 #include <arch/x86_64/acpi.h>
 #include <memory/virtual.hpp>
 #include <locking/locker.hpp>
-#include <sections.h>
+#include <defines.h>
 #include <arch/cpu.h>
 #include <unordered_map.hpp>
 #include <dmesg.h>
@@ -15,7 +15,7 @@ struct ACPI_RSDP {
     char oemId[6];
     u8_t revision;
     u32_t rsdtAddress;
-}__attribute__((packed));
+} PACKED;
 
 struct ACPI_RSDP2 {
     ACPI_RSDP rsdp;
@@ -24,17 +24,17 @@ struct ACPI_RSDP2 {
     u64_t xsdtAddress;
     u8_t checksum;
     u8_t reserved[3];
-}__attribute__((packed));
+} PACKED;
 
 struct ACPI_RSDT {
     ACPI_SDTHeader header;
     u32_t other[0];
-}__attribute__((packed));
+} PACKED;
 
 struct ACPI_XSDT {
     ACPI_SDTHeader header;
     u64_t other[0];
-}__attribute__((packed));
+} PACKED;
 
 std::UnorderedMap<std::String<>, physaddr_t> acpi_tables = std::UnorderedMap<std::String<>, physaddr_t>();
 

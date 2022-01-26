@@ -1,7 +1,7 @@
 #include <memory/virtual.hpp>
 #include <memory/physical.h>
 #include <stdlib.h>
-#include <sections.h>
+#include <defines.h>
 #include <locking/locker.hpp>
 
 using namespace kernel;

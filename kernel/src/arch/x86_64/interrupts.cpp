@@ -2,7 +2,7 @@
 #include <arch/x86_64/int_handlers.h>
 #include <dmesg.h>
 #include <stdlib.h>
-#include <sections.h>
+#include <defines.h>
 #include <arch/x86_64/cpu.h>
 #include <arch/cpu.h>
 
@@ -14,7 +14,7 @@ struct interrupt_descriptor {
     u16_t offset_1631;
     u32_t offset_3263;
     u32_t reserved2;
-}__attribute__((packed));
+} PACKED;
 
 interrupt_descriptor idt[256];
 
@@ -33,7 +33,7 @@ TEXT_FREE_AFTER_INIT void create_descriptor(interrupt_descriptor& entry, void (*
 struct idt_ptr {
     u16_t length;
     u64_t ptr;
-}__attribute__((packed));
+} PACKED;
 
 idt_ptr idtr;
 

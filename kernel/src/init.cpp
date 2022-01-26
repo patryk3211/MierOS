@@ -1,5 +1,5 @@
 #include <stivale.h>
-#include <sections.h>
+#include <defines.h>
 #include <dmesg.h>
 #include <arch/cpu.h>
 #include <memory/liballoc.h>

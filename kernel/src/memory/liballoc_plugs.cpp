@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <locking/spinlock.hpp>
 #include <locking/locker.hpp>
-#include <sections.h>
+#include <defines.h>
 #include <memory/virtual.hpp>
 
 using namespace kernel;
@@ -25,7 +25,7 @@ extern "C" int liballoc_unlock() {
 
 u8_t heap_usage_bitmap[HEAP_PAGE_SIZE/8];
 u32_t heap_first_potential_page;
-__attribute__((section(".heap"))) u8_t initial_heap[HEAP_SIZE];
+SECTION(".heap") u8_t initial_heap[HEAP_SIZE];
 
 inline bool is_page_used(u32_t page_idx) {
     ASSERT_F(page_idx < HEAP_PAGE_SIZE, "\033[1;37mpage_idx\033[0m points outside of the \033[1;37minitial_heap\033[0m");
@@ -97,10 +97,10 @@ void operator delete[](void* ptr) {
     free(ptr);
 }
 
-void operator delete(void* ptr, __attribute__((unused)) size_t size) {
+void operator delete(void* ptr, size_t) {
     free(ptr);
 }
 
-void operator delete[](void* ptr, __attribute__((unused)) size_t size) {
+void operator delete[](void* ptr, size_t) {
     free(ptr);
 }

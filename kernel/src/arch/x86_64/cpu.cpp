@@ -7,6 +7,7 @@
 #include <arch/interrupts.h>
 #include <memory/physical.h>
 #include <tasking/scheduler.hpp>
+#include <defines.h>
 
 using namespace kernel;
 
@@ -15,7 +16,7 @@ struct MADT_Record {
     u8_t length;
 
     u8_t rest[];
-}__attribute__((packed));
+} PACKED;
 
 struct ACPI_MADT {
     ACPI_SDTHeader header;
@@ -24,7 +25,7 @@ struct ACPI_MADT {
     u32_t flags;
 
     u8_t records[];
-}__attribute__((packed));
+} PACKED;
 
 // LAPIC Id - Linear Id
 std::UnorderedMap<int, int> core_map(16);
@@ -132,12 +133,12 @@ struct gdt_entry {
     u8_t flags:4;
     u8_t base_2431;
 
-}__attribute__((packed));
+} PACKED;
 
 struct gdtr {
     u16_t size;
     u64_t base;
-}__attribute__((packed));
+} PACKED;
 
 struct TSS {
     u32_t reserved;
@@ -157,7 +158,7 @@ struct TSS {
     u32_t reserved4;
     u16_t reserved5;
     u16_t iopb_offset;
-}__attribute__((packed));
+} PACKED;
 
 gdt_entry* gdt;
 gdtr gdt_ptr;
