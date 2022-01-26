@@ -1,5 +1,5 @@
-set(CMAKE_CXX_FLAGS "-g -nostdlib -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti -mcmodel=kernel -fno-use-cxa-atexit")
-set(CMAKE_C_FLAGS "-g -nostdlib -ffreestanding -Wall -Wextra -mcmodel=kernel")
+set(CMAKE_CXX_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti -mcmodel=large -fno-use-cxa-atexit -pie -Wl,-export-dynamic")
+set(CMAKE_C_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -Wall -Wextra -mcmodel=large -pie -Wl,-export-dynamic")
 
 set(CMAKE_CXX_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-g++")
 set(CMAKE_C_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-gcc")
@@ -39,7 +39,7 @@ add_custom_command(TARGET kernel.bin PRE_BUILD
 
 add_compile_definitions(${ARCH}=1)
 
-target_link_options(kernel.bin PUBLIC -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -z max-page-size=0x1000 ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o)
+target_link_options(kernel.bin PUBLIC -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -pie -Wl,-export-dynamic -z max-page-size=0x1000 ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o)
 target_include_directories(kernel.bin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(kernel.bin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/std/include)
 

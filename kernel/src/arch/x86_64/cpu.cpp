@@ -224,7 +224,8 @@ void init_gdt() {
     asm volatile(
         "lgdt %0\n"
         "pushq $8\n"
-        "pushq $init_gdt_dest\n"
+        "lea init_gdt_dest(%%rip), %%rax\n"
+        "pushq %%rax\n"
         "lretq\n"
         "init_gdt_dest: mov $0x10, %%ax\n"
         "mov %%ax, %%ds\n"
@@ -234,7 +235,7 @@ void init_gdt() {
         "mov %%ax, %%gs\n"
         "mov $0x2B, %%ax\n"
         "ltr %%ax"
-    : : "m"(gdt_ptr));
+    : : "m"(gdt_ptr) : "rax");
 }
 
 extern "C" void set_kernel_stack(int core, u64_t rsp) {
@@ -274,7 +275,8 @@ void core_init() {
     asm volatile(
         "lgdt %0\n"
         "pushq $8\n"
-        "pushq $core_init_dest\n"
+        "lea core_init_dest(%%rip), %%rax\n"
+        "pushq %%rax\n"
         "lretq\n"
         "core_init_dest: mov $0x10, %%ax\n"
         "mov %%ax, %%ds\n"
@@ -285,7 +287,7 @@ void core_init() {
         "ltr %%cx\n"
         "sti\n"
         "int $0xFE"
-    : : "m"(gdt_ptr), "c"(0x2B+(core_id*16)));
+    : : "m"(gdt_ptr), "c"(0x2B+(core_id*16)) : "rax");
     while(true);
 }
 

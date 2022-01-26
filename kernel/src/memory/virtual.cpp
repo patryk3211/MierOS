@@ -129,7 +129,7 @@ TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kerne
 
     asm volatile("mov %0, %%cr3" : : "a"(init_pml4));
 
-    first_potential_kernel_page = (virtaddr_t)&_kernel_end;
+    first_potential_kernel_page = KERNEL_START;
 
     // Create the first pager.
     Pager* p = new Pager();
@@ -250,7 +250,7 @@ void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
     ASSERT_F(virt != 0, "Mapping to address 0");
 
-    bool kernel = virt >= KERNEL_START || virt+(length<<12) > KERNEL_START;
+    bool kernel = (virt >= KERNEL_START || virt+(length<<12) > KERNEL_START) && !has_kernel_lock;
     if(kernel) kernel_locker.lock();
 
     virt >>= 12;
@@ -280,15 +280,21 @@ void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags
 virtaddr_t Pager::kmap(physaddr_t phys, size_t length, PageFlags flags) {
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
 
-    virtaddr_t start = getFreeRange(KERNEL_START, length);
+    kernel_locker.lock();
+    has_kernel_lock = true;
+
+    virtaddr_t start = getFreeRange(first_potential_kernel_page, length);
     map(phys, start, length, flags);
+
+    has_kernel_lock = false;
+    kernel_locker.unlock();
     return start + (phys & 0xFFF);
 }
 
 physaddr_t Pager::unmap(virtaddr_t virt, size_t length) {
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
 
-    bool kernel = virt >= KERNEL_START || virt+(length<<12) > KERNEL_START;
+    bool kernel = (virt >= KERNEL_START || virt+(length<<12) > KERNEL_START) && !has_kernel_lock;
     if(kernel) kernel_locker.lock();
 
     physaddr_t addr = 0;
@@ -307,6 +313,8 @@ physaddr_t Pager::unmap(virtaddr_t virt, size_t length) {
         if(addr == 0) addr = entry.structured.address << 12;
         entry.structured.present = 0;
     }
+
+    if(virt < first_potential_kernel_page && virt >= KERNEL_START) first_potential_kernel_page = virt;
 
     if(kernel) kernel_locker.unlock();
     return addr;
@@ -347,10 +355,20 @@ PageFlags Pager::getFlags(virtaddr_t virt) {
 virtaddr_t Pager::kalloc(size_t length) {
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
 
-    virtaddr_t start = getFreeRange(KERNEL_START, length);
-    if(start == 0) return 0;
+    kernel_locker.lock();
+    has_kernel_lock = true;
+
+    virtaddr_t start = getFreeRange(first_potential_kernel_page, length);
+    if(start == 0) {
+        has_kernel_lock = false;
+        kernel_locker.unlock();
+        return 0;
+    }
 
     for(size_t i = 0; i < length; ++i) map(palloc(1), start+(i<<12), 1, PageFlags { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1 });
+    
+    has_kernel_lock = false;
+    kernel_locker.unlock();
     return start;
 }
 
@@ -365,7 +383,7 @@ void Pager::free(virtaddr_t ptr, size_t length) {
 virtaddr_t Pager::getFreeRange(virtaddr_t start, size_t length) {
     bool kernel = false;
     for(virtaddr_t addr = start; addr != 0; addr += 0x1000) {
-        if((addr >= KERNEL_START || addr+(length<<12) > KERNEL_START) && !kernel) {
+        if((addr >= KERNEL_START || addr+(length<<12) > KERNEL_START) && !kernel && !has_kernel_lock) {
             kernel_locker.lock();
             kernel = true;
         }

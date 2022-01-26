@@ -7,6 +7,7 @@ PHDRS {
 	text 	PT_LOAD 	FLAGS((1 << 2) | (1 << 0));	/* r-x */
 	rodata 	PT_LOAD 	FLAGS((1 << 2)); 			/* r-- */
 	data 	PT_LOAD		FLAGS((1 << 2) | (1 << 1));	/* rw- */
+	dynamic	PT_DYNAMIC	;
 }
 
 SECTIONS {
@@ -40,6 +41,10 @@ SECTIONS {
 		*(.data.*)
 	} :data
 
+	.dynamic : {
+		*(.dynamic)
+	} :data :dynamic
+
 	.bss (NOLOAD): {
 		*(COMMON)
 		*(.bss)
@@ -58,5 +63,6 @@ SECTIONS {
 
 	/DISCARD/ : {
 		*(.dtors)
+		*(.interp)
 	}
 }
