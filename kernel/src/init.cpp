@@ -6,6 +6,8 @@
 #include <memory/physical.h>
 #include <memory/virtual.hpp>
 #include <tests/test.hpp>
+#include <tasking/process.hpp>
+#include <tasking/scheduler.hpp>
 
 #ifdef x86_64
     #include <arch/x86_64/acpi.h>
@@ -27,6 +29,7 @@ static stivale2_header stivalehdr {
 extern "C" void (*_global_constructor_start)();
 extern "C" void (*_global_constructor_end)();
 
+void stage2_init();
 extern "C" TEXT_FREE_AFTER_INIT void _start() {
     stivale2_struct* structure;
     asm volatile("mov %%rdi, %0" : "=a"(structure));
@@ -85,12 +88,22 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
 
     pmm_release_bootloader_resources();
 
-    kernel::tests::do_tests();
-
-    while(true);
+    kernel::Process* kern_proc = kernel::Process::construct_kernel_process((virtaddr_t)&stage2_init);
+    kernel::Scheduler::schedule_process(*kern_proc);
+    asm volatile("int $0xFE");
+    
+    ASSERT_NOT_REACHED("You should be in stage2 right now");
+    while(true) asm volatile("hlt");
 }
 
 extern "C" void __cxa_pure_virtual() {
     ASSERT_NOT_REACHED("You shouldn't be here");
     asm("int3");
+}
+
+void stage2_init() {
+    dmesg("[Kernel] Multitasking initialized! Now in stage 2\n");
+    kernel::tests::do_tests();
+
+    while(true);
 }

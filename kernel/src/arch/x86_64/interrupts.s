@@ -74,11 +74,15 @@ handle_int:
     mov %cr3, %rax
     pushq %rax
 
+    sub $8, %rsp
+
     mov %rsp, %rdi
     call interrupt_handle
     mov %rax, %rsp
 
 int_ret:
+    add $8, %rsp
+
     popq %rax
     mov %rax, %cr3
 
@@ -104,6 +108,6 @@ int_ret:
     add $16, %rsp
 
 int_ignore:
-    iret
+    iretq
 
 .global int_ignore

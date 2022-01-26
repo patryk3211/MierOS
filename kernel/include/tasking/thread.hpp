@@ -7,6 +7,7 @@
 #include <locking/spinlock.hpp>
 #include <list.hpp>
 #include <memory/virtual.hpp>
+#include <unordered_map.hpp>
 
 namespace kernel {
     enum ThreadState {
@@ -17,6 +18,10 @@ namespace kernel {
 
     class Process;
     class Thread {
+        static pid_t next_pid;
+        static std::UnorderedMap<pid_t, Thread*> threads;
+        static SpinLock pid_lock;
+
         KBuffer kernel_stack;
         // Kernel Stack Pointer
         CPUState* ksp;
@@ -28,6 +33,8 @@ namespace kernel {
         ThreadState state;
 
         Process& parent;
+
+        pid_t _pid;
     public:
         Thread* next;
 
@@ -51,8 +58,14 @@ namespace kernel {
          */
         bool try_wakeup();
 
+        pid_t pid() { return _pid; }
+
         static Thread* current();
 
         friend class Scheduler;
+        friend class Process;
+    
+    private:
+        static pid_t generate_pid();
     };
 }

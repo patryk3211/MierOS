@@ -8,6 +8,8 @@ extern "C" {
 #endif
 
 struct CPUState {
+    u64_t next_switch_time;
+
     u64_t cr3;
 
     u64_t rax;

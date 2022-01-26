@@ -269,7 +269,6 @@ extern "C" u64_t idtr;
 void core_init() {
     asm volatile("lidt %0" : : "m"(idtr));
     int core_id = current_core();
-    *((u32_t*)0x2004) = 1;
 
     asm volatile(
         "lgdt %0\n"
@@ -283,7 +282,8 @@ void core_init() {
         "mov %%ax, %%fs\n"
         "mov %%ax, %%gs\n"
         "ltr %%cx\n"
-        "sti"
+        "sti\n"
+        "int $0xFE"
     : : "m"(gdt_ptr), "c"(0x2B+(core_id*16)));
     while(true);
 }
@@ -314,7 +314,7 @@ extern "C" void init_cpu() {
                 crude_delay_1msec();
                 if(*((u32_t*)0x2000) == 1) break;
             }
-            while(*((u32_t*)0x2004) == 0);
+            while(!Scheduler::scheduler(item.value).is_idle());
         }
     }
     pager.unlock();

@@ -105,6 +105,9 @@ extern "C" u64_t interrupt_handle(u64_t rsp) {
                          state->rsi,
                          state->rdi,
                          state->rbp);
+    } else if(state->int_num < 0x20) {
+        kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
+        while(true) asm volatile("hlt");
     } else {
         for(handler_entry* handler = handlers[state->int_num]; handler != 0; handler = handler->next)
             handler->handler();

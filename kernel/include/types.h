@@ -15,6 +15,8 @@ typedef unsigned long size_t;
 typedef u64_t physaddr_t;
 typedef u64_t virtaddr_t;
 
+typedef u32_t pid_t;
+
 #if defined(__cplusplus)
 }
 #endif

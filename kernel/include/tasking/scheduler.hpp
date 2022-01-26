@@ -18,7 +18,8 @@ namespace kernel {
         KBuffer idle_stack;
         CPUState* idle_ksp;
 
-        bool is_idle;
+        bool _is_idle:1;
+        bool first_switch:1;
     public:
         Scheduler();
         ~Scheduler();
@@ -31,6 +32,8 @@ namespace kernel {
         static Scheduler& scheduler(int core);
 
         static void schedule_process(Process& proc);
+
+        bool is_idle() { return _is_idle; }
     private:
         static void idle();
     };

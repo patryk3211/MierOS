@@ -93,6 +93,19 @@ namespace std {
             return iterator(capacity, 0, *this);
         }
 
+        iterator find(const K& key) {
+            size_t bucket_pos = Hasher{}(key) % capacity;
+
+            if(bucket[bucket_pos] != 0) {
+                for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
+                    if(Pred{}(key, entry->key)) {
+                        return iterator(bucket_pos, entry, *this);
+                    }
+                }
+            }
+            return end();
+        }
+
         bool insert(Pair<K, V> value) {
             Entry* entry = allocator.template alloc<Entry>(value.key, value.value);
 

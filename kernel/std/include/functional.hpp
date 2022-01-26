@@ -39,4 +39,10 @@ namespace std {
         x = (x >> 16) ^ x;
         return x;
     } };
+    template<> struct hash<unsigned int> { size_t operator()(const unsigned int& key) {
+        size_t x = ((key >> 16) ^ key) * 0x45d9f3b;
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = (x >> 16) ^ x;
+        return x;
+    } };
 }

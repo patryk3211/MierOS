@@ -1,6 +1,7 @@
 #include <tasking/scheduler.hpp>
 #include <sections.h>
 #include <arch/cpu.h>
+#include <arch/interrupts.h>
 
 using namespace kernel;
 
@@ -17,7 +18,12 @@ TEXT_FREE_AFTER_INIT Scheduler::Scheduler() : idle_stack(4096) {
     idle_ksp->cs = 0x08;
     idle_ksp->rflags = 0x202;
 
-    is_idle = false;
+    idle_ksp->cr3 = Pager::active().cr3();
+    idle_ksp->rsp = (virtaddr_t)idle_stack.ptr()+4096;
+    idle_ksp->ss = 0x10;
+
+    _is_idle = false;
+    first_switch = true;
 }
 
 Scheduler::~Scheduler() {
@@ -28,28 +34,30 @@ CPUState* Scheduler::schedule(CPUState* current_state) {
     // Try to obtain a lock on the thread queue.
     if(!queue_lock.try_lock()) return current_state;
 
-    if(current_thread == 0) {
-        // We were in the idle task.
-        idle_ksp = current_state;
-    } else {
-        current_thread->ksp = current_state;
-        if(current_thread->state == RUNNING) {
-            current_thread->state = RUNNABLE;
-            runnable_queue.push_back(current_thread);
+    if(!first_switch) {
+        if(current_thread == 0) {
+            // We were in the idle task.
+            idle_ksp = current_state;
         } else {
-            wait_queue.push_back(current_thread);
+            current_thread->ksp = current_state;
+            if(current_thread->state == RUNNING) {
+                current_thread->state = RUNNABLE;
+                runnable_queue.push_back(current_thread);
+            } else {
+                wait_queue.push_back(current_thread);
+            }
+            current_thread = 0;
         }
-        current_thread = 0;
-    }
+    } else first_switch = false;
 
     Thread* new_thread = runnable_queue.get_optimal_thread(core_id);
     queue_lock.unlock();
     if(new_thread == 0) {
         // No thread needs to be executed.
-        is_idle = true;
+        _is_idle = true;
         return idle_ksp;
     } else {
-        is_idle = false;
+        _is_idle = false;
         new_thread->state = RUNNING;
         current_thread = new_thread;
         return current_thread->ksp;
@@ -59,10 +67,14 @@ CPUState* Scheduler::schedule(CPUState* current_state) {
 TEXT_FREE_AFTER_INIT void Scheduler::init(int core_count) {
     schedulers = new Scheduler[core_count];
     for(int i = 0; i < core_count; ++i) schedulers[i].core_id = i;
+
+    register_task_switch_handler([](CPUState* state) -> CPUState* {
+        return schedulers[current_core()].schedule(state);
+    });
 }
 
 void Scheduler::idle() {
-    int core_id = current_core();
+    //int core_id = current_core();
     while(true) {
         asm volatile("hlt");
     }
@@ -70,4 +82,13 @@ void Scheduler::idle() {
 
 Scheduler& Scheduler::scheduler(int core) {
     return schedulers[core];
+}
+
+void Scheduler::schedule_process(Process& proc) {
+    queue_lock.lock();
+    for(auto& thread : proc.threads) {
+        if(thread->state == RUNNABLE) runnable_queue.push_back(thread);
+        else wait_queue.push_back(thread);
+    }
+    queue_lock.unlock();
 }

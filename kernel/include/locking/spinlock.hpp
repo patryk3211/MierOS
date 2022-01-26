@@ -42,10 +42,9 @@ namespace kernel {
             asm volatile(
                 "mov $1, %%ecx\n"
                 "xor %%eax, %%eax\n"
-
                 "lock cmpxchg %%ecx, %0\n"
                 "jne _SpinLock.try_lock_out\n"
-                "mov $1, %1\n"
+                "movb $1, %1\n"
                 "_SpinLock.try_lock_out:"
             : : "m"(locked), "m"(has_locked) : "eax", "ecx");
             return has_locked;

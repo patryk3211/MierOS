@@ -3,10 +3,23 @@
 #include <arch/cpu.h>
 #include <tasking/process.hpp>
 #include <arch/interrupts.h>
+#include <locking/locker.hpp>
 
 using namespace kernel;
 
 #define KERNEL_STACK_SIZE 1024*16 // 16 KiB stack
+
+pid_t Thread::next_pid = 1;
+std::UnorderedMap<pid_t, Thread*> Thread::threads;
+SpinLock Thread::pid_lock;
+
+pid_t Thread::generate_pid() {
+    Locker locker(pid_lock);
+    while(true) {
+        if(threads.find(next_pid) == threads.end()) return next_pid++;
+        ++next_pid;
+    }
+}
 
 Thread::Thread(u64_t ip, bool isKernel, Process& process) : kernel_stack(KERNEL_STACK_SIZE), parent(process) {
     preferred_core = -1;
@@ -20,7 +33,10 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process) : kernel_stack(KERNEL_
     ksp->cs = isKernel ? 0x08 : 0x1B;
     ksp->ss = isKernel ? 0x10 : 0x23;
 
+    if(isKernel) ksp->rsp = (virtaddr_t)kernel_stack.ptr()+KERNEL_STACK_SIZE;
+
     next = 0;
+    state = RUNNABLE;
 }
 
 void Thread::sleep(std::Function<bool()>& until) {

@@ -17,5 +17,7 @@ namespace kernel {
         Pager& pager() { return *_pager; }
 
         static Process* construct_kernel_process(virtaddr_t entry_point);
+
+        friend class Scheduler;
     };
 }

@@ -91,7 +91,7 @@ namespace kernel {
         Thread* get_optimal_thread(int core) {
             Thread* best_thread = first;
             Thread* prev = 0;
-            for(Thread* thread = first->next; thread != 0; thread = thread->next) {
+            for(Thread* thread = first; thread != 0; thread = thread->next) {
                 if(best_thread->preferred_core != core && thread->preferred_core == core) {
                     if(prev != 0) prev->next = best_thread->next;
                     else first = best_thread->next;
@@ -106,11 +106,13 @@ namespace kernel {
                 }
                 prev = thread;
             }
-            if(prev != 0) prev->next = best_thread->next;
-            else first = best_thread->next;
+            if(best_thread != 0) {
+                if(prev != 0) prev->next = best_thread->next;
+                else first = best_thread->next;
 
-            if(best_thread == last) last = prev;
-            best_thread->next = 0;
+                if(best_thread == last) last = prev;
+                best_thread->next = 0;
+            }
 
             return best_thread;
         }
