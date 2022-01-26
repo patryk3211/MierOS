@@ -21,5 +21,4 @@ qemu-system-x86_64 -s -m 1G \
 			-no-reboot \
 			-no-shutdown \
 			-d guest_errors \
-			-d int \
 			-S

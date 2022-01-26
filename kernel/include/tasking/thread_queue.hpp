@@ -107,8 +107,10 @@ namespace kernel {
                 prev = thread;
             }
             if(best_thread != 0) {
-                if(prev != 0) prev->next = best_thread->next;
-                else first = best_thread->next;
+                if(best_thread == first) {
+                    first = best_thread->next;
+                    prev = 0;
+                } else prev->next = best_thread->next;
 
                 if(best_thread == last) last = prev;
                 best_thread->next = 0;

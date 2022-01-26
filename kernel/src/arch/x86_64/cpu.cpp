@@ -268,9 +268,15 @@ extern "C" u8_t _binary_ap_starter_end[];
 
 extern "C" u64_t idtr;
 
+inline void init_lapic_timer() {
+    write_lapic(0x320, 0x000000FE);
+}
+
 void core_init() {
     asm volatile("lidt %0" : : "m"(idtr));
     int core_id = current_core();
+
+    init_lapic_timer();
 
     asm volatile(
         "lgdt %0\n"
@@ -291,11 +297,26 @@ void core_init() {
     while(true);
 }
 
-extern "C" void init_cpu() {
+u32_t lapic_timer_ticks;
+TEXT_FREE_AFTER_INIT void measure_lapic_timer() {
+    write_lapic(0x320, 0x000000FF);
+    write_lapic(0x3E0, 0b1011);
+    write_lapic(0x380, 0xFFFFFFFF);
+    crude_delay_1msec();
+    lapic_timer_ticks = 0xFFFFFFFF - read_lapic(0x390);
+    write_lapic(0x380, 0);
+    kprintf("[Kernel] 1 ms took %d Local APIC timer ticks\n", lapic_timer_ticks);
+}
+
+extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
     parse_madt();
 
     init_gdt();
     init_interrupts();
+
+    // Measure Local APIC timer ticks for 1 millisecond
+    measure_lapic_timer();
+    init_lapic_timer();
 
     Scheduler::init(core_count());
 

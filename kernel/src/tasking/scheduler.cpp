@@ -55,11 +55,13 @@ CPUState* Scheduler::schedule(CPUState* current_state) {
     if(new_thread == 0) {
         // No thread needs to be executed.
         _is_idle = true;
+        idle_ksp->next_switch_time = 250; // 250 us
         return idle_ksp;
     } else {
         _is_idle = false;
         new_thread->state = RUNNING;
         current_thread = new_thread;
+        current_thread->ksp->next_switch_time = 1000; // 1000 us -> 1 ms
         return current_thread->ksp;
     }
 }

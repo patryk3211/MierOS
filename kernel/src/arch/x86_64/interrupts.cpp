@@ -93,11 +93,16 @@ extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     asm volatile("lidt %0; sti" : : "m"(idtr));
 }
 
+extern u32_t lapic_timer_ticks;
+
 extern "C" u64_t interrupt_handle(u64_t rsp) {
     CPUState* state = (CPUState*)rsp;
     if(state->int_num == 0xFE) {
-        rsp = (u64_t)_tsh(state);
+        state = _tsh(state);
         set_kernel_stack(current_core(), rsp+sizeof(CPUState));
+
+        u64_t timer_value = state->next_switch_time * lapic_timer_ticks / 1000;
+        write_lapic(0x380, timer_value);
     } else if(state->int_num == 0x8F) {
         state->rax = _sh(state->rbx,
                          state->rcx,
@@ -114,7 +119,7 @@ extern "C" u64_t interrupt_handle(u64_t rsp) {
     }
 
     write_lapic(0xB0, 0);
-    return rsp;
+    return (u64_t)state;
 }
 
 extern "C" void register_handler(u8_t vector, void (*handler)()) {
