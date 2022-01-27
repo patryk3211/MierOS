@@ -4,10 +4,6 @@
 #include <memory/liballoc.h>
 
 namespace std {
-    template<typename T> class SharedPtr {
-        
-    };
-
     template<typename T> class UniquePtr {
         T* value;
     public:

@@ -1,6 +1,22 @@
 #pragma once
 
 namespace std {
+    template<typename T> class Optional {
+        T value;
+        bool exists;
+    public:
+        Optional() : value(), exists(false) { }
+        Optional(const T& value) : value(value), exists(true) { }
+
+        T operator*() {
+            if(exists) return *this;
+            else return T();
+        }
+
+        operator bool() { return exists; }
+        bool operator!() { return !exists; }
+    };
+
     template<typename T> class OptionalRef {
         T* reference;
     public:

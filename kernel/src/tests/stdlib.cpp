@@ -1,11 +1,12 @@
 #include <tests/stdlib.hpp>
-#include <pointer.hpp>
+#include <unique_pointer.hpp>
 #include <function.hpp>
 #include <functional.hpp>
 #include <assert.h>
 #include <list.hpp>
 #include <unordered_map.hpp>
 #include <string.hpp>
+#include <vector.hpp>
 
 using namespace std;
 
@@ -97,6 +98,16 @@ bool kernel::tests::stdlib_test() {
         map.insert({ "Fifty", 50 });
 
         TEST(*map.at("Five") == 5 && *map.at("Nine") == 9 && *map.at("Zero") == 0 && *map.at("Eleven") == 11 && *map.at("Fifty") == 50, "(SL6.1) std::UnorderedMap test failed");
+    }
+
+    { // Vector test
+        Vector<int> vec = Vector<int>();
+        vec.push_back(6);
+        vec.push_back(2);
+        vec.push_back(8);
+        vec.resize(4, 10);
+        
+        TEST(vec[0] == 6 && vec[1] == 2 && vec[2] == 8 && vec[3] == 10, "(SL6.1) std::Vector test failed");
     }
 
     return true;

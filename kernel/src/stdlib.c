@@ -29,3 +29,9 @@ size_t strlen(const char* str) {
     for(len = 0; str[len] != 0; ++len);
     return len;
 }
+
+int memcmp(const void* a, const void* b, size_t count) {
+    for(int i = 0; i < count; ++i)
+        if(*((u8_t*)a+i) != *((u8_t*)b+i)) return 0;
+    return 1;
+}
