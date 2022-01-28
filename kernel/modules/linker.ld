@@ -1,4 +1,3 @@
-ENTRY(_start)
 OUTPUT_FORMAT(elf64-x86-64)
 OUTPUT_ARCH(i386:x86-64)
 
@@ -11,32 +10,27 @@ PHDRS {
 }
 
 SECTIONS {
-	. = 0xFFFFFFFF80000000;
-
 	.text : ALIGN(4096) {
 		*(.text)
 		*(.text.*)
 	} :text
 
-	.text_free_after_init : ALIGN(4096) {
-		*(.text_free_after_init)
-		*(.text_free_after_init.*)
-	} :text
-
-	.stivale2hdr : ALIGN(4096) {
-		KEEP(*(.stivale2hdr))
-	} :rodata
-
+    . = ALIGN(4096);
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)
-
-		_global_constructor_start = .;
-		*(.ctors)
-		_global_constructor_end = .;
 	} :rodata
 
-	.data : ALIGN(4096) {
+    .ctors : {
+        *(.ctors)
+    } :rodata
+
+    .dtors : {
+        *(.dtors)
+    } :rodata
+
+    . = ALIGN(4096);
+	.data : {
 		*(.data)
 		*(.data.*)
 	} :data
@@ -49,19 +43,5 @@ SECTIONS {
 		*(COMMON)
 		*(.bss)
 		*(.bss.*)
-
-		. = ALIGN(4096);
-		*(.heap)
 	} :data
-
-	.free_after_init (NOLOAD): ALIGN(4096) {
-		*(.free_after_init)
-	} :data
-
-	. = ALIGN(4096);
-	_kernel_end = .;
-
-	/DISCARD/ : {
-		*(.dtors)
-	}
 }

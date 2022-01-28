@@ -85,6 +85,33 @@ struct Elf64_Section {
     u64_t entry_size;
 };
 
+#define STT_NOTYPE 0
+#define STT_OBJECT 1
+#define STT_FUNC 2
+#define STT_SECTION 3
+#define STT_FILE 4
+#define STT_COMMON 5
+#define STT_TLS 6
+#define	STT_NUM 7
+
+#define STB_LOCAL 0
+#define STB_GLOBAL 1
+#define STB_WEAK 2
+#define	STB_NUM	3
+
+#define ELF64_ST_BIND(val) (((u8_t) (val)) >> 4)
+#define ELF64_ST_TYPE(val) ((val) & 0xf)
+#define ELF64_ST_INFO(bind, type) (((bind) << 4) + ((type) & 0xf))
+
+struct Elf64_Symbol {
+    u32_t name_idx;
+    u8_t info;
+    u8_t other;
+    u16_t sec_idx;
+    u64_t addr;
+    u64_t size;
+};
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

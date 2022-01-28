@@ -32,7 +32,6 @@ union PageStructuresEntry {
 #define WORKPAGE(i) ((PageStructuresEntry*)(0xFFFFFFFFFFE00000 | ((i) << 12)))
 
 #define BASE_MAPPING_ADDRESS 0x1000
-#define KERNEL_START 0xFFFFFFFF80000000
 
 #define REFRESH_TLB asm volatile("mov %cr3, %rax; mov %rax, %cr3");
 
@@ -40,6 +39,7 @@ physaddr_t Pager::kernel_pd[2] = { 0, 0 };
 std::List<Pager*> Pager::pagers;
 SpinLock Pager::kernel_locker;
 virtaddr_t Pager::first_potential_kernel_page;
+Pager* Pager::kernel_pager = 0;
 
 Pager::Pager() {
     this->pml4 = palloc(1);
@@ -125,7 +125,6 @@ TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kerne
     ((PageStructuresEntry*)control_page)[511].raw = control_page | 0x8000000000000103;
 
     kernel_locker = SpinLock();
-    //pagers = std::List<Pager*>();
 
     asm volatile("mov %0, %%cr3" : : "a"(init_pml4));
 
@@ -136,6 +135,8 @@ TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kerne
     p->enable();
     pfree(init_pml4, 1);
     pfree(init_pdpt, 1);
+
+    kernel_pager = p;
 }
 
 int Pager::aquireWorkpageIndex() {
@@ -419,4 +420,8 @@ Pager& Pager::active() {
     }
     ASSERT_NOT_REACHED("Invalid CR3 value (no pager associated)");
     while(true);
+}
+
+Pager& Pager::kernel() {
+    return *kernel_pager;
 }

@@ -1,8 +1,13 @@
-set(CMAKE_CXX_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti -mcmodel=large -fno-use-cxa-atexit -pie -Wl,-export-dynamic")
-set(CMAKE_C_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -Wall -Wextra -mcmodel=large -pie -Wl,-export-dynamic")
+set(CMAKE_C_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -Wall -Wextra -mcmodel=large -fPIC -Wl,-export-dynamic")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fno-exceptions -fno-rtti -fno-use-cxa-atexit")
 
 set(CMAKE_CXX_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-g++")
 set(CMAKE_C_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-gcc")
+
+#set(CMAKE_LINKER "${CROSS_DIR}/kern/bin/${ARCH}-elf-ld")
+#set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_LINKER> -pie -export-dynamic -z max-page-size=0x1000 <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+#set(CMAKE_C_LINK_EXECUTABLE ${CMAKE_CXX_LINK_EXECUTABLE})
+#set(CMAKE_ASM_LINK_EXECUTABLE ${CMAKE_CXX_LINK_EXECUTABLE})
 
 set(KERNEL_SOURCES src/init.cpp
                    src/dmesg.c
@@ -31,6 +36,10 @@ endif()
 
 add_executable(kernel.bin ${KERNEL_SOURCES} ${ARCH_SOURCES})
 
+set_target_properties(kernel.bin PROPERTIES
+                      PREFIX ""
+                      SUFFIX "")
+
 add_custom_command(TARGET kernel.bin PRE_BUILD 
                     COMMAND nasm ARGS -o ap_starter ${CMAKE_CURRENT_SOURCE_DIR}/ap_starter.s -f bin
                     COMMAND ld ARGS -r -b binary -o ap_starter.o ap_starter
@@ -39,10 +48,16 @@ add_custom_command(TARGET kernel.bin PRE_BUILD
                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                     COMMENT "Assembling Application Core starter...")
 
+add_custom_command(TARGET kernel.bin POST_BUILD
+                    COMMAND elfedit ARGS --output-type DYN kernel.bin
+                    VERBATIM
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
 add_compile_definitions(${ARCH}=1)
 
-target_link_options(kernel.bin PUBLIC -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -pie -Wl,-export-dynamic -z max-page-size=0x1000 ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o)
-target_include_directories(kernel.bin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_include_directories(kernel.bin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/std/include)
+target_link_options(kernel.bin PRIVATE -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -pie -Wl,-export-dynamic -z max-page-size=0x1000 ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o -Wl,--no-dynamic-linker)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/std/include)
 
 install(TARGETS kernel.bin DESTINATION ${SYSROOT_DIR}/)
+
+add_subdirectory(modules)

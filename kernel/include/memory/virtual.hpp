@@ -15,11 +15,14 @@ namespace kernel {
         bool global:1;
     };
 
+    #define KERNEL_START 0xFFFFFFFF80000000
+
     class Pager {
         static physaddr_t kernel_pd[2];
         static std::List<Pager*> pagers;
         static SpinLock kernel_locker;
         static virtaddr_t first_potential_kernel_page;
+        static Pager* kernel_pager;
 
         physaddr_t pml4;
 
@@ -62,6 +65,7 @@ namespace kernel {
         static void init(physaddr_t kernel_base_p, virtaddr_t kernel_base_v, stivale2_stag_pmrs* pmrs);
 
         static Pager& active();
+        static Pager& kernel();
     private:
         void mapStructures(int new_pml4e, int new_pdpte, int new_pde);
         int getWorkpage(int index);

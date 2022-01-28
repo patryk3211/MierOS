@@ -7,5 +7,5 @@ Process::Process(virtaddr_t entry_point, Pager* pager) : _pager(pager) {
 }
 
 Process* Process::construct_kernel_process(virtaddr_t entry_point) {
-    return new Process(entry_point, &Pager::active());
+    return new Process(entry_point, &Pager::kernel());
 }

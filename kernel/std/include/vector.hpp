@@ -27,10 +27,10 @@ namespace std {
 
         Vector(size_t size, const T& initial_value) {
             this->f_size = size;
-            this->f_capacity = f_capacity;
+            this->f_capacity = size;
             
             elements = alloc.template alloc<T>(size);
-            for(int i = 0; i < size; ++i) elements[i] = initial_value;
+            for(size_t i = 0; i < size; ++i) elements[i] = initial_value;
         }
 
         Vector(const Vector<T>& vector) {
