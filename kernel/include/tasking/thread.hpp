@@ -8,6 +8,7 @@
 #include <list.hpp>
 #include <memory/virtual.hpp>
 #include <unordered_map.hpp>
+#include <modules/module.hpp>
 
 namespace kernel {
     enum ThreadState {
@@ -36,6 +37,8 @@ namespace kernel {
 
         pid_t _pid;
     public:
+        Module* current_module;
+
         Thread* next;
 
         int preferred_core;

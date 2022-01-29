@@ -3,6 +3,7 @@
 #include <dmesg.h>
 #include <memory/virtual.hpp>
 #include <memory/physical.h>
+#include <tasking/thread.hpp>
 
 using namespace kernel;
 
@@ -167,4 +168,14 @@ std::OptionalRef<Elf64_Symbol> Module::get_symbol(size_t index) {
     size_t offset = symbol_table->entry_size*index;
     if(offset >= symbol_table->size) return {};
     return *(Elf64_Symbol*)(symbol_table->address+offset);
+}
+
+Module::ThreadModuleSetter::ThreadModuleSetter(Module* mod) {
+    Thread* thread = Thread::current();
+    old_mod = thread->current_module;
+    thread->current_module = mod;
+}
+
+Module::ThreadModuleSetter::~ThreadModuleSetter() {
+    Thread::current()->current_module = old_mod;
 }

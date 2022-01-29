@@ -35,6 +35,8 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process) : kernel_stack(KERNEL_
 
     if(isKernel) ksp->rsp = (virtaddr_t)kernel_stack.ptr()+KERNEL_STACK_SIZE;
 
+    current_module = 0;
+
     next = 0;
     state = RUNNABLE;
 }

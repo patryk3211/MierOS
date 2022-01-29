@@ -18,6 +18,12 @@ namespace kernel {
             u32_t entry_size;
         };
     private:
+        struct ThreadModuleSetter {
+            Module* old_mod;
+            ThreadModuleSetter(Module* mod);
+            ~ThreadModuleSetter();
+        };
+
         u16_t major_num;
 
         std::Vector<Section> sections;
@@ -32,6 +38,7 @@ namespace kernel {
         ~Module();
 
         template<typename Ret, typename... Args> Ret run_function(const char* func_name, Args... args) {
+            ThreadModuleSetter setter(this);
             return ((Ret (*)(Args...))(address_base + get_symbol(func_name)->addr))(args...);
         }
     private:
