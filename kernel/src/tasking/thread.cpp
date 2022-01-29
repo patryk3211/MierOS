@@ -9,9 +9,9 @@ using namespace kernel;
 
 #define KERNEL_STACK_SIZE 1024*16 // 16 KiB stack
 
-pid_t Thread::next_pid = 1;
-std::UnorderedMap<pid_t, Thread*> Thread::threads;
-SpinLock Thread::pid_lock;
+NO_EXPORT pid_t Thread::next_pid = 1;
+NO_EXPORT std::UnorderedMap<pid_t, Thread*> Thread::threads;
+NO_EXPORT SpinLock Thread::pid_lock;
 
 pid_t Thread::generate_pid() {
     Locker locker(pid_lock);

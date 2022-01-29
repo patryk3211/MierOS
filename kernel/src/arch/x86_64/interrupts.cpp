@@ -16,7 +16,7 @@ struct interrupt_descriptor {
     u32_t reserved2;
 } PACKED;
 
-interrupt_descriptor idt[256];
+NO_EXPORT interrupt_descriptor idt[256];
 
 TEXT_FREE_AFTER_INIT void create_descriptor(interrupt_descriptor& entry, void (*handler)(), u8_t type, u8_t dpl) {
     entry.offset_015 = (u64_t)handler;
@@ -35,16 +35,16 @@ struct idt_ptr {
     u64_t ptr;
 } PACKED;
 
-idt_ptr idtr;
+NO_EXPORT idt_ptr idtr;
 
 struct handler_entry {
     void (*handler)();
     handler_entry* next;
 };
 
-handler_entry* handlers[256];
-CPUState* (*_tsh)(CPUState* current_state);
-u32_t (*_sh)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t);
+NO_EXPORT handler_entry* handlers[256];
+NO_EXPORT CPUState* (*_tsh)(CPUState* current_state);
+NO_EXPORT u32_t (*_sh)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t);
 
 extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     memset(handlers, 0, sizeof(handlers));
@@ -95,7 +95,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
 
 extern u32_t lapic_timer_ticks;
 
-extern "C" u64_t interrupt_handle(u64_t rsp) {
+extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
     CPUState* state = (CPUState*)rsp;
     if(state->int_num == 0xFE) {
         state = _tsh(state);

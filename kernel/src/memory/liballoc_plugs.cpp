@@ -8,7 +8,7 @@
 
 using namespace kernel;
 
-SpinLock heap_lock;
+NO_EXPORT SpinLock heap_lock;
 extern "C" int liballoc_lock() {
     heap_lock.lock();
     return 0;
@@ -23,9 +23,9 @@ extern "C" int liballoc_unlock() {
 
 #define HEAP_PAGE_SIZE HEAP_SIZE/4096
 
-u8_t heap_usage_bitmap[HEAP_PAGE_SIZE/8];
-u32_t heap_first_potential_page;
-SECTION(".heap") u8_t initial_heap[HEAP_SIZE];
+NO_EXPORT u8_t heap_usage_bitmap[HEAP_PAGE_SIZE/8];
+NO_EXPORT u32_t heap_first_potential_page;
+NO_EXPORT SECTION(".heap") u8_t initial_heap[HEAP_SIZE];
 
 inline bool is_page_used(u32_t page_idx) {
     ASSERT_F(page_idx < HEAP_PAGE_SIZE, "\033[1;37mpage_idx\033[0m points outside of the \033[1;37minitial_heap\033[0m");

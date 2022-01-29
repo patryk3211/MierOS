@@ -73,11 +73,24 @@ struct Elf64_Phdr {
 #define ST_NUM 19
 #define ST_LOOS 0x60000000
 
+#define SHF_WRITE (1 << 0)
+#define SHF_ALLOC (1 << 1)
+#define SHF_EXECINSTR (1 << 2)
+#define SHF_MERGE (1 << 4)
+#define SHF_STRINGS	(1 << 5)
+#define SHF_INFO_LINK (1 << 6)
+#define SHF_LINK_ORDER (1 << 7)
+#define SHF_OS_NONCONFORMING (1 << 8)
+#define SHF_GROUP (1 << 9)
+#define SHF_TLS	(1 << 10)
+#define SHF_COMPRESSED (1 << 11)
+
 struct Elf64_Section {
     u32_t name_idx;
     u32_t type;
     u64_t flags;
     u64_t addr;
+    u64_t offset;
     u64_t size;
     u32_t link;
     u32_t info;
@@ -111,6 +124,15 @@ struct Elf64_Symbol {
     u64_t addr;
     u64_t size;
 };
+
+struct Elf64_Rela {
+    u64_t addr;
+    u64_t info;
+    u64_t addend;
+};
+
+#define ELF64_REL_SYM(i) ((i) >> 32)
+#define ELF64_REL_TYPE(i) ((i) & 0xffffffff)
 
 #if defined(__cplusplus)
 } // extern "C"

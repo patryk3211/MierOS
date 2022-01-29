@@ -36,7 +36,7 @@ struct ACPI_XSDT {
     u64_t other[0];
 } PACKED;
 
-std::UnorderedMap<std::String<>, physaddr_t> acpi_tables = std::UnorderedMap<std::String<>, physaddr_t>();
+NO_EXPORT std::UnorderedMap<std::String<>, physaddr_t> acpi_tables = std::UnorderedMap<std::String<>, physaddr_t>();
 
 extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
     Pager& pager = Pager::active();

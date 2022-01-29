@@ -1,10 +1,11 @@
 #include <modules/module_manager.hpp>
 #include <unordered_map.hpp>
 #include <modules/module.hpp>
+#include <defines.h>
 
 using namespace kernel;
 
-std::UnorderedMap<u16_t, Module*> module_map;
+NO_EXPORT std::UnorderedMap<u16_t, Module*> module_map;
 
 void kernel::init_module_manager() {
     

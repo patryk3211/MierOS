@@ -24,6 +24,7 @@ namespace std {
         OptionalRef(T& value) : reference(&value) { }
 
         T& operator*() { return *reference; }
+        T* operator->() { return reference; }
 
         operator bool() { return !!reference; }
         bool operator!() { return !reference; }

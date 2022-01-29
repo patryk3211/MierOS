@@ -35,11 +35,11 @@ union PageStructuresEntry {
 
 #define REFRESH_TLB asm volatile("mov %cr3, %rax; mov %rax, %cr3");
 
-physaddr_t Pager::kernel_pd[2] = { 0, 0 };
-std::List<Pager*> Pager::pagers;
-SpinLock Pager::kernel_locker;
-virtaddr_t Pager::first_potential_kernel_page;
-Pager* Pager::kernel_pager = 0;
+NO_EXPORT physaddr_t Pager::kernel_pd[2] = { 0, 0 };
+NO_EXPORT std::List<Pager*> Pager::pagers;
+NO_EXPORT SpinLock Pager::kernel_locker;
+NO_EXPORT virtaddr_t Pager::first_potential_kernel_page;
+NO_EXPORT Pager* Pager::kernel_pager = 0;
 
 Pager::Pager() {
     this->pml4 = palloc(1);

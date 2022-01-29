@@ -11,13 +11,13 @@
 
 using namespace kernel;
 
-physaddr_t pmm_first_potential_page;
+NO_EXPORT physaddr_t pmm_first_potential_page;
 
 struct page_4gb_status_struct {
     u8_t used_bitmap[0x20000];
 };
 
-page_4gb_status_struct* status_pages;
+NO_EXPORT page_4gb_status_struct* status_pages;
 
 void set_page_status(u64_t address, int status) {
     address >>= 12;
@@ -32,9 +32,9 @@ int is_page_used(u64_t address) {
     return (status_pages[address >> 20].used_bitmap[(address >> 3) & 0x1FFFFFFF] >> (address & 7)) & 1;
 }
 
-SpinLock pmm_lock;
+NO_EXPORT SpinLock pmm_lock;
 
-std::RangeMap<physaddr_t>* freeable_mem;
+NO_EXPORT std::RangeMap<physaddr_t>* freeable_mem;
 
 extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) {
     ASSERT_F(memory_map != 0, "\033[1;37mmemory_map\033[0m is null");

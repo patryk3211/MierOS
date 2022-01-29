@@ -5,10 +5,10 @@
 
 using namespace kernel;
 
-ThreadQueue Scheduler::wait_queue = ThreadQueue();
-ThreadQueue Scheduler::runnable_queue = ThreadQueue();
-Scheduler* Scheduler::schedulers;
-SpinLock Scheduler::queue_lock;
+NO_EXPORT ThreadQueue Scheduler::wait_queue = ThreadQueue();
+NO_EXPORT ThreadQueue Scheduler::runnable_queue = ThreadQueue();
+NO_EXPORT Scheduler* Scheduler::schedulers;
+NO_EXPORT SpinLock Scheduler::queue_lock;
 
 TEXT_FREE_AFTER_INIT Scheduler::Scheduler() : idle_stack(4096) {
     current_thread = 0;

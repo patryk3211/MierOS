@@ -28,7 +28,7 @@ struct ACPI_MADT {
 } PACKED;
 
 // LAPIC Id - Linear Id
-std::UnorderedMap<int, int> core_map(16);
+NO_EXPORT std::UnorderedMap<int, int> core_map(16);
 
 #define LAPIC_MSR 0x1B
 
@@ -57,12 +57,12 @@ void send_ipi(u8_t vector, u8_t mode, u8_t destination) {
     }
 }
 
-void enable_lapic() {
+TEXT_FREE_AFTER_INIT void enable_lapic() {
     wrmsr(LAPIC_MSR, rdmsr(LAPIC_MSR) | 0x800);
     write_lapic(0xF0, read_lapic(0xF0) | 0x1FF);
 }
 
-void parse_madt() {
+TEXT_FREE_AFTER_INIT void parse_madt() {
     auto& pager = Pager::active();
     Locker locker(pager);
 
@@ -160,12 +160,12 @@ struct TSS {
     u16_t iopb_offset;
 } PACKED;
 
-gdt_entry* gdt;
-gdtr gdt_ptr;
+NO_EXPORT gdt_entry* gdt;
+NO_EXPORT gdtr gdt_ptr;
 
-TSS* tsses;
+NO_EXPORT TSS* tsses;
 
-void init_gdt() {
+TEXT_FREE_AFTER_INIT void init_gdt() {
     gdt = new gdt_entry[5+core_count()*2];
     memset(&gdt[0], 0, sizeof(gdt_entry));
 
@@ -252,7 +252,7 @@ static inline u8_t inb(u16_t port) {
     return data;
 }
 
-void crude_delay_1msec() {
+NO_EXPORT void crude_delay_1msec() {
     outb(0x43, 0b00110000);
     outb(0x40, 0xA9);
     outb(0x40, 0x04);
@@ -272,7 +272,7 @@ inline void init_lapic_timer() {
     write_lapic(0x320, 0x000000FE);
 }
 
-void core_init() {
+TEXT_FREE_AFTER_INIT void core_init() {
     asm volatile("lidt %0" : : "m"(idtr));
     int core_id = current_core();
 
@@ -297,7 +297,7 @@ void core_init() {
     while(true);
 }
 
-u32_t lapic_timer_ticks;
+NO_EXPORT u32_t lapic_timer_ticks;
 TEXT_FREE_AFTER_INIT void measure_lapic_timer() {
     write_lapic(0x320, 0x000000FF);
     write_lapic(0x3E0, 0b1011);

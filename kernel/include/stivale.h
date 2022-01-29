@@ -75,6 +75,18 @@ struct stivale2_stag_rsdp {
     u64_t rsdp_addr;
 };
 
+struct stivale2_module {
+    u64_t start;
+    u64_t end;
+    char name[128];
+};
+
+struct stivale2_stag_modules {
+    struct stivale2_tag_base base;
+    u64_t module_count;
+    struct stivale2_module modules[];
+};
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

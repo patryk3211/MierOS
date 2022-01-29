@@ -1,13 +1,8 @@
 set(CMAKE_C_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -Wall -Wextra -mcmodel=large -fPIC -Wl,-export-dynamic")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fno-exceptions -fno-rtti -fno-use-cxa-atexit")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -fno-use-cxa-atexit")
 
 set(CMAKE_CXX_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-g++")
 set(CMAKE_C_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-gcc")
-
-#set(CMAKE_LINKER "${CROSS_DIR}/kern/bin/${ARCH}-elf-ld")
-#set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_LINKER> -pie -export-dynamic -z max-page-size=0x1000 <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-#set(CMAKE_C_LINK_EXECUTABLE ${CMAKE_CXX_LINK_EXECUTABLE})
-#set(CMAKE_ASM_LINK_EXECUTABLE ${CMAKE_CXX_LINK_EXECUTABLE})
 
 set(KERNEL_SOURCES src/init.cpp
                    src/dmesg.c

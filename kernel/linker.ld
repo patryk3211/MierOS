@@ -31,9 +31,21 @@ SECTIONS {
 		*(.rodata)
 		*(.rodata.*)
 
+		. = ALIGN(8);
 		_global_constructor_start = .;
 		*(.ctors)
 		_global_constructor_end = .;
+	} :rodata
+
+	.dynsym : ALIGN(8) {
+		_dynsym_start = .;
+		*(.dynsym)
+		_dynsym_end = .;
+	} :rodata
+
+	.dynstr : {
+		_dynstr_start = .;
+		*(.dynstr)
 	} :rodata
 
 	.data : ALIGN(4096) {

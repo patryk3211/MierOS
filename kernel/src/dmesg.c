@@ -1,5 +1,6 @@
 #include <dmesg.h>
 #include <types.h>
+#include <defines.h>
 
 static inline void outb(u16_t port, u8_t data) {
     asm volatile("outb %0, %1" : : "a"(data), "Nd"(port));
@@ -13,7 +14,7 @@ static inline u8_t inb(u16_t port) {
 
 #define IO_PORT 0x3F8
 
-void init_serial() {
+TEXT_FREE_AFTER_INIT void init_serial() {
     // Disable Interrupts
     outb(IO_PORT+1, 0b00000000);
     // Set DLAB
