@@ -19,12 +19,18 @@ NO_EXPORT std::UnorderedMap<std::String<>, u16_t> name_map;
 // Map of module paths to major numbers
 NO_EXPORT std::UnorderedMap<std::String<>, u16_t> path_map;
 
-struct module_index_entry {
+struct module_index_list_entry {
     bool is_fallback;
     std::String<> path;
 };
-// Map of init signals to module paths
-NO_EXPORT std::UnorderedMap<std::String<>, std::List<module_index_entry>> module_index;
+
+struct module_index_entry {
+    std::String<> init_signal;
+    std::List<module_index_list_entry> modules;
+};
+
+// List of init signals with module paths
+NO_EXPORT std::List<module_index_entry> module_index;
 
 NO_EXPORT u16_t potential_major = 1;
 NO_EXPORT SpinLock major_lock;
@@ -63,13 +69,17 @@ u16_t kernel::add_preloaded_module(void* file) {
     auto module_path = std::String<>("/init/") + (const char*)header->name_ptr;
     path_map.insert({ module_path, major });
     for(char* signal = (char*)header->init_on_ptr; *signal != 0; signal += strlen(signal)+1) {
-        auto mod_list = module_index.at(signal);
-        if(mod_list) mod_list->push_back({(bool)(header->flags & 1), module_path });
-        else {
-            std::List<module_index_entry> mods;
-            mods.push_back({(bool)(header->flags & 1), module_path });
-            module_index.insert({ signal, mods });
+        for(auto& entry : module_index) {
+            if(entry.init_signal == signal) {
+                entry.modules.push_back({ (bool)(header->flags & 1), module_path });
+                goto found;
+            }
+        } {
+            std::List<module_index_list_entry> mods;
+            mods.push_back({ (bool)(header->flags & 1), module_path });
+            module_index.push_back({ signal, mods });
         }
+    found:;
     }
 
     return major;
@@ -78,12 +88,18 @@ u16_t kernel::add_preloaded_module(void* file) {
 void kernel::init_modules(const char* init_signal, void* init_struct) {
     ASSERT_F(init_signal != 0, "Cannot pass a null init signal");
 
-    auto modules = module_index.at(init_signal);
-    if(!modules) return;
+    std::List<module_index_list_entry> possible_modules;
+    for(auto& entry : module_index) {
+        if(strmatch(entry.init_signal.c_str(), init_signal)) {
+            for(auto& list_entry : entry.modules) {
+                possible_modules.push_back(list_entry);
+            }
+        }
+    }
 
     bool fallback_required = true;
     std::List<std::String<>> potential_fallbacks;
-    for(auto entry : *modules) {
+    for(auto entry : possible_modules) {
         if(entry.is_fallback) {
             // This is a fallback module
             if(fallback_required) potential_fallbacks.push_back(entry.path);
