@@ -5,6 +5,7 @@
 #include <string.hpp>
 #include <range_map.hpp>
 #include <optional.hpp>
+#include <locking/spinlock.hpp>
 
 namespace kernel {
     class Module {
@@ -33,9 +34,25 @@ namespace kernel {
 
         Section* symbol_table;
         Section* symbol_names;
+
+        char* init_signals;
+        u16_t f_flags;
+        bool initialized;
+
+        SpinLock locker;
     public:
         Module(void* elf_file, u16_t major_num);
         ~Module();
+
+        int init(void* init_struct);
+        bool is_appropriate(const char* init_signal);
+
+        void lock() { locker.lock(); }
+        void unlock() { locker.unlock(); }
+
+        u16_t flags() { return f_flags; }
+
+        virtaddr_t base() { return address_base; }
 
         template<typename Ret, typename... Args> Ret run_function(const char* func_name, Args... args) {
             ThreadModuleSetter setter(this);
@@ -46,8 +63,10 @@ namespace kernel {
         void run_ctors();
         void run_dtors();
 
-        std::OptionalRef<Section> get_section(std::String<> name);
-        std::OptionalRef<Elf64_Symbol> get_symbol(std::String<> name);
+        std::OptionalRef<Section> get_section(const char* name);
+        std::OptionalRef<Elf64_Symbol> get_symbol(const char* name);
         std::OptionalRef<Elf64_Symbol> get_symbol(size_t index);
+
+        friend u16_t add_preloaded_module(void* file);
     };
 }

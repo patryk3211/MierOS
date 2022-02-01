@@ -95,8 +95,8 @@ namespace std {
             tail.next = 0;
             length = other.length;
 
-            Entry* last = &head;
-            for(Entry* entry = other.head.next; entry != &other.tail; entry = entry->next) {
+            Entry* last = static_cast<Entry*>(&head);
+            for(Entry* entry = static_cast<Entry*>(other.head.next); entry != &other.tail; entry = static_cast<Entry*>(entry->next)) {
                 Entry* e = allocator.template alloc<Entry>(entry->value);
                 
                 e->next = last->next;
@@ -182,9 +182,9 @@ namespace std {
         unsigned int size() { return length; }
 
         void clear() {
-            Entry* e = head.next;
+            Entry* e = static_cast<Entry*>(head.next);
             while(e != &tail) {
-                Entry* n = e->next;
+                Entry* n = static_cast<Entry*>(e->next);
                 allocator.free(e);
                 e = n;
             }

@@ -7,6 +7,7 @@ PHDRS {
 	rodata 	PT_LOAD 	FLAGS((1 << 2)); 			/* r-- */
 	data 	PT_LOAD		FLAGS((1 << 2) | (1 << 1));	/* rw- */
 	dynamic	PT_DYNAMIC	;
+	modhdr	PT_NOTE		;
 }
 
 SECTIONS {
@@ -20,6 +21,10 @@ SECTIONS {
 		*(.rodata)
 		*(.rodata.*)
 	} :rodata
+
+	.modulehdr : {
+		*(.modulehdr)
+	} :rodata :modhdr
 
     .ctors : {
         *(.ctors)

@@ -17,8 +17,13 @@ set(SYSROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sysroot")
 
 add_subdirectory(kernel)
 
-file(COPY ${CMAKE_SOURCE_DIR}/scripts/create_hdd.sh DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/scripts/make_initrd.sh DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/scripts/copy_sysroot.sh DESTINATION ${CMAKE_BINARY_DIR})
 
 add_custom_target(copy_sysroot "sh" "copy_sysroot.sh" "${SYSROOT_DIR}"
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+set(INITRD_MODULES kernel/modules/pci/pci.mod
+                   kernel/modules/test/test.mod)
+
+add_custom_target(initrd.img ALL "sh" "make_initrd.sh" "${INITRD_MODULES}" "${SYSROOT_DIR}/initrd.img" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} VERBATIM DEPENDS ${INITRD_MODULES})

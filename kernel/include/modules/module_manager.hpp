@@ -1,16 +1,13 @@
 #pragma once
 
 #include <types.h>
+#include <modules/module.hpp>
 
 namespace kernel {
-    void init_module_manager();
-    u16_t add_preloaded_module(const char* name, void* file);
+    u16_t add_preloaded_module(void* file);
 
-    int init_module(u16_t major, u32_t* additional_args);
-    virtaddr_t get_module_symbol_addr(u16_t major, const char* symbol_name);
+    void init_modules(const char* init_signal, void* init_struct);
+    int init_module(u16_t major, void* init_struct);
 
-    template<typename Ret, typename... Args> Ret run_function(u16_t major, const char* func_name, Args... args) {
-        typedef Ret func_t(Args...);
-        return ((func_t*)get_module_symbol_addr(major, func_name))(args...);
-    }
+    Module* get_module(u16_t major);
 }

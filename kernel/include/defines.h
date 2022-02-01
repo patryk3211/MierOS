@@ -11,4 +11,6 @@
 #define NO_EXPORT __attribute__((visibility("hidden")))
 #define EXPORT __attribute__((visibility("default")))
 
+#define MODULE_HEADER __attribute__((section(".modulehdr"), used))
+
 #endif // _MIEROS_KERNEL_SECTIONS_H

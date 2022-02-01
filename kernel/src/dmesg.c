@@ -1,16 +1,7 @@
 #include <dmesg.h>
 #include <types.h>
 #include <defines.h>
-
-static inline void outb(u16_t port, u8_t data) {
-    asm volatile("outb %0, %1" : : "a"(data), "Nd"(port));
-}
-
-static inline u8_t inb(u16_t port) {
-    u8_t data;
-    asm volatile("inb %1, %0" : "=a"(data) : "Nd"(port));
-    return data;
-}
+#include <arch/x86_64/ports.h>
 
 #define IO_PORT 0x3F8
 

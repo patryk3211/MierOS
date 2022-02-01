@@ -1,6 +1,26 @@
 {
     "tasks": [
         {
+            "label": "Build and Start QEMU",
+            "command": "scripts/run.sh",
+            "args": [ "build" ],
+            "isBackground": true,
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^(Starting QEMU)",
+                    "line": 1
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^(Starting build)",
+                    "endsPattern": "^(Starting QEMU)"
+                }
+            }
+        }, {
             "label": "Start QEMU",
             "command": "scripts/run.sh",
             "isBackground": true,

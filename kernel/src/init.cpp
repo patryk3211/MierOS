@@ -1,14 +1,16 @@
 #include <stivale.h>
 #include <defines.h>
-#include <dmesg.h>
 #include <arch/cpu.h>
+#include <tests/test.hpp>
 #include <memory/liballoc.h>
 #include <memory/physical.h>
 #include <memory/virtual.hpp>
-#include <tests/test.hpp>
 #include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
-#include <modules/module.hpp>
+#include <modules/module_manager.hpp>
+#include <initrd.h>
+#include <dmesg.h>
+#include <trace.h>
 
 #ifdef x86_64
     #include <arch/x86_64/acpi.h>
@@ -30,7 +32,8 @@ static stivale2_header stivalehdr {
 extern "C" void (*_global_constructor_start)();
 extern "C" void (*_global_constructor_end)();
 
-NO_EXPORT stivale2_module mod;
+FREE_AFTER_INIT stivale2_module mod;
+FREE_AFTER_INIT stivale2_module sym_map;
 
 void stage2_init();
 extern "C" TEXT_FREE_AFTER_INIT void _start() {
@@ -66,9 +69,17 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
             case 0x9e1786930a375e78: // ACPI RSDP Tag
                 rsdp = ((stivale2_stag_rsdp*)tag)->rsdp_addr;
                 break;
-            case 0x4b6fe466aade04ce: // Modules
-                mod = ((stivale2_stag_modules*)tag)->modules[0];
+            case 0x4b6fe466aade04ce: {// Modules
+                stivale2_stag_modules* mod_tag = (stivale2_stag_modules*)tag;
+                for(size_t i = 0; i < mod_tag->module_count; ++i) {
+                    if(!strcmp(mod_tag->modules[i].name, "module")) {
+                        mod = mod_tag->modules[i];
+                    } else if(!strcmp(mod_tag->modules[i].name, "map")) {
+                        sym_map = mod_tag->modules[i];
+                    }
+                }
                 break;
+            }
         }
     }
 
@@ -107,20 +118,34 @@ extern "C" void __cxa_pure_virtual() {
     asm("int3");
 }
 
-NO_EXPORT void stage2_init() {
+TEXT_FREE_AFTER_INIT void stage2_init() {
     dmesg("[Kernel] Multitasking initialized! Now in stage 2\n");
     kernel::tests::do_tests();
 
-    physaddr_t start = mod.start & 0x7FFFFFFFFFFF;
-    physaddr_t end = mod.end & 0x7FFFFFFFFFFF;
-    size_t length = end - start;
+    physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;
+    physaddr_t mod_phys_end = mod.end & 0x7FFFFFFFFFFF;
+    size_t length = mod_phys_end - mod_phys_start;
     size_t page_size = (length >> 12) + ((length & 0xFFF) == 0 ? 0 : 1);
+
+    physaddr_t map_phys_start = sym_map.start & 0x7FFFFFFFFFFF;
+    physaddr_t map_phys_end = sym_map.end & 0x7FFFFFFFFFFF;
+    size_t length2 = map_phys_end - map_phys_start;
+    size_t page_size2 = (length2 >> 12) + ((length2 & 0xFFF) == 0 ? 0 : 1);
+
     kernel::Pager::kernel().lock();
-    virtaddr_t mod_start = kernel::Pager::kernel().kmap(start, page_size, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1 });
+    virtaddr_t mod_start = kernel::Pager::kernel().kmap(mod_phys_start, page_size, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1 });
+    virtaddr_t map_start = kernel::Pager::kernel().kmap(map_phys_start, page_size2, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1 });
     kernel::Pager::kernel().unlock();
-    kernel::Module module = kernel::Module((void*)mod_start, 1);
-    int value = module.run_function<int>("init");
-    kprintf("[Kernel] Module returned %d\n", value);
+
+    set_line_map((void*)map_start);
+    set_initrd((void*)mod_start);
+
+    void** files = get_files("*.mod");
+    for(size_t i = 0; files[i] != 0; ++i) {
+        kernel::add_preloaded_module(files[i]);
+    }
+
+    kernel::init_modules("INIT", 0);
 
     while(true);
 }

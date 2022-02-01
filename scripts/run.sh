@@ -1,10 +1,12 @@
 #!/bin/bash
 
-echo "Starting build"
+if [ "$1" = "build" ]; then
+	echo "Starting build"
 
-cmake --build build --target all
-cmake --install build
-cmake --build build --target copy_sysroot
+	cmake --build build --target all
+	cmake --install build
+	cmake --build build --target copy_sysroot
+fi
 
 echo "Starting QEMU"
 

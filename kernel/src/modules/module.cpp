@@ -4,6 +4,7 @@
 #include <memory/virtual.hpp>
 #include <memory/physical.h>
 #include <tasking/thread.hpp>
+#include <modules/module_header.h>
 
 using namespace kernel;
 
@@ -41,6 +42,7 @@ Module::Module(void* elf_file, u16_t major_num) : major_num(major_num) {
             bool writable = program_headers[i].flags & 2;
             for(size_t j = 0; j < page_size; ++j)
                 Pager::kernel().map(palloc(1), address_base + program_headers[i].vaddr + (j << 12), 1, { .present = 1, .writable = writable, .user_accesible = 0, .executable = executable, .global = 1 });
+            kprintf("Dest: 0x%x16 Src: 0x%x16 Size: 0x%x16\n", (void*)(address_base + program_headers[i].vaddr), elf_file_c+program_headers[i].offset, program_headers[i].file_size);
             memcpy((void*)(address_base + program_headers[i].vaddr), elf_file_c+program_headers[i].offset, program_headers[i].file_size);
             allocated_ranges.add(program_headers[i].vaddr, program_headers[i].vaddr+(page_size<<12));
         }
@@ -77,21 +79,47 @@ Module::Module(void* elf_file, u16_t major_num) : major_num(major_num) {
         return;
     }
 
+    auto header_sec = get_section(".modulehdr");
+    if(!header_sec) {
+        dmesg("[Kernel] \033[31;1mError!\033[0m Module does not have a header section\n");
+        return;
+    }
+
     link();
+
+    module_header* header = (module_header*)header_sec->address;
+    init_signals = (char*)header->init_on_ptr;
+    f_flags = header->flags;
+
     run_ctors();
+
+    initialized = false;
 }
 
 Module::~Module() {
+    if(initialized) {
+        run_function<void>("destroy");
+        initialized = false;
+    }
     run_dtors();
+}
+
+bool Module::is_appropriate(const char* init_signal) {
+    char* signals = init_signals;
+    while(signals[0] != 0) {
+        if(strmatch(signals, init_signal)) return true;
+        signals += strlen(signals)+1;
+    }
+    return false;
 }
 
 extern "C" Elf64_Symbol _dynsym_start;
 extern "C" Elf64_Symbol _dynsym_end;
 extern "C" char _dynstr_start;
-Elf64_Symbol* find_kernel_symbol(std::String<> name) {
+Elf64_Symbol* find_kernel_symbol(const char* name) {
     for(Elf64_Symbol* symbol = &_dynsym_start; symbol != &_dynsym_end; ++symbol) {
         char* sym_name = &_dynstr_start+symbol->name_idx;
-        if(name == sym_name) return symbol;
+        if(!strcmp(name, sym_name)) return symbol;
     }
     return 0;
 }
@@ -119,6 +147,9 @@ void Module::link() {
                             dmesg("[Kernel] TODO: Look in the dependencies of this module.\n");
                         }
                         break;
+                    } case 0x08: { // R_x86_64_RELATIVE
+                        *(u64_t*)(address_base+rela->addr) = address_base + rela->addend;
+                        break;
                     } default:
                         kprintf("[Kernel] \033[31;1mError!\033[0m Unknown relocation type %d\n", ELF64_REL_TYPE(rela->info));
                         break;
@@ -128,38 +159,51 @@ void Module::link() {
     }
 }
 
+int Module::init(void* init_struct) {
+    if(initialized) return 0;
+    initialized = true;
+    if(init_struct == 0) return run_function<int>("init");
+    else return run_function<int>("init", init_struct);
+}
+
 void Module::run_ctors() {
     auto section = get_section(".ctors");
     if(section) {
+        Module* old = Thread::current()->current_module;
+        Thread::current()->current_module = this;
         for(size_t i = 0; i < section->size; i += 8) {
             u64_t constructor_addr = *(u64_t*)(section->address+i);
-            ((void (*)())(constructor_addr+address_base))();
+            ((void (*)())(constructor_addr))();
         }
+        Thread::current()->current_module = old;
     }
 }
 
 void Module::run_dtors() {
     auto section = get_section(".dtors");
     if(section) {
+        Module* old = Thread::current()->current_module;
+        Thread::current()->current_module = this;
         for(size_t i = 0; i < section->size; i += 8) {
             u64_t constructor_addr = *(u64_t*)(section->address+i);
-            ((void (*)())(constructor_addr+address_base))();
+            ((void (*)())(constructor_addr))();
         }
+        Thread::current()->current_module = old;
     }
 }
 
-std::OptionalRef<Module::Section> Module::get_section(std::String<> name) {
+std::OptionalRef<Module::Section> Module::get_section(const char* name) {
     for(auto& section : sections) {
-        if(section.name == name) return section;
+        if(!strcmp(section.name.c_str(), name)) return section;
     }
     return {};
 }
 
-std::OptionalRef<Elf64_Symbol> Module::get_symbol(std::String<> name) {
+std::OptionalRef<Elf64_Symbol> Module::get_symbol(const char* name) {
     for(size_t i = 0; i < symbol_table->size; i += symbol_table->entry_size) {
         Elf64_Symbol* symbol = (Elf64_Symbol*)(symbol_table->address+i);
         char* sym_name = (char*)(symbol_names->address+symbol->name_idx);
-        if(name == sym_name) return *symbol;
+        if(!strcmp(sym_name, name)) return *symbol;
     }
     return {};
 }

@@ -5,6 +5,8 @@
 #include <defines.h>
 #include <arch/x86_64/cpu.h>
 #include <arch/cpu.h>
+#include <tasking/thread.hpp>
+#include <trace.h>
 
 struct interrupt_descriptor {
     u16_t offset_015;
@@ -95,6 +97,20 @@ extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
 
 extern u32_t lapic_timer_ticks;
 
+void trace_stack(void* base_pointer) {
+    struct frame {
+        frame* next_frame;
+        u64_t ret_ip;
+    };
+
+    frame* f = (frame*)base_pointer;
+    while(f != 0) {
+        file_line_pair p = addr_to_line(f->ret_ip);
+        kprintf("Stack frame 0x%x16 Ret: 0x%x16 %s:%d\n", f, f->ret_ip, p.name, p.line);
+        f = f->next_frame;
+    }
+}
+
 extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
     CPUState* state = (CPUState*)rsp;
     if(state->int_num == 0xFE) {
@@ -112,6 +128,16 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
                          state->rbp);
     } else if(state->int_num < 0x20) {
         kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
+        switch(state->int_num) {
+            case 0x0e: {
+                u64_t cr2;
+                asm volatile("mov %%cr2, %0" : "=a"(cr2));
+                kprintf("cr2: 0x%x16 code: 0x%x16\n", cr2, state->err_code);
+                break;
+            }
+        }
+        if(kernel::Thread::current()->current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->current_module->base());
+        trace_stack((void*)state->rbp);
         while(true) asm volatile("hlt");
     } else {
         for(handler_entry* handler = handlers[state->int_num]; handler != 0; handler = handler->next)

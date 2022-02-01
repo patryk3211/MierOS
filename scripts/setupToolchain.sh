@@ -91,8 +91,19 @@ git clone https://github.com/limine-bootloader/limine.git --branch=v2.0-branch-b
 cd limine
 
 make all
-
 cd ..
+
+echo "Building debug table exporter..."
+git clone https://github.com/patryk3211/MierOSDebugExporter.git --depth 1
+cd MierOSDebugExporter
+
+cmake -S . -B build
+cmake --build build --target all
+
+cp build/debug-exporter ../cross
+cd ..
+
+rm -rf MierOSDebugExporter
 
 mkdir -p sysroot/EFI/BOOT
 cp -v limine/limine.sys sysroot/

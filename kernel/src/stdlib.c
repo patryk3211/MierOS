@@ -35,3 +35,23 @@ int memcmp(const void* a, const void* b, size_t count) {
         if(*((u8_t*)a+i) != *((u8_t*)b+i)) return 0;
     return 1;
 }
+
+int strmatch(const char* wildcard, const char* str) {
+    const char *text_backup = 0;
+    const char *wild_backup = 0;
+    while (*str != '\0')  {
+        if (*wildcard == '*') {
+            text_backup = str;
+            wild_backup = ++wildcard;
+        } else if (*wildcard == '?' || *wildcard == *str) {
+            str++;
+            wildcard++;
+        } else {
+            if (wild_backup == 0) return 0;
+            str = ++text_backup;
+            wildcard = wild_backup;
+        }
+    }
+    while (*wildcard == '*') wildcard++;
+    return *wildcard == '\0' ? 1 : 0;
+}

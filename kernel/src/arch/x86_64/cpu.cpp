@@ -8,6 +8,7 @@
 #include <memory/physical.h>
 #include <tasking/scheduler.hpp>
 #include <defines.h>
+#include <arch/x86_64/ports.h>
 
 using namespace kernel;
 
@@ -240,16 +241,6 @@ TEXT_FREE_AFTER_INIT void init_gdt() {
 
 extern "C" void set_kernel_stack(int core, u64_t rsp) {
     tsses[core].rsp0 = rsp;
-}
-
-static inline void outb(u16_t port, u8_t data) {
-    asm volatile("outb %0, %1" : : "a"(data), "Nd"(port));
-}
-
-static inline u8_t inb(u16_t port) {
-    u8_t data;
-    asm volatile("inb %1, %0" : "=a"(data) : "Nd"(port));
-    return data;
 }
 
 NO_EXPORT void crude_delay_1msec() {
