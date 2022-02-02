@@ -41,7 +41,7 @@ Module::Module(void* elf_file, u16_t major_num) : major_num(major_num) {
             bool executable = program_headers[i].flags & 1;
             bool writable = program_headers[i].flags & 2;
             for(size_t j = 0; j < page_size; ++j)
-                Pager::kernel().map(palloc(1), address_base + program_headers[i].vaddr + (j << 12), 1, { .present = 1, .writable = writable, .user_accesible = 0, .executable = executable, .global = 1 });
+                Pager::kernel().map(palloc(1), address_base + program_headers[i].vaddr + (j << 12), 1, { .present = 1, .writable = writable, .user_accesible = 0, .executable = executable, .global = 1, .cache_disable = 0 });
             memcpy((void*)(address_base + program_headers[i].vaddr), elf_file_c+program_headers[i].offset, program_headers[i].file_size);
             allocated_ranges.add(program_headers[i].vaddr, program_headers[i].vaddr+(page_size<<12));
         }

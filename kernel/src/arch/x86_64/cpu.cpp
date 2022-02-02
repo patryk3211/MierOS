@@ -68,13 +68,13 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
     Locker locker(pager);
 
     auto madt_addr = get_table("APIC");
-    auto* madt = (ACPI_MADT*)pager.kmap(madt_addr, 2, { 1, 0, 0, 0, 0 });
+    auto* madt = (ACPI_MADT*)pager.kmap(madt_addr, 2, { 1, 0, 0, 0, 0, 0 });
 
     size_t byte_size = (madt_addr & 0xFFF) + madt->header.length;
     size_t page_size = (byte_size >> 12) + ((byte_size & 0xFFF) == 0 ? 0 : 1);
 
     pager.unmap((virtaddr_t)madt, 2);
-    madt = (ACPI_MADT*)pager.kmap(madt_addr, page_size, { 1, 0, 0, 0, 0 });
+    madt = (ACPI_MADT*)pager.kmap(madt_addr, page_size, { 1, 0, 0, 0, 0, 0 });
     physaddr_t lapic_addr = madt->lapic_addr;
 
     { // Get the address override before anything else
@@ -90,7 +90,7 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
     }
 
     // Map Local APIC to a constant address
-    pager.map(lapic_addr, LAPIC_VIRTUAL_ADDRESS, 1, { 1, 1, 0, 0, 1 });
+    pager.map(lapic_addr, LAPIC_VIRTUAL_ADDRESS, 1, { 1, 1, 0, 0, 1, 0 });
     enable_lapic();
 
     // BSP is always guaranteed to be core 0
@@ -313,7 +313,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
 
     auto& pager = Pager::active();
     pager.lock();
-    pager.map(0x1000, 0x1000, 3, { 1, 1, 0, 1, 0 });
+    pager.map(0x1000, 0x1000, 3, { 1, 1, 0, 1, 0, 0 });
     memcpy((void*)0x1000, _binary_ap_starter_start, _binary_ap_starter_end-_binary_ap_starter_start);
     *((u64_t*)0x2008) = pager.cr3();
     *((u64_t*)0x2010) = (u64_t)&core_init;

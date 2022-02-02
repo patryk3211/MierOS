@@ -133,8 +133,8 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     size_t page_size2 = (length2 >> 12) + ((length2 & 0xFFF) == 0 ? 0 : 1);
 
     kernel::Pager::kernel().lock();
-    virtaddr_t mod_start = kernel::Pager::kernel().kmap(mod_phys_start, page_size, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1 });
-    virtaddr_t map_start = kernel::Pager::kernel().kmap(map_phys_start, page_size2, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1 });
+    virtaddr_t mod_start = kernel::Pager::kernel().kmap(mod_phys_start, page_size, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
+    virtaddr_t map_start = kernel::Pager::kernel().kmap(map_phys_start, page_size2, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
     kernel::Pager::kernel().unlock();
 
     set_line_map((void*)map_start);

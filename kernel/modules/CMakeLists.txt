@@ -7,3 +7,4 @@ add_link_options(-T${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -z max-page-size=0x1000
 
 add_subdirectory(test)
 add_subdirectory(pci)
+add_subdirectory(ahci)

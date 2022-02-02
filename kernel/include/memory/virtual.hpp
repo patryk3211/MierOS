@@ -13,6 +13,7 @@ namespace kernel {
         bool user_accesible:1;
         bool executable:1;
         bool global:1;
+        bool cache_disable:1;
     };
 
     #define KERNEL_START 0xFFFFFFFF80000000

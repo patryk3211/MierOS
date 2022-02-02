@@ -34,7 +34,7 @@ extern "C" int init() {
     for(auto& header : pci_headers)
         kprintf("[PCI] Vendor=%x4 DeviceID=%x4 Class=%x2 Subclass=%x2 ProgIf=%x2 Rev=%x2\n", header.vendor_id, header.device_id, header.classcode, header.subclass, header.prog_if, header.revision);
     
-    char init_signal[] = "PCI-V????-D????-C??S??P??R??";
+    char init_signal[] = "PCI-V???\?-D???\?-C??S??P??R??";
     for(auto& header : pci_headers) {
         init_signal[5] = lookup[(header.vendor_id >> 12) & 0xF];
         init_signal[6] = lookup[(header.vendor_id >>  8) & 0xF];

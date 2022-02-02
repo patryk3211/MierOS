@@ -272,6 +272,7 @@ void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags
         entry.structured.user = flags.user_accesible;
         entry.structured.execute_disable = !flags.executable;
         entry.structured.global = flags.global;
+        entry.structured.cache_disabled = flags.cache_disable;
     }
     REFRESH_TLB;
 
@@ -330,7 +331,7 @@ physaddr_t Pager::getPhysicalAddress(virtaddr_t virt) {
     mapStructures(pml4e, pdpte, pde);
 
     PageStructuresEntry& entry = WORKPAGE(getWorkpage(3))[pte];
-    return entry.structured.address << 12;
+    return (entry.structured.address << 12) | (virt & 0xFFF);
 }
 
 PageFlags Pager::getFlags(virtaddr_t virt) {
@@ -349,6 +350,7 @@ PageFlags Pager::getFlags(virtaddr_t virt) {
         flags.user_accesible = entry.structured.user;
         flags.executable = !entry.structured.execute_disable;
         flags.global = entry.structured.global;
+        flags.cache_disable = entry.structured.cache_disabled;
     }
     return flags;
 }
@@ -366,7 +368,7 @@ virtaddr_t Pager::kalloc(size_t length) {
         return 0;
     }
 
-    for(size_t i = 0; i < length; ++i) map(palloc(1), start+(i<<12), 1, PageFlags { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1 });
+    for(size_t i = 0; i < length; ++i) map(palloc(1), start+(i<<12), 1, PageFlags { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
     
     has_kernel_lock = false;
     kernel_locker.unlock();
