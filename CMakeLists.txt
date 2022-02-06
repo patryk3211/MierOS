@@ -25,6 +25,7 @@ add_custom_target(copy_sysroot "sh" "copy_sysroot.sh" "${SYSROOT_DIR}"
 
 set(INITRD_MODULES kernel/modules/pci/pci.mod
                    kernel/modules/test/test.mod
-                   kernel/modules/ahci/ahci.mod)
+                   kernel/modules/ahci/ahci.mod
+                   kernel/modules/ext2/ext2.mod)
 
 add_custom_target(initrd.img ALL "sh" "make_initrd.sh" "${INITRD_MODULES}" "${SYSROOT_DIR}/initrd.img" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} VERBATIM DEPENDS ${INITRD_MODULES})

@@ -1,20 +1,70 @@
 #pragma once
 
+#include <new.hpp>
+#include <utility.hpp>
+
 namespace std {
     template<typename T> class Optional {
-        T value;
+        alignas(T) unsigned char storage[sizeof(T)];
         bool exists;
     public:
-        Optional() : value(), exists(false) { }
-        Optional(const T& value) : value(value), exists(true) { }
+        Optional() : exists(false) { }
+        Optional(const T& value) : exists(true) { new(storage) T(value); }
 
-        T operator*() {
-            if(exists) return *this;
-            else return T();
+        Optional(const Optional<T>& other) : exists(other.exists) {
+            if(exists) new(storage) T(other.value());
         }
 
-        operator bool() { return exists; }
-        bool operator!() { return !exists; }
+        Optional(Optional<T>&& other) : exists(other.exists) {
+            if(exists) {
+                new(storage) T(move(other.value()));
+                other.exists = false;
+            }
+        }
+
+        Optional<T>& operator=(const Optional<T>& other) {
+            clear();
+            exists = other.exists;
+            if(exists) new(storage) T(other.value());
+            return *this;
+        }
+
+        Optional<T>& operator=(Optional<T>&& other) {
+            clear();
+            exists = other.exists;
+            if(exists) {
+                new(storage) T(move(other.value()));
+                other.exists = false;
+            }
+            return *this;
+        }
+
+        ~Optional() {
+            clear();
+        }
+
+        void clear() {
+            if(exists) {
+                value().~T();
+                exists = false;
+            }
+        }
+
+        T& value() {
+            return *reinterpret_cast<T*>(storage);
+        }
+        const T& value() const {
+            return *reinterpret_cast<const T*>(storage);
+        }
+
+        T& operator*() { return value(); }
+        T* operator->() { return &value(); }
+
+        const T& operator*() const { return value(); }
+        const T* operator->() const { return &value(); }
+
+        operator bool() const { return exists; }
+        bool operator!() const { return !exists; }
     };
 
     template<typename T> class OptionalRef {
@@ -26,7 +76,7 @@ namespace std {
         T& operator*() { return *reference; }
         T* operator->() { return reference; }
 
-        operator bool() { return !!reference; }
-        bool operator!() { return !reference; }
+        operator bool() const { return !!reference; }
+        bool operator!() const { return !reference; }
     };
 }

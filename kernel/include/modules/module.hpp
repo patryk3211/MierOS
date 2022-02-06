@@ -58,6 +58,12 @@ namespace kernel {
             ThreadModuleSetter setter(this);
             return ((Ret (*)(Args...))(address_base + get_symbol(func_name)->addr))(args...);
         }
+
+        virtaddr_t get_symbol_addr(const char* name) {
+            return address_base + get_symbol(name)->addr;
+        }
+
+        u16_t major() { return major_num; }
     private:
         void link();
         void run_ctors();

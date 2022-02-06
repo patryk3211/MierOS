@@ -104,3 +104,7 @@ void operator delete(void* ptr, size_t) {
 void operator delete[](void* ptr, size_t) {
     free(ptr);
 }
+
+void* operator new(size_t, void* ptr) {
+    return ptr;
+}

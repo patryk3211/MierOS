@@ -85,7 +85,7 @@ u16_t kernel::add_preloaded_module(void* file) {
     return major;
 }
 
-void kernel::init_modules(const char* init_signal, void* init_struct) {
+u16_t kernel::init_modules(const char* init_signal, void* init_struct) {
     ASSERT_F(init_signal != 0, "Cannot pass a null init signal");
 
     std::List<module_index_list_entry> possible_modules;
@@ -96,6 +96,8 @@ void kernel::init_modules(const char* init_signal, void* init_struct) {
             }
         }
     }
+
+    u16_t return_major = 0;
 
     bool fallback_required = true;
     std::List<std::String<>> potential_fallbacks;
@@ -114,6 +116,7 @@ void kernel::init_modules(const char* init_signal, void* init_struct) {
                 auto module = module_map.at(*by_path);
                 ASSERT_F(module, "If a module is in path index then it should also be in the map");
                 (*module)->init(init_struct);
+                if(return_major == 0) return_major = (*module)->major();
             } else {
                 // We have to load the module from disk
                 dmesg("[Kernel] TODO: [31.01.2022] We have to load the module from disk\n");
@@ -128,6 +131,7 @@ void kernel::init_modules(const char* init_signal, void* init_struct) {
                 auto module = module_map.at(*by_path);
                 ASSERT_F(module, "If a module is in path index then it should also be in the map");
                 (*module)->init(init_struct);
+                if(return_major == 0) return_major = (*module)->major();
             } else {
                 // We have to load the module from disk
                 dmesg("[Kernel] TODO: [31.01.2022] We have to load the module from disk\n");
@@ -136,6 +140,7 @@ void kernel::init_modules(const char* init_signal, void* init_struct) {
     }
 
     if(!has_disk_modules) inits.push_back(init_signal);
+    return return_major;
 }
 
 int kernel::init_module(u16_t major, void* init_struct) {

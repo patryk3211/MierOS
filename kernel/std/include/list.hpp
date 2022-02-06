@@ -10,10 +10,6 @@ namespace std {
             EntryBase* prev;
         };
 
-        /*struct NullEntry {
-
-        };*/
-
         struct Entry : public EntryBase {
             T value;
 

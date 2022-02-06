@@ -7,6 +7,7 @@
 #include <unordered_map.hpp>
 #include <string.hpp>
 #include <vector.hpp>
+#include <errno.h>
 
 using namespace std;
 
@@ -20,7 +21,7 @@ bool kernel::tests::stdlib_test() {
         UniquePtr<int> copy2 = original;
         original.clear();
 
-        TEST(!original && *copy1 == 5271 && *copy2 == 10101, "(SL1) UniquePtr test failed");
+        TEST(!original && *copy1 == 5271 && *copy2 == 10101, "(SL1.1) UniquePtr test failed");
     }
 
     { // Function test
@@ -36,7 +37,7 @@ bool kernel::tests::stdlib_test() {
         int i2 = func2();
         int i3 = func3();
 
-        TEST(i2 == 5 && i3 == 6, "(SL2) std::Function test failed");
+        TEST(i2 == 5 && i3 == 6, "(SL2.1) std::Function test failed");
     }
 
     { // Operator test
@@ -44,9 +45,9 @@ bool kernel::tests::stdlib_test() {
         TEST(!less<int>{}(2, 1), "(SL3.2) std::less test failed");
         TEST(!less<int>{}(1, 1), "(SL3.3) std::less test failed");
 
-        TEST(!greater<int>{}(1, 2), "(SL3.1) std::greater test failed");
-        TEST(greater<int>{}(2, 1), "(SL3.2) std::greater test failed");
-        TEST(!greater<int>{}(1, 1), "(SL3.3) std::greater test failed");
+        TEST(!greater<int>{}(1, 2), "(SL3.4) std::greater test failed");
+        TEST(greater<int>{}(2, 1), "(SL3.5) std::greater test failed");
+        TEST(!greater<int>{}(1, 1), "(SL3.6) std::greater test failed");
     }
 
     { // List test
@@ -108,6 +109,22 @@ bool kernel::tests::stdlib_test() {
         vec.resize(4, 10);
         
         TEST(vec[0] == 6 && vec[1] == 2 && vec[2] == 8 && vec[3] == 10, "(SL6.1) std::Vector test failed");
+    }
+
+    { // ValueOrError test
+        ValueOrError<char> value = 'c';
+        ValueOrError<char> value2 = ERR_UNIMPLEMENTED;
+
+        TEST(value && !value2 && *value == 'c' && value2.errno() == ERR_UNIMPLEMENTED, "(SL7.1) ValueOrError test failed");
+    }
+
+    { // Optional test
+        Optional<int> value = 52;
+        Optional<int> value2 = {};
+        Optional<int> value3 = value;
+        value.clear();
+
+        TEST(!value && !value2 && value3 && *value3 == 52, "(SL8.1) std::Optional test failed");
     }
 
     return true;
