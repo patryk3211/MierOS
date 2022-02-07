@@ -16,6 +16,7 @@ extern int memcmp(const void* a, const void* b, size_t count);
 extern int strcmp(const char* a, const char* b);
 extern size_t strlen(const char* str);
 extern int strmatch(const char* wildcard, const char* str);
+extern char* strchr(const char* str, char c);
 
 #if defined(__cplusplus)
 } // extern "C"

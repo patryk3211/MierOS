@@ -6,11 +6,11 @@ ValueOrError<void> Filesystem::umount() {
     return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<VNode*> Filesystem::get_file(VNode*, const char*) {
+ValueOrError<VNode*> Filesystem::get_file(VNode*, const char*, FilesystemFlags) {
     return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<std::List<VNode*>> Filesystem::get_files(VNode*, const char*) {
+ValueOrError<std::List<VNode*>> Filesystem::get_files(VNode*, const char*, FilesystemFlags) {
     return ERR_UNIMPLEMENTED;
 }
     
@@ -26,7 +26,7 @@ ValueOrError<size_t> Filesystem::read(FileStream*, void*, size_t) {
     return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<size_t> Filesystem::write(FileStream*, void*, size_t) {
+ValueOrError<size_t> Filesystem::write(FileStream*, const void*, size_t) {
     return ERR_UNIMPLEMENTED;
 }
 

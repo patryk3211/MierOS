@@ -33,7 +33,7 @@ namespace kernel {
          * @param length Amount of data to write
          * @return size_t Amount of data actually written
          */
-        virtual size_t write(void* buffer, size_t length);
+        virtual size_t write(const void* buffer, size_t length);
 
         /**
          * @brief Change the current position of the stream.

@@ -10,6 +10,10 @@ extern "C" {
 typedef int err_t;
 
 #define ERR_UNIMPLEMENTED (err_t)1
+#define ERR_FILE_NOT_FOUND (err_t)2
+#define ERR_NOT_A_DIRECTORY (err_t)3
+#define ERR_FILE_EXISTS (err_t)4
+#define ERR_LINK (err_t)5
 
 #if defined(__cplusplus)
 } // extern "C"

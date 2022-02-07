@@ -13,15 +13,15 @@ ValueOrError<void> ModuleFilesystem::umount() {
     return func(minor);
 }
 
-ValueOrError<VNode*> ModuleFilesystem::get_file(VNode* root, const char* path) {
+ValueOrError<VNode*> ModuleFilesystem::get_file(VNode* root, const char* path, FilesystemFlags flags) {
     auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->get_file;
-    if(func != 0) return func(minor, root, path);
+    if(func != 0) return func(minor, root, path, flags);
     else return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<std::List<VNode*>> ModuleFilesystem::get_files(VNode* root, const char* path) {
+ValueOrError<std::List<VNode*>> ModuleFilesystem::get_files(VNode* root, const char* path, FilesystemFlags flags) {
     auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->get_files;
-    if(func != 0) return func(minor, root, path);
+    if(func != 0) return func(minor, root, path, flags);
     else return ERR_UNIMPLEMENTED;
 }
     
@@ -43,7 +43,7 @@ ValueOrError<size_t> ModuleFilesystem::read(FileStream* stream, void* buffer, si
     else return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<size_t> ModuleFilesystem::write(FileStream* stream, void* buffer, size_t length) {
+ValueOrError<size_t> ModuleFilesystem::write(FileStream* stream, const void* buffer, size_t length) {
     auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->write;
     if(func != 0) return func(minor, stream, buffer, length);
     else return ERR_UNIMPLEMENTED;

@@ -12,6 +12,8 @@ namespace kernel {
         FileStream(VNode* file) : Stream(STREAM_TYPE_FILE), f_file(file) { }
     public:
 
+        VNode* node() { return f_file; }
+
         friend class VNode;
     };
 }
