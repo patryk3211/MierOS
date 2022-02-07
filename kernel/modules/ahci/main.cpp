@@ -7,6 +7,9 @@
 #include <memory/virtual.hpp>
 #include <locking/locker.hpp>
 #include <memory/physical.h>
+#include <vector.hpp>
+#include <fs/devicefs.hpp>
+#include <tasking/thread.hpp>
 
 #define	SATA_SIG_ATA    0x00000101
 #define	SATA_SIG_ATAPI  0xEB140101
@@ -34,23 +37,37 @@ constexpr size_t max_prdt_size = (COMMAND_TABLE_PAGES*4096-128)/16;
 
 struct drive_information {
     bool atapi;
+    bool support64;
     Port_Command_List* command_list;
     Port_Command_Table* tables[32];
     kernel::SpinLock lock;
     HBA_MEM* hba;
     int port_id;
+    u32_t ref_count;
 
     drive_information() {
         memset(tables, 0, sizeof(tables));
+        ref_count = 0;
     }
 };
 
-bool support64;
-drive_information* drives[32];
+struct drive_file {
+    drive_information* drive;
+    u64_t partition_start;
+    u64_t partition_end;
+    kernel::VNode* node;
+};
+
+size_t drive_count;
+std::Vector<drive_file> drives;
 
 size_t ahci_ata_read(drive_information* drive, u64_t lba, u16_t sector_count, void* buffer);
 
-void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager) {
+void find_partitions(drive_information* drive) {
+
+}
+
+void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64) {
     HBA_Port* port = &hba->ports[port_id];
 
     if((port->sata_status & 0xF) != 3) {
@@ -85,10 +102,10 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager) {
             kprintf("[AHCI] Unknown device found at port %d\n", port_id);
             return;
     }
-    drives[port_id] = drive_info;
 
     drive_info->hba = hba;
     drive_info->port_id = port_id;
+    drive_info->support64 = support64;
 
     // Stop command processor and FIS receiver
     port->command_status &= ~((1 << 4) | (1 << 0));
@@ -109,6 +126,20 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager) {
     // Start command processor and FIS receiver
     while((port->command_status & (1 << 15)));
     port->command_status |= (1 << 4) | (1 << 0);
+
+    size_t minor = drives.size();
+    drives.push_back({ drive_info, 0, 0 });
+
+    char drive_name[] = "ahci?";
+    drive_name[4] = '0' + drive_count;
+
+    auto ret = kernel::DeviceFilesystem::instance()->add_dev(drive_name, kernel::Thread::current()->current_module->major(), minor);
+    if(ret) {
+        drives[minor].node = *ret;
+        find_partitions(drive_info);
+
+        ++drive_count;
+    }
 }
 
 /// TODO: [02.02.2022] Since there can be multiple AHCI controllers we have to put the HBA's and all other objects in a list or something.
@@ -116,11 +147,13 @@ extern "C" int init(PCI_Header* header) {
     // We will maintain a lock for the duration of AHCI module initialization
     kernel::Pager& pager = kernel::Pager::kernel();
     kernel::Locker lock(pager);
+
+    drive_count = 0;
     
     HBA_MEM* hba = (HBA_MEM*)pager.kmap(header->bar[5] & ~0xFFF, 1, { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 1 });
     if(!(hba->capabilities & (1 << 18))) hba->global_host_control |= (1 << 31); // Enable AHCI mode
 
-    support64 = (hba->capabilities >> 31) & 1;
+    bool support64 = (hba->capabilities >> 31) & 1;
 
     { // Check if our mapping is correct
         int biggest_implemented = -1;
@@ -135,12 +168,10 @@ extern "C" int init(PCI_Header* header) {
         }
     }
 
-    memset(drives, 0, sizeof(drives));
-
     // Detect drives
     for(int i = 0; i < 32; ++i) {
         if((hba->ports_implemented >> i) & 1) {
-            init_drive(hba, i, pager);
+            init_drive(hba, i, pager, support64);
         }
     }
 
@@ -151,15 +182,14 @@ extern "C" int destroy() {
     kernel::Pager& pager = kernel::Pager::kernel();
     kernel::Locker lock(pager);
 
-    for(int i = 0; i < 32; ++i) {
-        if(drives[i] != 0) {
-            for(int j = 0; j < 32; ++j) {
-                if(drives[i]->tables[j] != 0) {
-                    pager.free((virtaddr_t)drives[i]->tables[j], COMMAND_TABLE_PAGES);
-                }
-            }
-            pager.free((virtaddr_t)drives[i]->command_list, 1);
-            delete drives[i];
+    for(auto& file : drives) {
+        if(file.partition_start == 0) {
+            // If the partition starts at address 0 then this is the main drive file.
+            for(int i = 0; i < 32; ++i)
+                if(file.drive->tables[i] != 0)
+                    pager.free((virtaddr_t)file.drive->tables[i], COMMAND_TABLE_PAGES);
+            pager.free((virtaddr_t)file.drive->command_list, 1);
+            delete file.drive;
         }
     }
     return 0;
@@ -173,7 +203,7 @@ int get_cmd_slot(drive_information* drive) {
                 physaddr_t addr = palloc(COMMAND_TABLE_PAGES);
                 Port_Command_Header* header = &drive->command_list->command_headers[i];
                 header->command_table_base = addr;
-                if(support64) header->command_table_base_upper = addr >> 32;
+                if(drive->support64) header->command_table_base_upper = addr >> 32;
 
                 kernel::Pager& pager = kernel::Pager::kernel();
                 pager.lock();
@@ -232,7 +262,7 @@ size_t ahci_ata_read(drive_information* drive, u64_t lba, u16_t sector_count, vo
         }
 
         cmd_table->prdt[prdt_entry].data_base = start_phys;
-        if(support64) cmd_table->prdt[prdt_entry].data_base_upper = start_phys >> 32;
+        if(drive->support64) cmd_table->prdt[prdt_entry].data_base_upper = start_phys >> 32;
         cmd_table->prdt[prdt_entry].i_count = entry_byte_count - 1;
         ++prdt_entry;
     }

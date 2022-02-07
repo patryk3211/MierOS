@@ -14,6 +14,8 @@ DeviceFilesystem* DeviceFilesystem::s_instance = 0;
 
 DeviceFilesystem::DeviceFilesystem() {
     root = new VNode(0777, 0, 0, 0, 0, 0, 0, "", VNode::DIRECTORY);
+
+    s_instance = this;
 }
 
 ValueOrError<VNode*> DeviceFilesystem::get_file(VNode* root, const char* path, FilesystemFlags flags) {
