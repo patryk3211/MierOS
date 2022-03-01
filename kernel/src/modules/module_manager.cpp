@@ -57,10 +57,12 @@ u16_t kernel::add_preloaded_module(void* file) {
         return 0;
     }
     module_header* header = (module_header*)hdr_sec->address;
-    auto mapped_mod = module_map.at(header->preferred_major);
     u16_t major = 0;
-    if(!mapped_mod) major = header->preferred_major;
-    else major = find_major();
+    if(header->preferred_major != 0) {
+        auto mapped_mod = module_map.at(header->preferred_major);
+        if(!mapped_mod) major = header->preferred_major;
+        else major = find_major();
+    } else major = find_major();
 
     mod->major_num = major;
     module_map.insert({ major, mod });

@@ -39,9 +39,11 @@ namespace std {
             iterator& operator++() {
                 if(entry->next == 0) {
                     Entry* new_entry = 0;
+                    ++index;
                     while(index < map.capacity && new_entry == 0)
-                        new_entry = map.bucket[++index];
+                        new_entry = map.bucket[index++];
                     entry = new_entry;
+                    if(entry != 0) --index;
                 } else entry = entry->next;
                 return *this;
             }

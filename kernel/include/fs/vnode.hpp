@@ -41,7 +41,7 @@ namespace kernel {
     public:
         void* fs_data;
 
-        VNode(u16_t permissions, u16_t user_id, u16_t group_id, time_t create_time, time_t access_time, time_t modify_time, u64_t size, const std::String<>& name, VNode::Type type);
+        VNode(u16_t permissions, u16_t user_id, u16_t group_id, time_t create_time, time_t access_time, time_t modify_time, u64_t size, const std::String<>& name, VNode::Type type, Filesystem* fs);
         ~VNode();
 
         FileStream* open(int mode);
@@ -53,6 +53,8 @@ namespace kernel {
         void ref() { f_ref_count.fetch_add(1); }
         void unref() { f_ref_count.fetch_sub(1); }
         u32_t ref_count() { return f_ref_count.load(); }
+
+        const std::String<>& name() const { return f_name; }
     private:
         void close(FileStream* stream);
 

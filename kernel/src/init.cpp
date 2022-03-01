@@ -11,6 +11,8 @@
 #include <initrd.h>
 #include <dmesg.h>
 #include <trace.h>
+#include <fs/devicefs.hpp>
+#include <fs/vnode.hpp>
 
 #ifdef x86_64
     #include <arch/x86_64/acpi.h>
@@ -145,7 +147,16 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         kernel::add_preloaded_module(files[i]);
     }
 
+    new kernel::DeviceFilesystem();
+
     kernel::init_modules("INIT", 0);
+
+    auto devices = kernel::DeviceFilesystem::instance()->get_files(0, "", { .follow_links = 1 });
+    for(auto& dev : *devices) {
+        dmesg(dev->name().c_str());
+        dmesg(" ");
+    }
+    dmesg("\n");
 
     while(true);
 }

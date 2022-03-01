@@ -22,7 +22,8 @@ set(KERNEL_SOURCES src/init.cpp
                    src/modules/module.cpp
                    src/fs/filesystem.cpp
                    src/fs/modulefs.cpp
-                   src/fs/devicefs.cpp)
+                   src/fs/devicefs.cpp
+                   src/fs/vnode.cpp)
 
 set(TESTS_SOURCES src/tests/test.cpp
                   src/tests/memory.cpp

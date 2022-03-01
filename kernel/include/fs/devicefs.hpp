@@ -21,8 +21,6 @@ namespace kernel {
         DeviceFilesystem();
         virtual ~DeviceFilesystem() { }
 
-        virtual ValueOrError<void> umount();
-
         virtual ValueOrError<VNode*> get_file(VNode* root, const char* path, FilesystemFlags flags);
         virtual ValueOrError<std::List<VNode*>> get_files(VNode* root, const char* path, FilesystemFlags flags);
     

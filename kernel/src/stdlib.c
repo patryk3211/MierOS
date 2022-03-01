@@ -58,6 +58,6 @@ int strmatch(const char* wildcard, const char* str) {
 
 char* strchr(const char* str, char c) {
     for(size_t i = 0; c == 0 || str[i] != 0; ++i)
-        if(str[i] == c) return str+i;
+        if(str[i] == c) return (char*)str+i;
     return 0;
 }
