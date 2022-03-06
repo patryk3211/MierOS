@@ -33,6 +33,7 @@ namespace kernel {
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
 
         ValueOrError<VNode*> add_dev(const char* path, u16_t major, u16_t minor);
+        ValueOrError<VNode*> add_link(const char* path, VNode* destination);
 
         static DeviceFilesystem* instance() { return s_instance; }
     };

@@ -88,6 +88,9 @@ bool kernel::tests::stdlib_test() {
         str1 = "";
 
         TEST(str1 == "" && copy1 == "Testing String12321" && copy2 == "Testing String12321Testing String", "(SL5.1) std::String test failed");
+    
+        auto str2 = num_to_string(5231);
+        TEST(str2 == "5231", "(SL5.2) std::num_to_string test failed");
     }
 
     { // Unordered Map test

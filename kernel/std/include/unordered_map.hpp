@@ -16,7 +16,7 @@ namespace std {
             V value;
             Entry* next;
 
-            Entry();
+            Entry() : next(0) { }
             Entry(const K& key, const V& value) : key(key), value(value), next(0) { }
             ~Entry() = default;
         };
@@ -81,7 +81,15 @@ namespace std {
         }
 
         ~UnorderedMap() {
-            
+            for(size_t i = 0; i < capacity; ++i) {
+                Entry* e = bucket[i];
+                while(e != 0) {
+                    Entry* next = e->next;
+                    allocator.free(e);
+                    e = next;
+                }
+            }
+            allocator.free_array(bucket);
         }
 
         iterator begin() {
@@ -145,6 +153,26 @@ namespace std {
             return {};
         }
 
+        V& operator[](const K& key) {
+            size_t bucket_pos = Hasher{}(key) % capacity;
+            if(bucket[bucket_pos] == 0) {
+                bucket[bucket_pos] = new Entry();
+                bucket[bucket_pos]->key = key;
+                return bucket[bucket_pos]->value;
+            }
+            Entry* last = 0;
+            for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
+                if(Pred{}(key, entry->key)) {
+                    return entry->value;
+                }
+                last = entry;
+            }
+
+            last->next = new Entry();
+            last->next->key = key;
+            return last->next->value;
+        }
+
         void erase(const K& key) {
             size_t bucket_pos = Hasher{}(key) % capacity;
 
@@ -163,5 +191,21 @@ namespace std {
         }
 
         size_t size() const { return _size; }
+
+        void clear() {
+            for(size_t i = 0; i < capacity; ++i) {
+                Entry* e = bucket[i];
+                while(e != 0) {
+                    Entry* next = e->next;
+                    allocator.free(e);
+                    e = next;
+                }
+            }
+            allocator.free_array(bucket);
+
+            bucket = allocator.template alloc<Entry*>(initial_bucket_size);
+            capacity = initial_bucket_size;
+            _size = 0;
+        }
     };
 }

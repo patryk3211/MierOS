@@ -8,9 +8,10 @@
 #include <memory/virtual.hpp>
 #include <locking/locker.hpp>
 #include <memory/physical.h>
-#include <vector.hpp>
+#include <unordered_map.hpp>
 #include <fs/devicefs.hpp>
 #include <tasking/thread.hpp>
+#include "../partition/parse.hpp"
 
 #define	SATA_SIG_ATA    0x00000101
 #define	SATA_SIG_ATAPI  0xEB140101
@@ -33,13 +34,42 @@ MODULE_HEADER static module_header header {
 MODULE_HEADER char header_mod_name[] = "ahci";
 MODULE_HEADER char init_on[] = "PCI-V???\?-D???\?-C01S06P01R??\0";
 
+u16_t module_major_num;
+
 size_t drive_count;
-std::Vector<drive_file> drives;
+u16_t minor_num;
+std::UnorderedMap<u16_t, drive_file> drives;
 
 extern size_t ahci_ata_read(drive_information* drive, u64_t lba, u16_t sector_count, void* buffer);
 
-void find_partitions(drive_information* drive) {
+void find_partitions(drive_information* drive, const std::String<>& disk_name, u16_t disk_minor) {
+    if(!drive->atapi) {
+        auto* parse_info = kernel::parse_partitions(512, 1, [drive](u64_t lba, void* buffer){ return ahci_ata_read(drive, lba, 1, buffer); }, [drive](u64_t lba, void* buffer){ return (size_t)0; });
 
+        if(parse_info->type == GPT_PPI_TYPE) {
+            auto* gpt = (kernel::GPTParttionParseInformation*)parse_info;
+
+            {
+                std::String<> disk_by_id = "block/by-id/";
+                disk_by_id += std::uuid_to_string(gpt->disk_id);
+                kernel::DeviceFilesystem::instance()->add_link(disk_by_id.c_str(), drives[disk_minor].node);
+            }
+
+            for(auto& part : *gpt) {
+                u16_t minor = minor_num++;
+                drives.insert({ minor, { drive, part.start_lba, part.end_lba, 0 } });
+                
+                auto file = kernel::DeviceFilesystem::instance()->add_dev((disk_name + "p" + std::num_to_string(minor)).c_str(), module_major_num, minor);
+                if(file) {
+                    drives[minor].node = *file;
+                
+                    std::String<> part_by_id = "block/by-id/";
+                    part_by_id += std::uuid_to_string(part.part_id);
+                    kernel::DeviceFilesystem::instance()->add_link(part_by_id.c_str(), *file);
+                }
+            }
+        }
+    }
 }
 
 void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64) {
@@ -102,16 +132,20 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
     while((port->command_status & (1 << 15)));
     port->command_status |= (1 << 4) | (1 << 0);
 
-    size_t minor = drives.size();
-    drives.push_back({ drive_info, 0, 0, 0 });
+    u16_t minor = minor_num++;
+    drives.insert({ minor, { drive_info, 0, 0, 0 } });
 
-    char drive_name[] = "ahci?";
-    drive_name[4] = '0' + drive_count;
+    std::String<> drive_name = "ahci";
+    drive_name += std::num_to_string(drive_count);
 
-    auto ret = kernel::DeviceFilesystem::instance()->add_dev(drive_name, kernel::Thread::current()->current_module->major(), minor);
+    auto ret = kernel::DeviceFilesystem::instance()->add_dev(drive_name.c_str(), module_major_num, minor);
     if(ret) {
         drives[minor].node = *ret;
-        find_partitions(drive_info);
+
+        // We have to unlock the pager here, because it is later locked in the read function and would cause a deadlock.
+        pager.unlock();
+        find_partitions(drive_info, drive_name, minor);
+        pager.lock();
 
         ++drive_count;
     }
@@ -121,9 +155,11 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
 extern "C" int init(PCI_Header* header) {
     // We will maintain a lock for the duration of AHCI module initialization
     kernel::Pager& pager = kernel::Pager::kernel();
-    kernel::Locker lock(pager);
+    pager.lock();
 
     drive_count = 0;
+    minor_num = 0;
+    module_major_num = kernel::Thread::current()->current_module->major();
     
     HBA_MEM* hba = (HBA_MEM*)pager.kmap(header->bar[5] & ~0xFFF, 1, { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 1 });
     if(!(hba->capabilities & (1 << 18))) hba->global_host_control |= (1 << 31); // Enable AHCI mode
@@ -150,6 +186,7 @@ extern "C" int init(PCI_Header* header) {
         }
     }
 
+    pager.unlock();
     return 0;
 }
 
@@ -157,14 +194,14 @@ extern "C" int destroy() {
     kernel::Pager& pager = kernel::Pager::kernel();
     kernel::Locker lock(pager);
 
-    for(auto& file : drives) {
-        if(file.partition_start == 0) {
+    for(auto file : drives) {
+        if(file.value.partition_start == 0) {
             // If the partition starts at address 0 then this is the main drive file.
             for(int i = 0; i < 32; ++i)
-                if(file.drive->tables[i] != 0)
-                    pager.free((virtaddr_t)file.drive->tables[i], COMMAND_TABLE_PAGES);
-            pager.free((virtaddr_t)file.drive->command_list, 1);
-            delete file.drive;
+                if(file.value.drive->tables[i] != 0)
+                    pager.free((virtaddr_t)file.value.drive->tables[i], COMMAND_TABLE_PAGES);
+            pager.free((virtaddr_t)file.value.drive->command_list, 1);
+            delete file.value.drive;
         }
     }
     return 0;
