@@ -136,6 +136,9 @@ namespace std {
             tail.next = 0;
             length = other.length;
 
+            head.next->prev = &head;
+            tail.prev->next = &tail;
+
             other.head.next = &other.tail;
             other.tail.prev = &other.head;
             other.length = 0;
@@ -154,6 +157,9 @@ namespace std {
             tail.prev = other.tail.prev;
             tail.next = 0;
             length = other.length;
+
+            head.next->prev = &head;
+            tail.prev->next = &tail;
 
             other.head.next = &other.tail;
             other.tail.prev = &other.head;
