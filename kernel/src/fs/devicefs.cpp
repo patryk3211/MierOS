@@ -120,6 +120,20 @@ ValueOrError<size_t> DeviceFilesystem::seek(FileStream* stream, size_t position,
     else return ERR_UNIMPLEMENTED;
 }
 
+ValueOrError<u32_t> DeviceFilesystem::block_read(VNode* bdev, u64_t lba, u32_t sector_count, void* buffer) {
+    u32_t number = (u64_t)bdev->fs_data;
+    auto* func = get_module_symbol<DevFsFunctionTable>(number >> 16, "dev_func_tab")->block_read;
+    if(func != 0) return func(number & 0xFFFF, lba, sector_count, buffer);
+    else return ERR_UNIMPLEMENTED;
+}
+
+ValueOrError<u32_t> DeviceFilesystem::block_write(VNode* bdev, u64_t lba, u32_t sector_count, const void* buffer) {
+    u32_t number = (u64_t)bdev->fs_data;
+    auto* func = get_module_symbol<DevFsFunctionTable>(number >> 16, "dev_func_tab")->block_write;
+    if(func != 0) return func(number & 0xFFFF, lba, sector_count, buffer);
+    else return ERR_UNIMPLEMENTED;
+}
+
 ValueOrError<VNode*> DeviceFilesystem::add_dev(const char* path, u16_t major, u16_t minor) {
     ASSERT_F(major != 0, "Cannot have a major number of 0");
 

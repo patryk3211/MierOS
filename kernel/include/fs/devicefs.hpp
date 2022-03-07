@@ -11,6 +11,9 @@ namespace kernel {
         ValueOrError<size_t> (*write)(u16_t minor, FileStream* stream, const void* buffer, size_t length);
 
         ValueOrError<size_t> (*seek)(u16_t minor, FileStream* stream, size_t position, int mode);
+
+        ValueOrError<u32_t> (*block_read)(u16_t minor, u64_t lba, u32_t sector_count, void* buffer);
+        ValueOrError<u32_t> (*block_write)(u16_t minor, u64_t lba, u32_t sector_count, const void* buffer);
     };
 
     class DeviceFilesystem : public Filesystem {
@@ -31,6 +34,9 @@ namespace kernel {
         virtual ValueOrError<size_t> write(FileStream* stream, const void* buffer, size_t length);
 
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
+
+        ValueOrError<u32_t> block_read(VNode* bdev, u64_t lba, u32_t sector_count, void* buffer);
+        ValueOrError<u32_t> block_write(VNode* bdev, u64_t lba, u32_t sector_count, const void* buffer);
 
         ValueOrError<VNode*> add_dev(const char* path, u16_t major, u16_t minor);
         ValueOrError<VNode*> add_link(const char* path, VNode* destination);

@@ -13,4 +13,6 @@
 
 #define MODULE_HEADER __attribute__((section(".modulehdr"), used))
 
+#define USED __attribute__((used))
+
 #endif // _MIEROS_KERNEL_SECTIONS_H

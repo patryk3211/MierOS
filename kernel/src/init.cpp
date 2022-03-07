@@ -151,18 +151,32 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     kernel::init_modules("INIT", 0);
 
-    auto devices = kernel::DeviceFilesystem::instance()->get_files(0, "", { .resolve_link = 0, .follow_links = 1 });
-    for(auto& dev : *devices) {
-        dmesg(dev->name().c_str());
-        dmesg(" ");
+    {
+        auto devices = kernel::DeviceFilesystem::instance()->get_files(0, "", { .resolve_link = 0, .follow_links = 1 });
+        for(auto& dev : *devices) {
+            dmesg(dev->name().c_str());
+            dmesg(" ");
+        }
+        dmesg("\nBy ID:\n");
+        devices = kernel::DeviceFilesystem::instance()->get_files(0, "block/by-id", { .resolve_link = 0, .follow_links = 1 });
+        for(auto& dev : *devices) {
+            dmesg(dev->name().c_str());
+            dmesg(" ");
+        }
+        dmesg("\n");
     }
-    dmesg("\nBy ID:\n");
-    devices = kernel::DeviceFilesystem::instance()->get_files(0, "block/by-id", { .resolve_link = 0, .follow_links = 1 });
-    for(auto& dev : *devices) {
-        dmesg(dev->name().c_str());
-        dmesg(" ");
+    
+    auto dev = kernel::DeviceFilesystem::instance()->get_file(0, "ahci0", { 1, 1 });
+    if(dev) {
+        u8_t buffer[512];
+        
+        kernel::DeviceFilesystem::instance()->block_read(*dev, 0, 1, buffer);
+
+        for(int i = 0; i < 512; ++i) {
+            if(i % 16 == 0) dmesg("\n");
+            kprintf("%x2 ", buffer[i]);
+        }
     }
-    dmesg("\n");
 
     while(true);
 }

@@ -12,6 +12,7 @@
 #include <fs/devicefs.hpp>
 #include <tasking/thread.hpp>
 #include "../partition/parse.hpp"
+#include "ata.hpp"
 
 #define	SATA_SIG_ATA    0x00000101
 #define	SATA_SIG_ATAPI  0xEB140101
@@ -39,8 +40,6 @@ u16_t module_major_num;
 size_t drive_count;
 u16_t minor_num;
 std::UnorderedMap<u16_t, drive_file> drives;
-
-extern size_t ahci_ata_read(drive_information* drive, u64_t lba, u16_t sector_count, void* buffer);
 
 void find_partitions(drive_information* drive, const std::String<>& disk_name, u16_t disk_minor) {
     if(!drive->atapi) {
