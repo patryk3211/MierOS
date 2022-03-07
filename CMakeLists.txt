@@ -20,7 +20,7 @@ add_subdirectory(kernel)
 file(COPY ${CMAKE_SOURCE_DIR}/scripts/make_initrd.sh DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/scripts/copy_sysroot.sh DESTINATION ${CMAKE_BINARY_DIR})
 
-add_custom_target(copy_sysroot "sh" "copy_sysroot.sh" "${SYSROOT_DIR}"
+add_custom_target(copy_sysroot "sh" "copy_sysroot.sh" "${SYSROOT_DIR}" "${CMAKE_SOURCE_DIR}/pass.txt"
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 set(INITRD_MODULES kernel/modules/pci/pci.mod
