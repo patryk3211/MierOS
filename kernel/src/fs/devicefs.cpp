@@ -24,8 +24,8 @@ ValueOrError<VNode*> DeviceFilesystem::get_file(VNode* root, const char* path, F
     ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
 
     const char* path_ptr = path;
-    const char* next_separator;
-    while(*path_ptr != 0 && ((next_separator = strchr(path, '/')) != 0 || (next_separator = strchr(path, 0)))) {
+    const char* next_separator = path;
+    while(*next_separator != 0 && ((next_separator = strchr(path_ptr, '/')) != 0 || (next_separator = strchr(path_ptr, 0)))) {
         if(root->type() != VNode::DIRECTORY) return ERR_NOT_A_DIRECTORY;
 
         size_t length = next_separator - path_ptr;
@@ -53,8 +53,8 @@ ValueOrError<std::List<VNode*>> DeviceFilesystem::get_files(VNode* root, const c
     ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
 
     const char* path_ptr = path;
-    const char* next_separator;
-    while(*path_ptr != 0 && ((next_separator = strchr(path, '/')) != 0 || (next_separator = strchr(path, 0)))) {
+    const char* next_separator = path;
+    while(*next_separator != 0 && ((next_separator = strchr(path_ptr, '/')) != 0 || (next_separator = strchr(path_ptr, 0)))) {
         if(root->type() != VNode::DIRECTORY) return ERR_NOT_A_DIRECTORY;
 
         size_t length = next_separator - path_ptr;

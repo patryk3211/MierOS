@@ -41,7 +41,7 @@ namespace std {
             }
 
             bool operator==(const iterator& other) { return value == other.value; }
-            bool operator!=(const iterator& other) { return value != other.value; }
+            bool operator!=(const iterator& other) { return !(*this == other); }
 
             friend class List;
         };
