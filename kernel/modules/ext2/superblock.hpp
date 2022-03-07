@@ -32,23 +32,23 @@ struct Superblock {
     u16_t reserved_owner_gid;
 
     // Extended superblock fields
-    u32_t first_inode;
-    u16_t inode_size;
-    u16_t superblock_group;
-    u32_t optional_features;
-    u32_t required_features;
-    u32_t readonly_features;
-    u8_t filesystem_id[16];
-    u8_t volume_name[16];
-    u8_t last_mount_path[64];
-    u32_t compression_algorithm;
-    u8_t preallocate_block_count_file;
-    u8_t preallocate_block_count_dir;
-    u16_t unused;
-    u8_t journal_id[16];
-    u32_t journal_inode;
-    u32_t journal_device;
-    u32_t head_of_orphan_list;
+    u32_t ext_first_inode;
+    u16_t ext_inode_size;
+    u16_t ext_superblock_group;
+    u32_t ext_optional_features;
+    u32_t ext_required_features;
+    u32_t ext_readonly_features;
+    u8_t ext_filesystem_id[16];
+    u8_t ext_volume_name[16];
+    u8_t ext_last_mount_path[64];
+    u32_t ext_compression_algorithm;
+    u8_t ext_preallocate_block_count_file;
+    u8_t ext_preallocate_block_count_dir;
+    u16_t ext_unused;
+    u8_t ext_journal_id[16];
+    u32_t ext_journal_inode;
+    u32_t ext_journal_device;
+    u32_t ext_head_of_orphan_list;
 
     u8_t reserved[788];
 } PACKED;

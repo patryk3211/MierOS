@@ -1,6 +1,9 @@
 #include <modules/module_header.h>
 #include <defines.h>
 #include <fs/modulefs_functions.hpp>
+#include "fs_func.hpp"
+#include "mount_info.hpp"
+#include <unordered_map.hpp>
 
 using namespace kernel;
 
@@ -20,20 +23,18 @@ MODULE_HEADER static module_header header {
 MODULE_HEADER char header_mod_name[] = "ext2";
 MODULE_HEADER char init_on[] = "FS-ext2";
 
-ValueOrError<u16_t> mount(VNode* fs_file);
-
-static fs_function_table fs_func_tab {
+fs_function_table fs_func_tab {
     .mount = &mount
 };
 
-extern "C" int init() {
+u16_t minor_num;
+std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
+extern "C" int init() {
+    minor_num = 0;
+    return 0;
 }
 
 extern "C" int destroy() {
-
-}
-
-ValueOrError<u16_t> mount(VNode* fs_file) {
-    
+    return 0;
 }

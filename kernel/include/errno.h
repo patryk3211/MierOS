@@ -9,12 +9,13 @@ extern "C" {
 
 typedef int err_t;
 
-#define ERR_UNIMPLEMENTED (err_t)1
-#define ERR_FILE_NOT_FOUND (err_t)2
-#define ERR_NOT_A_DIRECTORY (err_t)3
-#define ERR_FILE_EXISTS (err_t)4
-#define ERR_LINK (err_t)5
-#define ERR_DEVICE_DOES_NOT_EXIST (err_t)6
+#define ERR_UNIMPLEMENTED           (err_t)1
+#define ERR_FILE_NOT_FOUND          (err_t)2
+#define ERR_NOT_A_DIRECTORY         (err_t)3
+#define ERR_FILE_EXISTS             (err_t)4
+#define ERR_LINK                    (err_t)5
+#define ERR_DEVICE_DOES_NOT_EXIST   (err_t)6
+#define ERR_MOUNT_FAILED            (err_t)7
 
 #if defined(__cplusplus)
 } // extern "C"
