@@ -19,6 +19,8 @@ namespace kernel {
         KBuffer(const KBuffer& other);
         KBuffer& operator=(const KBuffer& other);
 
+        void resize(size_t new_size);
+
         template<typename T = void> T* ptr() { return static_cast<T*>(raw_ptr); }
         template<typename T = void> const T* ptr() const { return static_cast<const T*>(raw_ptr); }
     };
@@ -37,6 +39,10 @@ namespace kernel {
         TypedKBuffer(const TypedKBuffer<T>& other) : buffer(other.buffer) { }
         TypedKBuffer<T>& operator=(const TypedKBuffer<T>& other) {
             buffer = other.buffer;
+        }
+
+        void resize(size_t new_element_count) {
+            buffer.resize(new_element_count * sizeof(T));
         }
 
         T* ptr() { return buffer.ptr<T>(); }

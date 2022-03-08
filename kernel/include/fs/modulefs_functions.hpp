@@ -11,6 +11,8 @@ namespace kernel {
         ValueOrError<u16_t> (*mount)(VNode* fs_file);
         ValueOrError<void> (*umount)(u16_t minor);
 
+        void (*set_fs_object)(u16_t minor, Filesystem* fs_obj);
+
         ValueOrError<VNode*> (*get_file)(u16_t minor, VNode* root, const char* path, FilesystemFlags flags);
         ValueOrError<std::List<VNode*>> (*get_files)(u16_t minor, VNode* root, const char* path, FilesystemFlags flags);
 

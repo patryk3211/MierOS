@@ -24,7 +24,9 @@ MODULE_HEADER char header_mod_name[] = "ext2";
 MODULE_HEADER char init_on[] = "FS-ext2";
 
 fs_function_table fs_func_tab {
-    .mount = &mount
+    .mount = &mount,
+
+    .set_fs_object = &set_fs_object
 };
 
 u16_t minor_num;

@@ -5,7 +5,14 @@
 
 using namespace kernel;
 
-ModuleFilesystem::ModuleFilesystem(u16_t major, u16_t minor) : major(major), minor(minor) { }
+ModuleFilesystem::ModuleFilesystem(u16_t major, u16_t minor) : major(major), minor(minor) {
+    auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab");
+    if(func == 0) panic("Filesystem module does not have a function table!");
+    if(func->set_fs_object == 0) panic("Filesystem module does not implement set_fs_object function! (Required for any filesystem)");
+
+    func->set_fs_object(minor, this);
+}
+
 ModuleFilesystem::~ModuleFilesystem() { }
 
 ValueOrError<void> ModuleFilesystem::umount() {
