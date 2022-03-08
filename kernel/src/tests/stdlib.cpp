@@ -1,4 +1,5 @@
 #include <tests/stdlib.hpp>
+#include <tests/test.hpp>
 #include <unique_pointer.hpp>
 #include <function.hpp>
 #include <functional.hpp>
@@ -10,8 +11,6 @@
 #include <errno.h>
 
 using namespace std;
-
-#define TEST(expr, msg) { bool temp = (expr); ASSERT_F(temp, msg); if(!temp) return false; }
 
 bool kernel::tests::stdlib_test() {
     { // UniquePtr test

@@ -1,37 +1,21 @@
 #pragma once
 
-//#include <stdatomic.h>
-
 namespace std {
     template<typename T> class Atomic {
         T value;
     public:
         template<typename... Args> Atomic(Args... args) : value(args...) { }
-
         ~Atomic() = default;
 
-        T load() {
-            //return atomic_load(&value);
-            return value;
-        }
-
-        void store(T v) {
-            //atomic_store(&value, v);
-            value = v;
-        }
+        T load();
+        void store(T v);
     
-        T fetch_add(T v) {
-            //return atomic_fetch_add(&value, v);
-            T t = value;
-            value += v;
-            return t;
-        }
-
-        T fetch_sub(T v) {
-            //return atomic_fetch_sub(&value, v);
-            T t = value;
-            value -= v;
-            return t;
-        }
+        T fetch_add(T v);
+        T fetch_sub(T v);
     };
+
+    #define _MIEROS_STANDARD_ATOMIC_HPP
+    #if defined(x86_64)
+    #include <arch/atomic.hpp>
+    #endif
 }

@@ -20,7 +20,10 @@
             "cStandard": "gnu11",
             "cppStandard": "gnu++17",
             "intelliSenseMode": "linux-gcc-x64",
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+            "defines": [
+                "X86_64=1"
+            ]
         }
     ],
     "version": 4

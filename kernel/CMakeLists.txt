@@ -28,7 +28,8 @@ set(KERNEL_SOURCES src/init.cpp
 
 set(TESTS_SOURCES src/tests/test.cpp
                   src/tests/memory.cpp
-                  src/tests/stdlib.cpp)
+                  src/tests/stdlib.cpp
+                  src/tests/atomic.cpp)
 
 file(GLOB_RECURSE ARCH_SOURCES CONFIGURE_DEPENDS src/arch/${ARCH}/*.cpp src/arch/${ARCH}/*.c src/arch/${ARCH}/*.s)
 

@@ -1,6 +1,7 @@
 #include <tests/test.hpp>
 #include <tests/memory.hpp>
 #include <tests/stdlib.hpp>
+#include <tests/atomic.hpp>
 
 #include <dmesg.h>
 
@@ -21,5 +22,12 @@ void kernel::tests::do_tests() {
         while(true);
     } else {
         dmesg("\033[1;32mTEST SUCCESSFUL!\033[0m (SL) Standard Library test succesful!\n");
+    }
+
+    if(!atomic_test()) {
+        dmesg("\033[1;31mTEST FAILED!\033[0m (AT) Atomic test has failed!\n");
+        while(true);
+    } else {
+        dmesg("\033[1;32mTEST SUCCESSFUL!\033[0m (AT) Atomic test succesful!\n");
     }
 }
