@@ -2,23 +2,27 @@
 
 #include <fs/vnode.hpp>
 #include "superblock.hpp"
+#include "blockgroup.hpp"
 #include <memory/kbuffer.hpp>
 
 struct MountInfo {
-    kernel::VNode* fs_file;
+    std::SharedPtr<kernel::VNode> fs_file;
     kernel::TypedKBuffer<Superblock> superblock;
     u32_t block_group_count;
     u32_t block_size;
     bool sb_ext;
     kernel::Filesystem* filesystem;
+    kernel::TypedKBuffer<BlockGroup> block_groups;
+
+    MountInfo() : block_groups(0) { }
 
     // Get the LBA address of this block
     u64_t get_lba(u32_t block) {
         return block * block_size / 512; /// TODO: [08.03.2022] I don't think that the sector size should be hardcoded.
     }
 
-    // Get starting block address of a group
-    u32_t get_group_block(u32_t group_index) {
+    // Get starting block address of a group descriptor table
+    u32_t get_group_descriptor_block(u32_t group_index) {
         return superblock->group_block_count * group_index + (superblock->blocks_size == 0 ? 1 : 0);
     }
 

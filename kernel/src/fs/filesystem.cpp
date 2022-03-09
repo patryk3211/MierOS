@@ -1,4 +1,5 @@
 #include <fs/filesystem.hpp>
+#include <fs/vnode.hpp>
 
 using namespace kernel;
 
@@ -6,11 +7,11 @@ ValueOrError<void> Filesystem::umount() {
     return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<VNode*> Filesystem::get_file(VNode*, const char*, FilesystemFlags) {
+ValueOrError<std::SharedPtr<VNode>> Filesystem::get_file(std::SharedPtr<VNode>, const char*, FilesystemFlags) {
     return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<std::List<VNode*>> Filesystem::get_files(VNode*, const char*, FilesystemFlags) {
+ValueOrError<std::List<std::SharedPtr<VNode>>> Filesystem::get_files(std::SharedPtr<VNode>, const char*, FilesystemFlags) {
     return ERR_UNIMPLEMENTED;
 }
     

@@ -19,13 +19,13 @@ namespace kernel {
     class DeviceFilesystem : public Filesystem {
         static DeviceFilesystem* s_instance;
 
-        VNode* root;
+        std::SharedPtr<VNode> root;
     public:
         DeviceFilesystem();
         virtual ~DeviceFilesystem() { }
 
-        virtual ValueOrError<VNode*> get_file(VNode* root, const char* path, FilesystemFlags flags);
-        virtual ValueOrError<std::List<VNode*>> get_files(VNode* root, const char* path, FilesystemFlags flags);
+        virtual ValueOrError<std::SharedPtr<VNode>> get_file(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
+        virtual ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
     
         virtual ValueOrError<void> open(FileStream* stream, int mode);
         virtual ValueOrError<void> close(FileStream* stream);
@@ -35,11 +35,11 @@ namespace kernel {
 
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
 
-        ValueOrError<u32_t> block_read(VNode* bdev, u64_t lba, u32_t sector_count, void* buffer);
-        ValueOrError<u32_t> block_write(VNode* bdev, u64_t lba, u32_t sector_count, const void* buffer);
+        ValueOrError<u32_t> block_read(std::SharedPtr<VNode> bdev, u64_t lba, u32_t sector_count, void* buffer);
+        ValueOrError<u32_t> block_write(std::SharedPtr<VNode> bdev, u64_t lba, u32_t sector_count, const void* buffer);
 
-        ValueOrError<VNode*> add_dev(const char* path, u16_t major, u16_t minor);
-        ValueOrError<VNode*> add_link(const char* path, VNode* destination);
+        ValueOrError<std::SharedPtr<VNode>> add_dev(const char* path, u16_t major, u16_t minor);
+        ValueOrError<std::SharedPtr<VNode>> add_link(const char* path, std::SharedPtr<VNode> destination);
 
         static DeviceFilesystem* instance() { return s_instance; }
     };

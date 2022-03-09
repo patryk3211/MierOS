@@ -20,13 +20,13 @@ ValueOrError<void> ModuleFilesystem::umount() {
     return func(minor);
 }
 
-ValueOrError<VNode*> ModuleFilesystem::get_file(VNode* root, const char* path, FilesystemFlags flags) {
+ValueOrError<std::SharedPtr<VNode>> ModuleFilesystem::get_file(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags) {
     auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->get_file;
     if(func != 0) return func(minor, root, path, flags);
     else return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<std::List<VNode*>> ModuleFilesystem::get_files(VNode* root, const char* path, FilesystemFlags flags) {
+ValueOrError<std::List<std::SharedPtr<VNode>>> ModuleFilesystem::get_files(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags) {
     auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->get_files;
     if(func != 0) return func(minor, root, path, flags);
     else return ERR_UNIMPLEMENTED;

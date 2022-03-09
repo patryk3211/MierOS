@@ -9,7 +9,7 @@ using namespace kernel;
 extern u16_t minor_num;
 extern std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
-ValueOrError<u16_t> mount(VNode* fs_file) {
+ValueOrError<u16_t> mount(std::SharedPtr<VNode> fs_file) {
     MountInfo mi;
 
     DeviceFilesystem::instance()->block_read(fs_file, 2, 2, mi.superblock.ptr());
@@ -25,6 +25,22 @@ ValueOrError<u16_t> mount(VNode* fs_file) {
 
         mi.sb_ext = mi.superblock->version_major >= 1;
     }
+
+    {
+        size_t byte_size = mi.block_group_count * sizeof(BlockGroup);
+        size_t block_size = byte_size / mi.block_size + (byte_size % mi.block_size == 0 ? 0 : 1);
+        mi.block_groups.resize(block_size * mi.block_size / sizeof(BlockGroup));
+
+        DeviceFilesystem::instance()->block_read(fs_file, mi.get_lba(mi.get_group_descriptor_block(0)), mi.block_size / 512, mi.block_groups.ptr());
+    }
+
+    {
+
+    }
+
+    u16_t minor = minor_num++;
+    mounted_filesystems.insert({ minor, mi });
+    return minor;
 }
 
 void set_fs_object(u16_t minor, Filesystem* fs_obj) {

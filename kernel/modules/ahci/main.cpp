@@ -56,7 +56,7 @@ void find_partitions(drive_information* drive, const std::String<>& disk_name, u
 
             for(auto& part : *gpt) {
                 u16_t minor = minor_num++;
-                drives.insert({ minor, { drive, part.start_lba, part.end_lba, 0 } });
+                drives.insert({ minor, { drive, part.start_lba, part.end_lba, std::SharedPtr<kernel::VNode>() } });
                 
                 auto file = kernel::DeviceFilesystem::instance()->add_dev((disk_name + "p" + std::num_to_string(minor)).c_str(), module_major_num, minor);
                 if(file) {
@@ -132,7 +132,7 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
     port->command_status |= (1 << 4) | (1 << 0);
 
     u16_t minor = minor_num++;
-    drives.insert({ minor, { drive_info, 0, 0, 0 } });
+    drives.insert({ minor, { drive_info, 0, 0, std::SharedPtr<kernel::VNode>() } });
 
     std::String<> drive_name = "ahci";
     drive_name += std::num_to_string(drive_count);

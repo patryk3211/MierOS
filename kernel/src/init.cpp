@@ -152,13 +152,13 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     kernel::init_modules("INIT", 0);
 
     {
-        auto devices = kernel::DeviceFilesystem::instance()->get_files(0, "", { .resolve_link = 0, .follow_links = 1 });
+        auto devices = kernel::DeviceFilesystem::instance()->get_files(std::SharedPtr<kernel::VNode>(), "", { .resolve_link = 0, .follow_links = 1 });
         for(auto& dev : *devices) {
             dmesg(dev->name().c_str());
             dmesg(" ");
         }
         dmesg("\nBy ID:\n");
-        devices = kernel::DeviceFilesystem::instance()->get_files(0, "block/by-id", { .resolve_link = 0, .follow_links = 1 });
+        devices = kernel::DeviceFilesystem::instance()->get_files(std::SharedPtr<kernel::VNode>(), "block/by-id", { .resolve_link = 0, .follow_links = 1 });
         for(auto& dev : *devices) {
             dmesg(dev->name().c_str());
             dmesg(" ");

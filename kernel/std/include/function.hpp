@@ -29,7 +29,7 @@ namespace std {
         class CallableBase {
         public:
             virtual ~CallableBase() = default;
-            virtual Ret invoke(Args... args) {
+            virtual Ret invoke(Args...) {
                 ASSERT_NOT_REACHED("You should not be here");
                 return Ret();
             }

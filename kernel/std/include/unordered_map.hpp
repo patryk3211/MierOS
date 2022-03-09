@@ -118,6 +118,7 @@ namespace std {
 
         bool insert(Pair<K, V> value) {
             Entry* entry = allocator.template alloc<Entry>(value.key, value.value);
+            entry->next = 0;
 
             size_t bucket_pos = Hasher{}(value.key) % capacity;
 

@@ -24,5 +24,5 @@ struct drive_file {
     drive_information* drive;
     u64_t partition_start;
     u64_t partition_end;
-    kernel::VNode* node;
+    std::SharedPtr<kernel::VNode> node;
 };
