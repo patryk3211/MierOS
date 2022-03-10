@@ -3,6 +3,7 @@
 #include <types.h>
 #include <defines.h>
 #include <shared_pointer.hpp>
+#include "mount_info.hpp"
 
 #define INODE_TYPE_FIFO       0x1000
 #define INODE_TYPE_CHARDEV    0x2000
@@ -36,4 +37,10 @@ struct Inode {
     u8_t os_val2[12];
 } PACKED;
 
-std::SharedPtr<Inode> read_inode(u32_t inode_index);
+class INodePtr {
+    Inode* ptr;
+public:
+    INodePtr(Inode* ptr);
+};
+
+INodePtr read_inode(MountInfo mi, u32_t inode_index);
