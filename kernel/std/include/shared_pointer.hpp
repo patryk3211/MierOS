@@ -7,7 +7,7 @@
 
 namespace std {
     template<typename T> class SharedPtr {
-        struct _data {
+        struct DataStorage {
             alignas(T) unsigned char storage[sizeof(T)];
             std::Atomic<size_t> ref_count;
             std::Optional<std::Function<void(T&)>> destructor;
@@ -20,8 +20,8 @@ namespace std {
         }
 
         SharedPtr(const T& value, std::Optional<std::Function<void(T&)>> destructor = std::Optional<std::Function<void(T&)>>()) {
-            data = new _data();
-            data->value() = value;
+            data = new DataStorage();
+            new(data->storage) T(value);
             data->ref_count.store(1);
             data->destructor = destructor;
         }
@@ -51,8 +51,8 @@ namespace std {
             clear();
         }
 
-        _data* leak_ptr() {
-            _data* ptr = data;
+        DataStorage* leak_ptr() {
+            DataStorage* ptr = data;
             data = 0;
             return ptr;
         }
@@ -78,9 +78,15 @@ namespace std {
 
         operator bool() { return data != 0; }
         bool operator!() { return data == 0; }
+
+        template<typename C, typename... Args> friend SharedPtr<C> make_shared(Args...);
     };
 
-    template<typename C, typename... Args> inline SharedPtr<C> make_shared(Args... args) {
-        return SharedPtr(C(args...));
+    template<typename C, typename... Args> SharedPtr<C> make_shared(Args... args) {
+        auto ptr = SharedPtr<C>();
+        ptr.data = new typename SharedPtr<C>::DataStorage();
+        new(ptr.data->storage) C(args...);
+        ptr.data->ref_count.store(1);
+        return ptr;
     }
 }
