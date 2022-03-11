@@ -38,9 +38,20 @@ struct Inode {
 } PACKED;
 
 class INodePtr {
-    Inode* ptr;
+    CacheBlock* block;
+    u32_t offset;
 public:
-    INodePtr(Inode* ptr);
+    INodePtr(CacheBlock* block, u32_t offset);
+    ~INodePtr();
+
+    Inode* ptr() { return (Inode*)((u8_t*)block->ptr()+offset); }
+    const Inode* ptr() const { return (Inode*)((u8_t*)block->ptr()+offset); }
+
+    Inode* operator->() { return ptr(); }
+    const Inode* operator->() const { return ptr(); }
+
+    Inode& operator*() { return *ptr(); }
+    const Inode& operator*() const { return *ptr(); }
 };
 
 INodePtr read_inode(MountInfo mi, u32_t inode_index);

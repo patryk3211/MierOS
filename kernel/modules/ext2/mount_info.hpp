@@ -4,6 +4,8 @@
 #include "superblock.hpp"
 #include "blockgroup.hpp"
 #include <memory/kbuffer.hpp>
+#include "cache.hpp"
+#include <unordered_map.hpp>
 
 struct MountInfo {
     std::SharedPtr<kernel::VNode> fs_file;
@@ -13,6 +15,7 @@ struct MountInfo {
     bool sb_ext;
     kernel::Filesystem* filesystem;
     kernel::TypedKBuffer<BlockGroup> block_groups;
+    std::UnorderedMap<u32_t, CacheBlock*> cache_block_table;
 
     MountInfo() : block_groups(0) { }
 
