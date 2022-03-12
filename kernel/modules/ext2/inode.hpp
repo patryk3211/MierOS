@@ -27,7 +27,7 @@ struct Inode {
     u32_t flags;
     u32_t os_val1;
     u32_t direct[12];
-    u32_t signly_indirect;
+    u32_t singly_indirect;
     u32_t doubly_indirect;
     u32_t triply_indirect;
     u32_t generation_num;
@@ -68,3 +68,4 @@ private:
 };
 
 INodePtr read_inode(MountInfo& mi, u32_t inode_index);
+u32_t get_inode_block(MountInfo& mi, INodePtr& inode, u32_t inode_block_index);

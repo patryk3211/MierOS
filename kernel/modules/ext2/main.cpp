@@ -28,15 +28,17 @@ fs_function_table fs_func_tab {
     .mount = &mount,
 
     .set_fs_object = &set_fs_object,
-    .fs_data_destroy = &fs_data_destroy
+    .fs_data_destroy = &fs_data_destroy,
+
+    .get_file = &get_file
 };
 
-u16_t major;
+u16_t mod_major;
 u16_t minor_num;
 std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
 extern "C" int init() {
-    major = kernel::Thread::current()->current_module->major();
+    mod_major = kernel::Thread::current()->current_module->major();
     minor_num = 0;
     return 0;
 }

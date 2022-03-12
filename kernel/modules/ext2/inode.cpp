@@ -8,13 +8,8 @@ INodePtr read_inode(MountInfo& mi, u32_t inode_idx) {
     u32_t inode_table_block = mi.block_groups[inode_group].inode_table;
 
     u32_t inode_block = mi.get_inode_block(inode_idx) + inode_table_block;
-    auto cache = mi.cache_block_table.at(inode_block);
-    CacheBlock* cb = 0;
-    if(cache) cb = *cache;
-    else {
-        cb = new CacheBlock(mi, inode_block);
-        mi.cache_block_table.insert({ inode_block, cb });
-    }
+    CacheBlock* cb = mi.read_cache_block(inode_block);
+
     u32_t inode_offset = ((inode_idx - 1) % (mi.block_size / mi.superblock->ext_inode_size)) * mi.superblock->ext_inode_size;
 
     INodePtr ptr = INodePtr(cb, inode_offset);
@@ -55,4 +50,29 @@ INodePtr& INodePtr::operator=(INodePtr&& other) {
     f_offset = other.f_offset;
 
     return *this;
+}
+
+u32_t get_inode_block(MountInfo& mi, INodePtr& inode, u32_t inode_block_index) {
+    u32_t ptr_per_block = mi.block_size / 4;
+    if(inode_block_index < 12) {
+        // Direct
+        return inode->direct[inode_block_index];
+    } else if(inode_block_index < 12 + ptr_per_block) {
+        // Singly
+        auto* cb = mi.read_cache_block(inode->singly_indirect);
+        return ((u32_t*)cb->ptr())[ptr_per_block - 12];
+    } else if(inode_block_index < 12 + ptr_per_block + ptr_per_block * ptr_per_block) {
+        // Doubly
+        auto* cb_singly = mi.read_cache_block(inode->doubly_indirect);
+        u32_t local_index = ptr_per_block - 12 - ptr_per_block;
+        auto* cb = mi.read_cache_block(((u32_t*)cb_singly->ptr())[local_index / ptr_per_block]);
+        return ((u32_t*)cb->ptr())[local_index % ptr_per_block];
+    } else {
+        // Triply
+        auto* cb_doubly = mi.read_cache_block(inode->triply_indirect);
+        u32_t local_index = ptr_per_block - 12 - ptr_per_block - ptr_per_block * ptr_per_block;
+        auto* cb_singly = mi.read_cache_block(((u32_t*)cb_doubly->ptr())[local_index / (ptr_per_block * ptr_per_block)]);
+        auto* cb = mi.read_cache_block(((u32_t*)cb_singly->ptr())[local_index / ptr_per_block % ptr_per_block]);
+        return ((u32_t*)cb->ptr())[local_index % ptr_per_block];
+    }
 }

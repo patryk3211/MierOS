@@ -52,3 +52,14 @@ void* CacheBlock::ptr() {
     }
     return f_base;
 }
+
+CacheBlock* MountInfo::read_cache_block(u32_t block_index) {
+    auto cache = cache_block_table.at(block_index);
+    CacheBlock* cb = 0;
+    if(cache) cb = *cache;
+    else {
+        cb = new CacheBlock(*this, block_index);
+        cache_block_table.insert({ block_index, cb });
+    }
+    return cb;
+}

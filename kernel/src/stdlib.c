@@ -61,3 +61,8 @@ char* strchr(const char* str, char c) {
         if(str[i] == c) return (char*)str+i;
     return 0;
 }
+
+int strncmp(const char* a, const char* b, size_t len) {
+    for(size_t i = 0; i < len; ++i) if(a[i] != b[i]) return a[i] - b[i];
+    return 0;
+}

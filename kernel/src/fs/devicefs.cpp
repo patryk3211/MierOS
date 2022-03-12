@@ -152,7 +152,10 @@ ValueOrError<std::SharedPtr<VNode>> DeviceFilesystem::add_dev(const char* path, 
         if(root->type() != VNode::DIRECTORY) return ERR_NOT_A_DIRECTORY;
 
         size_t length = next_separator - path_ptr;
-        if(length == 0) continue;
+        if(length == 0) {
+            ++path_ptr;
+            continue;
+        }
 
         char part[length+1];
         memcpy(part, path_ptr, length);
@@ -189,7 +192,10 @@ ValueOrError<std::SharedPtr<VNode>> DeviceFilesystem::add_link(const char* path,
         if(root->type() != VNode::DIRECTORY) return ERR_NOT_A_DIRECTORY;
 
         size_t length = next_separator - path_ptr;
-        if(length == 0) continue;
+        if(length == 0) {
+            ++path_ptr;
+            continue;
+        }
 
         char part[length+1];
         memcpy(part, path_ptr, length);

@@ -44,4 +44,7 @@ struct MountInfo {
     u32_t get_inode_block(u32_t inode_index) {
         return get_inode_local_index(inode_index) * superblock->ext_inode_size / block_size;
     }
+
+    // Returns a block from cache and creates one if not found
+    CacheBlock* read_cache_block(u32_t block_index);
 };

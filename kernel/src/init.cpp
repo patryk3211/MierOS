@@ -174,6 +174,12 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     auto* fs_mount = kernel::get_module_symbol<kernel::fs_function_table>(fs_mod, "fs_func_tab")->mount;
     u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(std::SharedPtr<kernel::VNode>(), "ahci0p1", { }));
     kernel::ModuleFilesystem mfs(fs_mod, minor);
+
+    auto result = mfs.get_file(std::SharedPtr<kernel::VNode>(), "limine.cfg", { });
+    if(result) {
+        auto node = *result;
+        kprintf("%d\n", node->f_size);
+    }
     kernel::Thread::current()->current_module = 0;
 
     while(true);

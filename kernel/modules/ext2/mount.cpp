@@ -4,6 +4,7 @@
 #include <fs/devicefs.hpp>
 #include <assert.h>
 #include "inode.hpp"
+#include "data_storage.hpp"
 
 using namespace kernel;
 
@@ -51,4 +52,5 @@ void set_fs_object(u16_t minor, Filesystem* fs_obj) {
         
     // We must create the root node here since in the mount function we did not have the filesystem object.
     mi->root = std::make_shared<VNode>(root_inode->type_and_perm & 0xFFF, root_inode->user_id, root_inode->group_id, root_inode->create_time, root_inode->access_time, root_inode->modify_time, root_inode->size, "", VNode::DIRECTORY, mi->filesystem);
+    mi->root->fs_data = new Ext2VNodeDataStorage(root_inode);
 }
