@@ -16,6 +16,7 @@ struct MountInfo {
     kernel::Filesystem* filesystem;
     kernel::TypedKBuffer<BlockGroup> block_groups;
     std::UnorderedMap<u32_t, CacheBlock*> cache_block_table;
+    std::SharedPtr<kernel::VNode> root;
 
     MountInfo() : block_groups(0) { }
 

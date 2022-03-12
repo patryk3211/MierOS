@@ -26,7 +26,6 @@ namespace kernel {
             LINK = 3
         };
 
-    private:
         u16_t f_permissions;
         u16_t f_user_id;
         u16_t f_group_id;
@@ -37,6 +36,11 @@ namespace kernel {
 
         u64_t f_size;
 
+        std::SharedPtr<VNode> f_parent;
+        std::UnorderedMap<std::String<>, std::SharedPtr<VNode>> f_children;
+
+        VNodeDataStorage* fs_data;
+    private:
         std::String<> f_name;
 
         Filesystem* f_filesystem;
@@ -46,11 +50,6 @@ namespace kernel {
         std::Atomic<u32_t> f_ref_count;
 
     public:
-        std::SharedPtr<VNode> f_parent;
-        std::UnorderedMap<std::String<>, std::SharedPtr<VNode>> f_children;
-
-        VNodeDataStorage* fs_data;
-
         VNode(u16_t permissions, u16_t user_id, u16_t group_id, time_t create_time, time_t access_time, time_t modify_time, u64_t size, const std::String<>& name, VNode::Type type, Filesystem* fs);
         ~VNode();
 

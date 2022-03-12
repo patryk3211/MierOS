@@ -35,19 +35,20 @@ ValueOrError<u16_t> mount(std::SharedPtr<VNode> fs_file) {
         DeviceFilesystem::instance()->block_read(fs_file, mi.get_lba(mi.get_group_descriptor_block(0)), mi.block_size / 512, mi.block_groups.ptr());
     }
 
-    { // Read the root inode
-        INodePtr root_inode = read_inode(mi, 2);
-        kprintf("%d\n", root_inode->size);
-    }
-
     u16_t minor = minor_num++;
     mounted_filesystems.insert({ minor, mi });
     return minor;
 }
 
 void set_fs_object(u16_t minor, Filesystem* fs_obj) {
-    auto val = mounted_filesystems.at(minor);
-    ASSERT_F(val, "Invalid minor number provided");
+    auto mi = mounted_filesystems.at(minor);
+    ASSERT_F(mi, "Invalid minor number provided");
 
-    val->filesystem = fs_obj;
+    mi->filesystem = fs_obj;
+    
+    // Read the root inode
+    INodePtr root_inode = read_inode(*mi, 2);
+        
+    // We must create the root node here since in the mount function we did not have the filesystem object.
+    mi->root = std::make_shared<VNode>(root_inode->type_and_perm & 0xFFF, root_inode->user_id, root_inode->group_id, root_inode->create_time, root_inode->access_time, root_inode->modify_time, root_inode->size, "", VNode::DIRECTORY, mi->filesystem);
 }
