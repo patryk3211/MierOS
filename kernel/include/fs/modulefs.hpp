@@ -2,8 +2,16 @@
 
 #include <fs/filesystem.hpp>
 #include <errno.h>
+#include <fs/vnode.hpp>
 
 namespace kernel {
+    struct ModuleVNodeDataStorage : public VNodeDataStorage {
+        u16_t major;
+
+        ModuleVNodeDataStorage(u16_t major);
+        ~ModuleVNodeDataStorage();
+    };
+
     class ModuleFilesystem : public Filesystem {
         u16_t major;
         u16_t minor;

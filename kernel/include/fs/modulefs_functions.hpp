@@ -7,11 +7,13 @@
 #include <errno.h>
 
 namespace kernel {
+    struct ModuleVNodeDataStorage;
     struct fs_function_table {
         ValueOrError<u16_t> (*mount)(std::SharedPtr<VNode> fs_file);
         ValueOrError<void> (*umount)(u16_t minor);
 
         void (*set_fs_object)(u16_t minor, Filesystem* fs_obj);
+        void (*fs_data_destroy)(ModuleVNodeDataStorage& data_obj);
 
         ValueOrError<std::SharedPtr<VNode>> (*get_file)(u16_t minor, std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
         ValueOrError<std::List<std::SharedPtr<VNode>>> (*get_files)(u16_t minor, std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);

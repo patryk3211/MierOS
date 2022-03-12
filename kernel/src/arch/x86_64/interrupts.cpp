@@ -127,7 +127,8 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
                          state->rdi,
                          state->rbp);
     } else if(state->int_num < 0x20) {
-        kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
+        file_line_pair p = addr_to_line(state->rip);
+        kprintf("Exception 0x%x2 on core %d\nRip: 0x%x16 %s:%d\n", state->int_num, current_core(), state->rip, p.name, p.line);
         switch(state->int_num) {
             case 0x0e: {
                 u64_t cr2;

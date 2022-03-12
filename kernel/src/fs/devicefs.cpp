@@ -93,51 +93,51 @@ ValueOrError<std::List<std::SharedPtr<VNode>>> DeviceFilesystem::get_files(std::
 }
 
 ValueOrError<void> DeviceFilesystem::open(FileStream* stream, int mode) {
-    u32_t number = (u64_t)stream->node()->fs_data;
-    auto* func = get_module_symbol<DevFsFunctionTable>(number >> 16, "dev_func_tab")->open;
-    if(func != 0) return func(number & 0xFFFF, stream, mode);
+    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->open;
+    if(func != 0) return func(numbers->minor, stream, mode);
     else return ERR_UNIMPLEMENTED;
 }
 
 ValueOrError<void> DeviceFilesystem::close(FileStream* stream) {
-    u32_t number = (u64_t)stream->node()->fs_data;
-    auto* func = get_module_symbol<DevFsFunctionTable>(number >> 16, "dev_func_tab")->close;
-    if(func != 0) return func(number & 0xFFFF, stream);
+    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->close;
+    if(func != 0) return func(numbers->minor, stream);
     else return ERR_UNIMPLEMENTED;
 }
 
 ValueOrError<size_t> DeviceFilesystem::read(FileStream* stream, void* buffer, size_t length) {
-    u32_t number = (u64_t)stream->node()->fs_data;
-    auto* func = get_module_symbol<DevFsFunctionTable>(number >> 16, "dev_func_tab")->read;
-    if(func != 0) return func(number & 0xFFFF, stream, buffer, length);
+    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->read;
+    if(func != 0) return func(numbers->minor, stream, buffer, length);
     else return ERR_UNIMPLEMENTED;
 }
 
 ValueOrError<size_t> DeviceFilesystem::write(FileStream* stream, const void* buffer, size_t length) {
-    u32_t number = (u64_t)stream->node()->fs_data;
-    auto* func = get_module_symbol<DevFsFunctionTable>(number >> 16, "dev_func_tab")->write;
-    if(func != 0) return func(number & 0xFFFF, stream, buffer, length);
+    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->write;
+    if(func != 0) return func(numbers->minor, stream, buffer, length);
     else return ERR_UNIMPLEMENTED;
 }
 
 ValueOrError<size_t> DeviceFilesystem::seek(FileStream* stream, size_t position, int mode) {
-    u32_t number = (u64_t)stream->node()->fs_data;
-    auto* func = get_module_symbol<DevFsFunctionTable>(number >> 16, "dev_func_tab")->seek;
-    if(func != 0) return func(number & 0xFFFF, stream, position, mode);
+    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->seek;
+    if(func != 0) return func(numbers->minor, stream, position, mode);
     else return ERR_UNIMPLEMENTED;
 }
 
 ValueOrError<u32_t> DeviceFilesystem::block_read(std::SharedPtr<VNode> bdev, u64_t lba, u32_t sector_count, void* buffer) {
-    u32_t number = (u64_t)bdev->fs_data;
-    auto* func = get_module_symbol<DevFsFunctionTable>(number >> 16, "dev_func_tab")->block_read;
-    if(func != 0) return func(number & 0xFFFF, lba, sector_count, buffer);
+    auto* numbers = static_cast<DevFs_DevData*>(bdev->fs_data);
+    auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->block_read;
+    if(func != 0) return func(numbers->minor, lba, sector_count, buffer);
     else return ERR_UNIMPLEMENTED;
 }
 
 ValueOrError<u32_t> DeviceFilesystem::block_write(std::SharedPtr<VNode> bdev, u64_t lba, u32_t sector_count, const void* buffer) {
-    u32_t number = (u64_t)bdev->fs_data;
-    auto* func = get_module_symbol<DevFsFunctionTable>(number >> 16, "dev_func_tab")->block_write;
-    if(func != 0) return func(number & 0xFFFF, lba, sector_count, buffer);
+    auto* numbers = static_cast<DevFs_DevData*>(bdev->fs_data);
+    auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->block_write;
+    if(func != 0) return func(numbers->minor, lba, sector_count, buffer);
     else return ERR_UNIMPLEMENTED;
 }
 

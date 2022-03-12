@@ -15,6 +15,14 @@ ModuleFilesystem::ModuleFilesystem(u16_t major, u16_t minor) : major(major), min
 
 ModuleFilesystem::~ModuleFilesystem() { }
 
+ModuleVNodeDataStorage::ModuleVNodeDataStorage(u16_t major) : major(major) { }
+
+ModuleVNodeDataStorage::~ModuleVNodeDataStorage() {
+    auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->fs_data_destroy;
+    if(func == 0) panic("Filesystem module does not implement fs_data_destroy function! (Required for any filesystem)");
+    func(*this);
+}
+
 ValueOrError<void> ModuleFilesystem::umount() {
     auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->umount;
     return func(minor);

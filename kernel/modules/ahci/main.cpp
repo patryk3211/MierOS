@@ -156,6 +156,7 @@ extern "C" int init(PCI_Header* header) {
     kernel::Pager& pager = kernel::Pager::kernel();
     pager.lock();
 
+    /// TODO: [12.03.2022] Currently if there are more than one AHCI controller these variables will be reset and the initialization will not proceed correctly.
     drive_count = 0;
     minor_num = 0;
     module_major_num = kernel::Thread::current()->current_module->major();

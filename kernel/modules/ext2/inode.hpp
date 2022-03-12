@@ -38,20 +38,33 @@ struct Inode {
 } PACKED;
 
 class INodePtr {
-    CacheBlock* block;
-    u32_t offset;
+    CacheBlock* f_block;
+    u32_t f_offset;
 public:
     INodePtr(CacheBlock* block, u32_t offset);
     ~INodePtr();
 
-    Inode* ptr() { return (Inode*)((u8_t*)block->ptr()+offset); }
-    const Inode* ptr() const { return (Inode*)((u8_t*)block->ptr()+offset); }
+    INodePtr(const INodePtr& other);
+    INodePtr(INodePtr&& other);
+
+    INodePtr& operator=(const INodePtr& other);
+    INodePtr& operator=(INodePtr&& other);
+
+    Inode* ptr() { return (Inode*)((u8_t*)f_block->ptr()+f_offset); }
+    const Inode* ptr() const { return (Inode*)((u8_t*)f_block->ptr()+f_offset); }
 
     Inode* operator->() { return ptr(); }
     const Inode* operator->() const { return ptr(); }
 
     Inode& operator*() { return *ptr(); }
     const Inode& operator*() const { return *ptr(); }
+
+private:
+    CacheBlock* leak_ptr() {
+        auto* r = f_block;
+        f_block = 0;
+        return r;
+    }
 };
 
-INodePtr read_inode(MountInfo mi, u32_t inode_index);
+INodePtr read_inode(MountInfo& mi, u32_t inode_index);

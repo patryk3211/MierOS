@@ -26,7 +26,7 @@ struct MountInfo {
 
     // Get starting block address of a group descriptor table
     u32_t get_group_descriptor_block(u32_t group_index) {
-        return superblock->group_block_count * group_index + (superblock->blocks_size == 0 ? 1 : 0);
+        return superblock->group_block_count * group_index + (superblock->blocks_size == 0 ? 2 : 1);
     }
 
     // Get the group that this inode belongs to

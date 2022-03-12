@@ -14,6 +14,9 @@
 #include <fs/devicefs.hpp>
 #include <fs/vnode.hpp>
 
+#include <fs/modulefs.hpp>
+#include <fs/modulefs_functions.hpp>
+
 #ifdef x86_64
     #include <arch/x86_64/acpi.h>
 #endif
@@ -165,6 +168,13 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         }
         dmesg("\n");
     }
+
+    u16_t fs_mod = kernel::init_modules("FS-ext2", 0);
+    kernel::Thread::current()->current_module = kernel::get_module(fs_mod);
+    auto* fs_mount = kernel::get_module_symbol<kernel::fs_function_table>(fs_mod, "fs_func_tab")->mount;
+    u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(std::SharedPtr<kernel::VNode>(), "ahci0p1", { }));
+    kernel::ModuleFilesystem mfs(fs_mod, minor);
+    kernel::Thread::current()->current_module = 0;
 
     while(true);
 }

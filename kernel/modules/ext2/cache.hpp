@@ -17,5 +17,9 @@ public:
     void sync();
     void free();
 
+    void ref();
+    void unref();
+    u32_t ref_count();
+
     void* ptr();
 };

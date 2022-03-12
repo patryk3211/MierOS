@@ -5,6 +5,8 @@
 using namespace kernel;
 
 KBuffer::KBuffer(size_t size) {
+    ref_count = new std::Atomic<u32_t>(1);
+
     if(size == 0) {
         raw_ptr = 0;
         page_size = 0;
@@ -17,7 +19,6 @@ KBuffer::KBuffer(size_t size) {
     Locker locker(pager);
 
     raw_ptr = (void*)pager.kalloc(page_size);
-    ref_count = new std::Atomic<u32_t>(1);
 }
 
 KBuffer::~KBuffer() {

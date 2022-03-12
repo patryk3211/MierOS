@@ -76,11 +76,82 @@ namespace std {
         UnorderedMap() : UnorderedMap(initial_bucket_size) { }
         UnorderedMap(size_t initial_capacity) : capacity(initial_capacity) {
             bucket = allocator.template alloc<Entry*>(capacity);
-            memset(bucket, 0, sizeof(Entry*)*capacity);
+            memset(bucket, 0, sizeof(Entry*) * capacity);
             _size = 0;
         }
 
+        UnorderedMap(const UnorderedMap<K, V>& other) : capacity(other.capacity), _size(other._size) {
+            bucket = allocator.template alloc<Entry*>(capacity);
+            memset(bucket, 0, sizeof(Entry*) * capacity);
+            for(size_t i = 0; i < capacity; ++i) {
+                if(bucket[i] == 0) continue;
+
+                auto* last = allocator.template alloc<Entry>(other.bucket[i]->key, other.bucket[i]->value);
+                bucket[i] = last;
+
+                for(auto* o_entry = other.bucket[i]->next; o_entry != 0; o_entry = o_entry->next) {
+                    auto* entry = allocator.template alloc<Entry>(o_entry->key, o_entry->value);
+                    last->next = entry;
+                    last = entry;
+                }
+            }
+        }
+        UnorderedMap<K, V>& operator=(const UnorderedMap<K, V>& other) {
+            for(size_t i = 0; i < capacity; ++i) {
+                Entry* e = bucket[i];
+                while(e != 0) {
+                    Entry* next = e->next;
+                    allocator.free(e);
+                    e = next;
+                }
+            }
+            allocator.free_array(bucket);
+
+            capacity = other.capacity;
+            _size = other._size;
+
+            bucket = allocator.template alloc<Entry*>(capacity);
+            memset(bucket, 0, sizeof(Entry*) * capacity);
+            for(size_t i = 0; i < capacity; ++i) {
+                if(bucket[i] == 0) continue;
+
+                auto* last = allocator.template alloc<Entry>(other.bucket[i]->key, other.bucket[i]->value);
+                bucket[i] = last;
+
+                for(auto* o_entry = other.bucket[i]->next; o_entry != 0; o_entry = o_entry->next) {
+                    auto* entry = allocator.template alloc<Entry>(o_entry->key, o_entry->value);
+                    last->next = entry;
+                    last = entry;
+                }
+            }
+        }
+
+        UnorderedMap(UnorderedMap<K, V>&& other) : capacity(other.capacity), _size(other._size) {
+            bucket = other.bucket;
+            other.bucket = 0;
+        }
+
+        UnorderedMap<K, V>& operator=(UnorderedMap<K, V>&& other) {
+            for(size_t i = 0; i < capacity; ++i) {
+                Entry* e = bucket[i];
+                while(e != 0) {
+                    Entry* next = e->next;
+                    allocator.free(e);
+                    e = next;
+                }
+            }
+            allocator.free_array(bucket);
+
+            capacity = other.capacity;
+            _size = other._size;
+
+            bucket = other.bucket;
+            other.bucket = 0;
+        }
+
         ~UnorderedMap() {
+            if(bucket == 0) return;
+
             for(size_t i = 0; i < capacity; ++i) {
                 Entry* e = bucket[i];
                 while(e != 0) {

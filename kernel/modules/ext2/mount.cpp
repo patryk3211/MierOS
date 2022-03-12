@@ -3,6 +3,7 @@
 #include <unordered_map.hpp>
 #include <fs/devicefs.hpp>
 #include <assert.h>
+#include "inode.hpp"
 
 using namespace kernel;
 
@@ -16,7 +17,7 @@ ValueOrError<u16_t> mount(std::SharedPtr<VNode> fs_file) {
     if(mi.superblock->signature != 0xef53) return ERR_MOUNT_FAILED;
     mi.fs_file = fs_file;
 
-    {
+    { // Read the superblock
         u32_t total_blocks = mi.superblock->total_blocks;
         u32_t blocks_per_group = mi.superblock->group_block_count;
         mi.block_group_count = (total_blocks / blocks_per_group) + (total_blocks % blocks_per_group == 0 ? 0 : 1);
@@ -26,7 +27,7 @@ ValueOrError<u16_t> mount(std::SharedPtr<VNode> fs_file) {
         mi.sb_ext = mi.superblock->version_major >= 1;
     }
 
-    {
+    { // Read the block groups
         size_t byte_size = mi.block_group_count * sizeof(BlockGroup);
         size_t block_size = byte_size / mi.block_size + (byte_size % mi.block_size == 0 ? 0 : 1);
         mi.block_groups.resize(block_size * mi.block_size / sizeof(BlockGroup));
@@ -34,8 +35,9 @@ ValueOrError<u16_t> mount(std::SharedPtr<VNode> fs_file) {
         DeviceFilesystem::instance()->block_read(fs_file, mi.get_lba(mi.get_group_descriptor_block(0)), mi.block_size / 512, mi.block_groups.ptr());
     }
 
-    {
-
+    { // Read the root inode
+        INodePtr root_inode = read_inode(mi, 2);
+        kprintf("%d\n", root_inode->size);
     }
 
     u16_t minor = minor_num++;

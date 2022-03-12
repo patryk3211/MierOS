@@ -29,6 +29,18 @@ void CacheBlock::free() {
     pager.unlock();
 }
 
+void CacheBlock::ref() {
+    f_ref_count.fetch_add(1);
+}
+
+void CacheBlock::unref() {
+    f_ref_count.fetch_sub(1);
+}
+
+u32_t CacheBlock::ref_count() {
+    return f_ref_count.load();
+}
+
 void* CacheBlock::ptr() {
     if(f_base == 0) {
         auto& pager = Pager::active();
