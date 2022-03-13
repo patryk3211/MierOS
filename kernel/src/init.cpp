@@ -183,6 +183,15 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         }
         dmesg("\n");
     }
+
+    auto file = mfs.get_file(std::SharedPtr<kernel::VNode>(), "limine.cfg", { });
+    if(file) {
+        auto& node = *file;
+        auto* fstream = new kernel::FileStream(node);
+        fstream->open(0);
+
+        delete fstream;
+    }
     kernel::Thread::current()->current_module = 0;
 
     while(true);

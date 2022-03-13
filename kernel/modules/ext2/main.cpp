@@ -31,7 +31,10 @@ fs_function_table fs_func_tab {
     .fs_data_destroy = &fs_data_destroy,
 
     .get_file = &get_file,
-    .get_files = &get_files
+    .get_files = &get_files,
+    
+    .open = &open,
+    .close = &close
 };
 
 u16_t mod_major;

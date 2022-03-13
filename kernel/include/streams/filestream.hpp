@@ -1,19 +1,25 @@
 #pragma once
 
 #include <streams/stream.hpp>
+#include <shared_pointer.hpp>
+#include <errno.h>
 
 namespace kernel {
     #define STREAM_TYPE_FILE 1
 
     class VNode;
     class FileStream : public Stream {
-        VNode* f_file;
+        std::SharedPtr<VNode> f_file;
+        bool f_open;
 
-        FileStream(VNode* file) : Stream(STREAM_TYPE_FILE), f_file(file) { }
     public:
+        void* fs_data;
 
-        VNode* node() { return f_file; }
+        FileStream(const std::SharedPtr<VNode>& file);
+        ~FileStream();
 
-        friend class VNode;
+        ValueOrError<void> open(int mode);
+
+        std::SharedPtr<VNode>& node() { return f_file; }
     };
 }
