@@ -46,9 +46,6 @@ namespace kernel {
         Filesystem* f_filesystem;
 
         Type f_type;
-
-        std::Atomic<u32_t> f_ref_count;
-
     public:
         VNode(u16_t permissions, u16_t user_id, u16_t group_id, time_t create_time, time_t access_time, time_t modify_time, u64_t size, const std::String<>& name, VNode::Type type, Filesystem* fs);
         ~VNode();
@@ -58,10 +55,6 @@ namespace kernel {
         u64_t size() { return f_size; }
         Filesystem* filesystem() { return f_filesystem; }
         Type type() { return f_type; }
-
-        void ref() { f_ref_count.fetch_add(1); }
-        void unref() { f_ref_count.fetch_sub(1); }
-        u32_t ref_count() { return f_ref_count.load(); }
 
         const std::String<>& name() const { return f_name; }
     private:

@@ -175,10 +175,13 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(std::SharedPtr<kernel::VNode>(), "ahci0p1", { }));
     kernel::ModuleFilesystem mfs(fs_mod, minor);
 
-    auto result = mfs.get_file(std::SharedPtr<kernel::VNode>(), "limine.cfg", { });
+    auto result = mfs.get_files(std::SharedPtr<kernel::VNode>(), "", { });
     if(result) {
-        auto node = *result;
-        kprintf("%d\n", node->f_size);
+        auto nodes = *result;
+        for(auto& node : nodes) {
+            kprintf("%s ", node->name().c_str());
+        }
+        dmesg("\n");
     }
     kernel::Thread::current()->current_module = 0;
 
