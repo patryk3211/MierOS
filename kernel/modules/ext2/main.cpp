@@ -34,7 +34,9 @@ fs_function_table fs_func_tab {
     .get_files = &get_files,
     
     .open = &open,
-    .close = &close
+    .close = &close,
+
+    .read = &read
 };
 
 u16_t mod_major;

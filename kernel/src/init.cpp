@@ -190,6 +190,10 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         auto* fstream = new kernel::FileStream(node);
         fstream->open(0);
 
+        u8_t buffer[node->f_size];
+        fstream->read(buffer, node->f_size);
+        dmesg((const char*)buffer);
+
         delete fstream;
     }
     kernel::Thread::current()->current_module = 0;
