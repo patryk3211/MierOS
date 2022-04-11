@@ -4,6 +4,7 @@
 #include <function.hpp>
 #include <optional.hpp>
 #include <atomic.hpp>
+#include <cstddef.hpp>
 
 namespace std {
     template<typename T> class SharedPtr {
@@ -24,6 +25,14 @@ namespace std {
             new(data->storage) T(value);
             data->ref_count.store(1);
             data->destructor = destructor;
+        }
+
+        SharedPtr(nullptr_t) {
+            data = 0;
+        }
+
+        SharedPtr<T>& operator=(nullptr_t) {
+            clear();
         }
 
         SharedPtr(const SharedPtr<T>& ptr) : data(ptr.data) {
