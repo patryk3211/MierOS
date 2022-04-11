@@ -72,7 +72,7 @@ namespace kernel {
                     GPT_PartitionEntry* partition = (GPT_PartitionEntry*)(buffer2 + j * header->partition_entry_size);
                     if(partition->partition_type.is_zero()) continue;
                     
-                    partitions.push_back({ partition->partition_type.to_uuid(), partition->partition_uuid.to_uuid(), partition->first_lba, partition->last_lba });
+                    partitions.push_back({ partition->partition_uuid.to_uuid(), partition->partition_type.to_uuid(), partition->first_lba, partition->last_lba });
                 }
             }
 
