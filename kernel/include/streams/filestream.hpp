@@ -20,6 +20,8 @@ namespace kernel {
 
         ValueOrError<void> open(int mode);
 
+        virtual size_t read(void* buffer, size_t length);
+
         std::SharedPtr<VNode>& node() { return f_file; }
     };
 }

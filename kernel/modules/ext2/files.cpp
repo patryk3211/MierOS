@@ -181,6 +181,7 @@ ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(u16_t minor, std::Share
                 auto new_node = std::make_shared<VNode>(new_inode->type_and_perm & 0xFFF, new_inode->user_id, new_inode->group_id, new_inode->create_time, new_inode->access_time, new_inode->modify_time, new_inode->size, name_cp, inode_to_vnode_type(new_inode->type_and_perm & 0xF000), mi.filesystem);
 
                 new_node->f_parent = node;
+                new_node->fs_data = new Ext2VNodeDataStorage(new_inode);
                 node->f_children.insert({ name_cp, new_node });
                 nodes.push_back(new_node);
             }

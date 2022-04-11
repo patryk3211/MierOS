@@ -17,3 +17,9 @@ ValueOrError<void> FileStream::open(int mode) {
     if(val) f_open = true;
     return val;
 }
+
+size_t FileStream::read(void* buffer, size_t length) {
+    auto val = f_file->filesystem()->read(this, buffer, length);
+    if(val) return *val;
+    else return -1;
+}
