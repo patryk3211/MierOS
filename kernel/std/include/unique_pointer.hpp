@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <memory/liballoc.h>
+#include <cstddef.hpp>
 
 namespace std {
     template<typename T> class UniquePtr {
@@ -9,6 +10,12 @@ namespace std {
     public:
         UniquePtr() { value = 0; }
         UniquePtr(T* value) : value(value) { }
+
+        UniquePtr(nullptr_t) { value = 0; }
+        UniquePtr<T>& operator=(nullptr_t) {
+            delete value;
+            value = 0;
+        }
 
         UniquePtr(const UniquePtr<T>& ptr) : value(new T(*ptr.ptr())) { }
         UniquePtr<T>& operator=(const UniquePtr<T>& ptr) {

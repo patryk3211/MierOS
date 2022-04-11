@@ -36,7 +36,7 @@ namespace std {
 
             virtual UniquePtr<CallableBase> copy() const {
                 ASSERT_NOT_REACHED("You should not be here");
-                return UniquePtr<CallableBase>();
+                return nullptr;
             }
         };
 
