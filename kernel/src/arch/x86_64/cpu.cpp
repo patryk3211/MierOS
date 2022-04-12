@@ -299,6 +299,8 @@ TEXT_FREE_AFTER_INIT void measure_lapic_timer() {
     kprintf("[Kernel] 1 ms took %d Local APIC timer ticks\n", lapic_timer_ticks);
 }
 
+extern void init_time();
+
 extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
     parse_madt();
 
@@ -333,6 +335,8 @@ extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
         }
     }
     pager.unlock();
+
+    init_time();
 }
 
 extern "C" int core_count() {
