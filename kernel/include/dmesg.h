@@ -19,9 +19,9 @@ extern void va_kprintf(const char* format, va_list args);
 extern void panic(const char* msg);
 
 #ifdef DEBUG_TRACE
-#define TRACE(msg, args...) kprintf(msg, args)
+#define TRACE(args...) kprintf(args)
 #else
-#define TRACE(msg, args...)
+#define TRACE(args...)
 #endif
 
 #if defined(__cplusplus)
