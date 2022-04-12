@@ -18,6 +18,8 @@ namespace kernel {
         ValueOrError<std::SharedPtr<VNode>> (*get_file)(u16_t minor, std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
         ValueOrError<std::List<std::SharedPtr<VNode>>> (*get_files)(u16_t minor, std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
 
+        ValueOrError<VNodePtr> (*resolve_link)(u16_t minor, VNodePtr link);
+
         ValueOrError<void> (*open)(u16_t minor, FileStream* filestream, int mode);
         ValueOrError<void> (*close)(u16_t minor, FileStream* filestream);
 

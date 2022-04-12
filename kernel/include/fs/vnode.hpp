@@ -23,7 +23,8 @@ namespace kernel {
             DIRECTORY = 0,
             FILE = 1,
             DEVICE = 2,
-            LINK = 3
+            LINK = 3,
+            MOUNT = 4
         };
 
         u16_t f_permissions;

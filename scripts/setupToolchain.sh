@@ -109,6 +109,8 @@ mkdir -p sysroot/EFI/BOOT
 cp -v limine/limine.sys sysroot/
 cp -v limine/BOOTX64.EFI sysroot/EFI/BOOT/
 
+mkdir -p sysroot/dev
+
 #cp -r host-binutils-conf/* binutils-2.35/
 #cp -r host-gcc-conf/* gcc-10.2.0/
 #

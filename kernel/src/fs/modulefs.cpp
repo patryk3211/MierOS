@@ -39,6 +39,12 @@ ValueOrError<std::List<std::SharedPtr<VNode>>> ModuleFilesystem::get_files(std::
     if(func != 0) return func(minor, root, path, flags);
     else return ERR_UNIMPLEMENTED;
 }
+
+ValueOrError<VNodePtr> ModuleFilesystem::resolve_link(VNodePtr link) {
+    auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->resolve_link;
+    if(func != 0) return func(minor, link);
+    else return ERR_UNIMPLEMENTED;
+}
     
 ValueOrError<void> ModuleFilesystem::open(FileStream* stream, int mode) {
     auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->open;

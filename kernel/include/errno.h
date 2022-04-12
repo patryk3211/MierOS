@@ -16,6 +16,7 @@ typedef int err_t;
 #define ERR_LINK                    (err_t)5
 #define ERR_DEVICE_DOES_NOT_EXIST   (err_t)6
 #define ERR_MOUNT_FAILED            (err_t)7
+#define ERR_NOT_LINK                (err_t)8
 
 #if defined(__cplusplus)
 } // extern "C"

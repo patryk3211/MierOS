@@ -8,6 +8,7 @@
 namespace kernel {
     class FileStream;
     class VNode;
+    typedef std::SharedPtr<VNode> VNodePtr;
 
     struct FilesystemFlags {
         /**
@@ -35,6 +36,8 @@ namespace kernel {
         virtual ValueOrError<std::SharedPtr<VNode>> get_file(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
         virtual ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
     
+        virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link);
+
         virtual ValueOrError<void> open(FileStream* stream, int mode);
         virtual ValueOrError<void> close(FileStream* stream);
 

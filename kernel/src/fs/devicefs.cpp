@@ -37,11 +37,23 @@ ValueOrError<std::SharedPtr<VNode>> DeviceFilesystem::get_file(std::SharedPtr<VN
         if(root->type() != VNode::DIRECTORY) return ERR_NOT_A_DIRECTORY;
 
         size_t length = next_separator - path_ptr;
-        if(length == 0) continue;
+        if(length == 0) {
+            path_ptr = next_separator + 1;
+            continue;
+        }
 
         char part[length+1];
         memcpy(part, path_ptr, length);
         part[length] = 0;
+
+        if(part[0] == 0 || (part[0] == '.' && part[1] == 0)) {
+            path_ptr = next_separator + 1;
+            continue;
+        } else if(part[0] == '.' && part[1] == '.' && part[2] == 0) {
+            if(root->f_parent) root = root->f_parent;
+            path_ptr = next_separator + 1;
+            continue;
+        }
 
         auto next_root = root->f_children.at(part);
         if(!next_root) return ERR_FILE_NOT_FOUND;
@@ -90,6 +102,13 @@ ValueOrError<std::List<std::SharedPtr<VNode>>> DeviceFilesystem::get_files(std::
         nodes.push_back(child.value);
     
     return nodes;
+}
+
+ValueOrError<VNodePtr> DeviceFilesystem::resolve_link(VNodePtr link) {
+    ASSERT_F(link->filesystem() == this, "Using a VNode from a different filesystem");
+
+    if(link->type() != VNode::LINK) return ERR_NOT_LINK;
+    return root = static_cast<DevFs_LinkData*>(root->fs_data)->destination;
 }
 
 ValueOrError<void> DeviceFilesystem::open(FileStream* stream, int mode) {

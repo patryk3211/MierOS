@@ -24,6 +24,7 @@ set(KERNEL_SOURCES src/init.cpp
                    src/fs/modulefs.cpp
                    src/fs/devicefs.cpp
                    src/fs/vnode.cpp
+                   src/fs/vfs.cpp
                    src/util/crc.c
                    src/streams/stream.cpp
                    src/streams/filestream.cpp)
@@ -66,6 +67,7 @@ add_custom_command(TARGET kernel.bin POST_BUILD
                     COMMENT "Exporting debug line symbols...")
 
 add_compile_definitions(${ARCH}=1)
+add_compile_definitions(DEBUG_TRACE=1)
 
 target_link_options(kernel.bin PRIVATE -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -pie -Wl,-export-dynamic -z max-page-size=0x1000 ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o -Wl,--no-dynamic-linker)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/std/include)

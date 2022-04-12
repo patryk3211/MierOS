@@ -13,6 +13,7 @@
 #include <trace.h>
 #include <fs/devicefs.hpp>
 #include <fs/vnode.hpp>
+#include <fs/vfs.hpp>
 
 #include <fs/modulefs.hpp>
 #include <fs/modulefs_functions.hpp>
@@ -169,13 +170,17 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         dmesg("\n");
     }
 
+    kernel::VFS* vfs = new kernel::VFS();
+
     u16_t fs_mod = kernel::init_modules("FS-ext2", 0);
     kernel::Thread::current()->current_module = kernel::get_module(fs_mod);
     auto* fs_mount = kernel::get_module_symbol<kernel::fs_function_table>(fs_mod, "fs_func_tab")->mount;
     u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(nullptr, "ahci0p1", { }));
     kernel::ModuleFilesystem mfs(fs_mod, minor);
 
-    auto result = mfs.get_files(nullptr, "", { });
+    vfs->mount(&mfs, "/");
+
+    auto result = vfs->get_files(nullptr, "", { });
     if(result) {
         auto nodes = *result;
         for(auto& node : nodes) {
@@ -184,7 +189,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         dmesg("\n");
     }
 
-    auto file = mfs.get_file(nullptr, "limine.cfg", { });
+    auto file = vfs->get_file(nullptr, "/limine.cfg", { });
     if(file) {
         auto& node = *file;
         auto* fstream = new kernel::FileStream(node);
