@@ -198,5 +198,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     }
     kernel::Thread::current()->current_module = 0;
 
+    TRACE("Test");
+
     while(true);
 }
