@@ -22,6 +22,14 @@ struct ACPI_SDTHeader {
     u32_t creatorRevision;
 } PACKED;
 
+struct ACPI_AddressStructure {
+    u8_t addressSpace;
+    u8_t bitWidth;
+    u8_t bitOffset;
+    u8_t accessSize;
+    u64_t address;
+} PACKED;
+
 extern void init_acpi(physaddr_t rsdp);
 extern physaddr_t get_table(const char* sign);
 
