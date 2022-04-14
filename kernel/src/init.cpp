@@ -125,7 +125,7 @@ extern "C" void __cxa_pure_virtual() {
 }
 
 TEXT_FREE_AFTER_INIT void stage2_init() {
-    dmesg("[Kernel] Multitasking initialized! Now in stage 2\n");
+    kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
     kernel::tests::do_tests();
 
     physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;

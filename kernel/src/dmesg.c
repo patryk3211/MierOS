@@ -2,6 +2,7 @@
 #include <types.h>
 #include <defines.h>
 #include <arch/x86_64/ports.h>
+#include <arch/time.h>
 
 #define IO_PORT 0x3F8
 
@@ -111,6 +112,33 @@ void va_kprintf(const char* format, va_list args) {
                         }
                     }
                     --i;
+                    break;
+                } case 'T': {
+                    // Timestamp
+                    time_t uptime = get_uptime();
+                    {
+                        time_t seconds = uptime / 1000;
+                        char buffer[80];
+                        int index = 0;
+                        do {
+                            int digit = seconds % 10;
+                            seconds /= 10;
+                            buffer[index++] = '0' + digit;
+                        } while(seconds > 0);
+                        char fin[index];
+                        for(int i = 0; i < index; i++) fin[i] = buffer[index-i-1];
+                        dmesgl(fin, index);
+                    } 
+                    dmesg(".");
+                    {
+                        time_t millis = uptime % 1000;
+                        char buffer[3];
+                        buffer[0] = '0' + (millis / 100);
+                        buffer[1] = '0' + (millis / 10 % 10);
+                        buffer[2] = '0' + (millis % 10);
+                        dmesgl(buffer, 3);
+                    }
+                    break;
                 }
             }
         } else if(dwOffset == -1) dwOffset = i;
