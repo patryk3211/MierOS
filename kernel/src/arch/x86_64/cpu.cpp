@@ -126,6 +126,24 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                 add_ioapic(apic_id, apic_addr, global_system_interrupt_base);
                 pager.lock();
                 break;
+            } case 0x02: { // Interrupt Source Override Entry
+                u8_t bus = record->rest[0];
+                u8_t interrupt = record->rest[1];
+                u32_t gsi = *((u32_t*)(record->rest+2));
+                u16_t flags = *((u16_t*)(record->rest+6));
+                kprintf("[Kernel] Int Source Override BUS=%x2 INT=%x2 GLOBAL=%x8 FLAGS=%x4\n", bus, interrupt, gsi, flags);
+
+                pager.unlock();
+                add_ioapic_intentry(interrupt, gsi, flags & 8, flags & 2, 0);
+                pager.lock();
+                break;
+            } case 0x03: { // NMI Source Override Entry
+                u8_t nmi = record->rest[0];
+                u16_t flags = *((u16_t*)(record->rest+2));
+                u32_t gsi = *((u32_t*)record->rest+4);
+                kprintf("[Kernel] NMI Source Override NMI=%x2 GLOBAL=%x8 FLAGS=%x4\n", nmi, gsi, flags);
+
+                break;
             }
         }
     }
