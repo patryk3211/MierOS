@@ -18,8 +18,10 @@ sudo mount /dev/loop100p1 imgmnt
 #sudo grub-install --force --target=i386-pc --root-directory=imgmnt --boot-directory=imgmnt/boot --grub-mkdevicemap=sysroot/boot/grub/device.map --no-floppy --modules="biosdisk part_msdos ext2 configfile normal multiboot" /dev/loop100
 limine/limine-install $1
 
-sudo chown -hR patryk:patryk imgmnt/*
-sudo chown -hR patryk:patryk imgmnt
+GROUP_NAME=$(id -gn)
+
+sudo chown -hR $USER:$GROUP_NAME imgmnt/*
+sudo chown -hR $USER:$GROUP_NAME imgmnt
 
 sudo umount imgmnt
 sudo losetup -d /dev/loop100
