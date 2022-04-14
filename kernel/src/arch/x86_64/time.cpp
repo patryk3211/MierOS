@@ -3,28 +3,38 @@
 #include <arch/x86_64/hpet.h>
 #include <memory/virtual.hpp>
 #include <arch/interrupts.h>
-
+#include <locking/locker.hpp>
 #include <arch/x86_64/ports.h>
 
 using namespace kernel;
 
+time_t uptime = 0;
+
+time_t time_ms = 0;
+time_t current_time = 0;
+
 void time_interrupt() {
-    dmesg("Timer\n");
+    uptime += 1;
+    
+    ++time_ms;
+    if(time_ms == 1000) {
+        time_ms = 0;
+        ++current_time;
+    }
 }
 
 void init_time() {
-    kprintf("PIT\n");
-    /*outb(0x43, 0b00110000);
-    outb(0x40, 0xA9);
-    outb(0x40, 0x04);*/
+    dmesg("[Kernel] Initializing time\n");
 
     register_handler(0x20, &time_interrupt);
 
-    auto& pager = Pager::active();
-    pager.lock();
-
     physaddr_t hpet_table_addr = get_table("HPET");
     if(hpet_table_addr != 0) {
+        dmesg("[Kernel] Using HPET for constant rate interrupts\n");
+
+        auto& pager = Pager::active();
+        Locker lock(pager);
+
         auto* hpet_table = (ACPI_HPET_Table*)pager.kmap(hpet_table_addr, 2, { 1, 0, 0, 0, 0, 0 });
 
         size_t byte_size = (hpet_table_addr & 0xFFF) + hpet_table->header.length;
@@ -34,38 +44,33 @@ void init_time() {
         hpet_table = (ACPI_HPET_Table*)pager.kmap(hpet_table_addr, page_size, { 1, 0, 0, 0, 0, 0 });
 
         volatile HPET* hpet = (volatile HPET*)pager.kmap(hpet_table->address.address, 1, { 1, 1, 0, 0, 1, 0 });
-        kprintf("HPET %x16 %x16 %x1 %x16\n", hpet->capabilities_and_id, hpet->configuration, hpet_table->comparatorCount, hpet->counter_value);
-        kprintf("Timer 0 %x16 %x16\n", hpet->timers[0].comparator_value, hpet->timers[0].config_and_capabilities);
-        kprintf("Timer 1 %x16 %x16\n", hpet->timers[1].comparator_value, hpet->timers[1].config_and_capabilities);
-        kprintf("Timer 2 %x16 %x16\n", hpet->timers[2].comparator_value, hpet->timers[2].config_and_capabilities);
 
         u64_t period = hpet->capabilities_and_id >> 32;
         u64_t frequency = 1000000000000000 / period;
+        u64_t timerValue = frequency / 1000; // 1 ms
+
+        kprintf("[Kernel] HPET Frequency %d Hz\n", frequency);
 
         hpet->timers[0].config_and_capabilities = 0b10001001100;
-        hpet->timers[0].comparator_value = frequency;
-        hpet->timers[0].comparator_value = frequency;
+        hpet->timers[0].comparator_value = timerValue;
+        hpet->timers[0].comparator_value = timerValue;
 
         hpet->counter_value = 0;
         hpet->configuration |= 1;
-
-        kprintf("After Config\nHPET %x16 %x16 %x1 %x16\n", hpet->capabilities_and_id, hpet->configuration, hpet_table->comparatorCount, hpet->counter_value);
-        kprintf("Timer 0 %x16 %x16\n", hpet->timers[0].comparator_value, hpet->timers[0].config_and_capabilities);
-        kprintf("Timer 1 %x16 %x16\n", hpet->timers[1].comparator_value, hpet->timers[1].config_and_capabilities);
-        kprintf("Timer 2 %x16 %x16\n", hpet->timers[2].comparator_value, hpet->timers[2].config_and_capabilities);
+    } else {
+        dmesg("[Kernel] Falling back to PIT for constant rate interrupts\n");
+        /// TODO: [14.04.2022] Implement PIT interrupts
     }
-
-    pager.unlock();
 }
 
 extern "C" void set_time(time_t time) {
-
+    current_time = time;
 }
 
 extern "C" time_t get_time() {
-
+    return current_time;
 }
 
 extern "C" time_t get_uptime() {
-
+    return uptime;
 }
