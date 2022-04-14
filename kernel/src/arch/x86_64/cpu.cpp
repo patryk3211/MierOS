@@ -9,6 +9,7 @@
 #include <tasking/scheduler.hpp>
 #include <defines.h>
 #include <arch/x86_64/ports.h>
+#include <arch/x86_64/apic.h>
 
 using namespace kernel;
 
@@ -29,7 +30,7 @@ struct ACPI_MADT {
 } PACKED;
 
 // LAPIC Id - Linear Id
-NO_EXPORT std::UnorderedMap<int, int> core_map(16);
+NO_EXPORT std::UnorderedMap<u32_t, u32_t> core_map(16);
 
 #define LAPIC_MSR 0x1B
 
@@ -63,6 +64,8 @@ TEXT_FREE_AFTER_INIT void enable_lapic() {
     write_lapic(0xF0, read_lapic(0xF0) | 0x1FF);
 }
 
+u32_t bsp_apic_id;
+
 TEXT_FREE_AFTER_INIT void parse_madt() {
     auto& pager = Pager::active();
     Locker locker(pager);
@@ -94,8 +97,8 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
     enable_lapic();
 
     // BSP is always guaranteed to be core 0
-    u8_t bsp_id = read_lapic(0x20) >> 24;
-    core_map.insert({ bsp_id, 0 });
+    bsp_apic_id = read_lapic(0x20) >> 24;
+    core_map.insert({ bsp_apic_id, 0 });
 
     // Parse the rest of the records
     size_t record_length = madt->header.length - sizeof(madt->header);
@@ -109,7 +112,7 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                 kprintf("[Kernel] LAPIC ACPI_ID=%x2 APIC_ID=%x2 FLAGS=%x2\n", acpi_id, apic_id, flags);
                 if(flags & 0x03) {
                     // This CPU can be enabled so we put it into our core map.
-                    core_map.insert({ apic_id, static_cast<int>(core_map.size()) });
+                    core_map.insert({ apic_id, static_cast<u32_t>(core_map.size()) });
                 }
                 break;
             } case 0x01: { // IO APIC Entry
@@ -117,6 +120,11 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                 u32_t apic_addr = ((u32_t*)(record->rest+2))[0];
                 u32_t global_system_interrupt_base = ((u32_t*)(record->rest+2))[1];
                 kprintf("[Kernel] I/O APIC ID=%x2 ADDR=%x8 INT_BASE=%x8\n", apic_id, apic_addr, global_system_interrupt_base);
+
+                // This should probably be a recursive lock or something.
+                pager.unlock();
+                add_ioapic(apic_id, apic_addr, global_system_interrupt_base);
+                pager.lock();
                 break;
             }
         }
