@@ -23,6 +23,25 @@ struct ACPI_HPET_Table {
     u8_t pageProtection;
 } PACKED;
 
+struct HPET_Timer {
+    u64_t config_and_capabilities;
+    u64_t comparator_value;
+    u64_t fsb_route;
+    u64_t reserved;
+} PACKED;
+
+struct HPET {
+    u64_t capabilities_and_id;
+    u64_t pad1;
+    u64_t configuration;
+    u64_t pad2;
+    u64_t interrupt_status;
+    u64_t pad3[25];
+    u64_t counter_value;
+    u64_t pad4;
+    struct HPET_Timer timers[32];
+} PACKED;
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif
