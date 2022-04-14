@@ -53,7 +53,7 @@ u16_t kernel::add_preloaded_module(void* file) {
     Module* mod = new Module(file, 0);
     auto hdr_sec = mod->get_section(".modulehdr");
     if(!hdr_sec) {
-        dmesg("[Kernel] Unable to find .modulehdr section in provided file\n");
+        dmesg("(Kernel) Unable to find .modulehdr section in provided file");
         return 0;
     }
     module_header* header = (module_header*)hdr_sec->address;
@@ -121,7 +121,7 @@ u16_t kernel::init_modules(const char* init_signal, void* init_struct) {
                 if(return_major == 0) return_major = (*module)->major();
             } else {
                 // We have to load the module from disk
-                dmesg("[Kernel] TODO: [31.01.2022] We have to load the module from disk\n");
+                dmesg("(Kernel] TODO: [31.01.2022) We have to load the module from disk");
             }
         }
     }
@@ -136,7 +136,7 @@ u16_t kernel::init_modules(const char* init_signal, void* init_struct) {
                 if(return_major == 0) return_major = (*module)->major();
             } else {
                 // We have to load the module from disk
-                dmesg("[Kernel] TODO: [31.01.2022] We have to load the module from disk\n");
+                dmesg("(Kernel] TODO: [31.01.2022) We have to load the module from disk");
             }
         }
     }

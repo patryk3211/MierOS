@@ -24,13 +24,13 @@ void time_interrupt() {
 }
 
 void init_time() {
-    dmesg("[Kernel] Initializing time\n");
+    dmesg("(Kernel) Initializing time");
 
     register_handler(0x20, &time_interrupt);
 
     physaddr_t hpet_table_addr = get_table("HPET");
     if(hpet_table_addr != 0) {
-        dmesg("[Kernel] Using HPET for constant rate interrupts\n");
+        dmesg("(Kernel) Using HPET for constant rate interrupts");
 
         auto& pager = Pager::active();
         Locker lock(pager);
@@ -49,7 +49,7 @@ void init_time() {
         u64_t frequency = 1000000000000000 / period;
         u64_t timerValue = frequency / 1000; // 1 ms
 
-        kprintf("[Kernel] HPET Frequency %d Hz\n", frequency);
+        kprintf("[%T] (Kernel) HPET Frequency %d Hz\n", frequency);
 
         hpet->timers[0].config_and_capabilities = 0b10001001100;
         hpet->timers[0].comparator_value = timerValue;
@@ -58,7 +58,7 @@ void init_time() {
         hpet->counter_value = 0;
         hpet->configuration |= 1;
     } else {
-        dmesg("[Kernel] Falling back to PIT for constant rate interrupts\n");
+        dmesg("(Kernel) Falling back to PIT for constant rate interrupts");
         /// TODO: [14.04.2022] Implement PIT interrupts
     }
 }

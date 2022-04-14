@@ -22,7 +22,7 @@ MODULE_HEADER char init_on[] = "TEST\0";
 std::Vector<int> vec = std::Vector<int>(10, 1);
 
 extern "C" int init() {
-    dmesg("[Test Mod] Testing\n");
+    dmesg("(Test Mod) Testing");
     vec.push_back(105);
     return vec[0] + vec[10];
 }

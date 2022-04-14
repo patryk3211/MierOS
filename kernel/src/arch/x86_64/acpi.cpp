@@ -51,7 +51,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
 
     if(check2 == 0) {
         // XSDT found.
-        dmesg("[Kernel] Found a valid ACPI XSDT\n");
+        dmesg("(Kernel) Found a valid ACPI XSDT");
         physaddr_t xsdt_addr = ((ACPI_RSDP2*)mapped_addr)->xsdtAddress;
         ACPI_XSDT* xsdt = (ACPI_XSDT*)pager.kmap(xsdt_addr, 2, { 1, 0, 0, 0, 0, 0 });
         
@@ -71,13 +71,13 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
             acpi_tables.insert({ sign, addr });
             pager.unmap((virtaddr_t)header, 1);
 
-            kprintf("[Kernel] ACPI Table (Signature '%s') found at 0x%x16\n", sign, addr);
+            kprintf("[%T] (Kernel) ACPI Table (Signature '%s') found at 0x%x16\n", sign, addr);
         }
 
         pager.unmap((virtaddr_t)xsdt, page_size);
     } else if(check1 == 0) {
         // RSDT found.
-        dmesg("[Kernel] Found a valid ACPI RSDT\n");
+        dmesg("(Kernel) Found a valid ACPI RSDT");
         physaddr_t rsdt_addr = ((ACPI_RSDP*)mapped_addr)->rsdtAddress;
         ACPI_RSDT* rsdt = (ACPI_RSDT*)pager.kmap(rsdt_addr, 2, { 1, 0, 0, 0, 0, 0 });
         
@@ -97,7 +97,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
             acpi_tables.insert({ sign, addr });
             pager.unmap((virtaddr_t)header, 1);
 
-            kprintf("[Kernel] ACPI Table (Signature '%s') found at 0x%x8\n", sign, addr);
+            kprintf("[%T] (Kernel) ACPI Table (Signature '%s') found at 0x%x8\n", sign, addr);
         }
 
         pager.unmap((virtaddr_t)rsdt, page_size);

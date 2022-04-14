@@ -75,12 +75,12 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
     HBA_Port* port = &hba->ports[port_id];
 
     if((port->sata_status & 0xF) != 3) {
-        kprintf("[AHCI] No device detected at port %d\n", port_id);
+        kprintf("[%T] (AHCI) No device detected at port %d\n", port_id);
         return;
     }
 
     if(((port->sata_status >> 8) & 0xF) != 1) {
-        kprintf("[AHCI] Device at port %d is not in an active state\n", port_id);
+        kprintf("[%T] (AHCI) Device at port %d is not in an active state\n", port_id);
         return;
     }
 
@@ -88,11 +88,11 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
     drive_information* drive_info = new drive_information();
     switch(port->signature) {
         case SATA_SIG_ATA:
-            kprintf("[AHCI] Found ATA device at port %d\n", port_id);
+            kprintf("[%T] (AHCI) Found ATA device at port %d\n", port_id);
             drive_info->atapi = false;
             break;
         case SATA_SIG_ATAPI:
-            kprintf("[AHCI] Found ATAPI device at port %d\n", port_id);
+            kprintf("[%T] (AHCI) Found ATAPI device at port %d\n", port_id);
             drive_info->atapi = true;
             break;
         case SATA_SIG_SEMB:
@@ -103,7 +103,7 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
             break;
         default:
             delete drive_info;
-            kprintf("[AHCI] Unknown device found at port %d\n", port_id);
+            kprintf("[%T] (AHCI) Unknown device found at port %d\n", port_id);
             return;
     }
 

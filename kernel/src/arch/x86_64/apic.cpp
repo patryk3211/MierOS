@@ -123,7 +123,7 @@ void init_pic() {
 
         use_apic = false;
     } else {
-        kprintf("[Kernel] Found %d I/O APIC\n", ioApics.size());
+        kprintf("[%T] (Kernel) Found %d I/O APIC\n", ioApics.size());
 
         // Mask the legacy PICs
         outb(MASTER_PIC_DATA, 0xFF);

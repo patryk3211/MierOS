@@ -27,12 +27,12 @@ extern void detect_pci();
 
 const char lookup[] = "0123456789abcdef";
 extern "C" int init() {
-    dmesg("[PCI] Detecting PCI devices...\n");
+    dmesg("(PCI) Detecting PCI devices...");
     detect_pci();
 
-    kprintf("[PCI] Found %d devices.\n", pci_headers.size());
+    kprintf("[%T] (PCI) Found %d devices.\n", pci_headers.size());
     for(auto& header : pci_headers)
-        kprintf("[PCI] Vendor=%x4 DeviceID=%x4 Class=%x2 Subclass=%x2 ProgIf=%x2 Rev=%x2\n", header.vendor_id, header.device_id, header.classcode, header.subclass, header.prog_if, header.revision);
+        kprintf("[%T] (PCI) Vendor=%x4 DeviceID=%x4 Class=%x2 Subclass=%x2 ProgIf=%x2 Rev=%x2\n", header.vendor_id, header.device_id, header.classcode, header.subclass, header.prog_if, header.revision);
     
     char init_signal[] = "PCI-V???\?-D???\?-C??S??P??R??";
     for(auto& header : pci_headers) {
@@ -58,7 +58,7 @@ extern "C" int init() {
         init_signal[26] = lookup[(header.revision >> 4) & 0xF];
         init_signal[27] = lookup[(header.revision >> 0) & 0xF];
 
-        kprintf("[PCI] Initalizing modules for signal '%s'\n", init_signal);
+        kprintf("[%T] (PCI) Initalizing modules for signal '%s'\n", init_signal);
 
         kernel::init_modules(init_signal, &header);
     }

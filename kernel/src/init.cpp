@@ -48,7 +48,7 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
 
     // Init serial for debug messages.
     init_serial();
-    dmesg("\033[1;37mHello Serial!\033[0m\n");
+    dmesg("\033[1;37mHello Serial!\033[0m");
 
     stivale2_stag_memmap* mem_map = 0;
 
@@ -158,16 +158,16 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     {
         auto devices = kernel::DeviceFilesystem::instance()->get_files(nullptr, "", { .resolve_link = 0, .follow_links = 1 });
         for(auto& dev : *devices) {
-            dmesg(dev->name().c_str());
-            dmesg(" ");
+            kprintf(dev->name().c_str());
+            kprintf(" ");
         }
-        dmesg("\nBy ID:\n");
+        kprintf("\nBy ID:\n");
         devices = kernel::DeviceFilesystem::instance()->get_files(nullptr, "block/by-id", { .resolve_link = 0, .follow_links = 1 });
         for(auto& dev : *devices) {
-            dmesg(dev->name().c_str());
-            dmesg(" ");
+            kprintf(dev->name().c_str());
+            kprintf(" ");
         }
-        dmesg("\n");
+        kprintf("\n");
     }
 
     kernel::VFS* vfs = new kernel::VFS();
@@ -186,7 +186,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         for(auto& node : nodes) {
             kprintf("%s ", node->name().c_str());
         }
-        dmesg("\n");
+        kprintf("\n");
     }
 
     auto file = vfs->get_file(nullptr, "/limine.cfg", { });
@@ -197,7 +197,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
         u8_t buffer[node->f_size];
         fstream->read(buffer, node->f_size);
-        dmesg((const char*)buffer);
+        kprintf((const char*)buffer);
 
         delete fstream;
     }

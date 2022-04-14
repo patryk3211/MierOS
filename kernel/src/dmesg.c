@@ -28,8 +28,12 @@ void write_serial(char c) {
     outb(IO_PORT, c);
 }
 
-void dmesg(const char* msg) {
+void raw_dmesg(const char* msg) {
     while(*msg != 0) write_serial(*msg++);
+}
+
+void dmesg(const char* msg) {
+    kprintf("[%T] %s\n", msg);
 }
 
 void dmesgl(const char* msg, size_t length) {
@@ -63,7 +67,7 @@ void va_kprintf(const char* format, va_list args) {
             switch(format[++i]) {
                 case 's': {
                     char* str = va_arg(args, char*);
-                    dmesg(str);
+                    raw_dmesg(str);
                     break;
                 } case 'c': {
                     char val = va_arg(args, int);
@@ -129,7 +133,7 @@ void va_kprintf(const char* format, va_list args) {
                         for(int i = 0; i < index; i++) fin[i] = buffer[index-i-1];
                         dmesgl(fin, index);
                     } 
-                    dmesg(".");
+                    raw_dmesg(".");
                     {
                         time_t millis = uptime % 1000;
                         char buffer[3];

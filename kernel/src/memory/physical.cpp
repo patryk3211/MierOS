@@ -39,10 +39,10 @@ NO_EXPORT std::RangeMap<physaddr_t>* freeable_mem;
 extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) {
     ASSERT_F(memory_map != 0, "\033[1;37mmemory_map\033[0m is null");
     // Output the memory map on serial and count how much 4 GB pages there are.
-    kprintf("[Kernel] Memory Map:\n[Kernel] Base             Length           Type    \n");
+    kprintf("[%T] (Kernel) Memory Map:\n[%T] (Kernel) Base             Length           Type    \n");
     physaddr_t max_address = 0;
     for(u64_t i = 0; i < memory_map->entry_count; ++i) {
-        kprintf("[Kernel] %x16 %x16 %x8\n", memory_map->entries[i].base, memory_map->entries[i].length, memory_map->entries[i].type);
+        kprintf("[%T] (Kernel) %x16 %x16 %x8\n", memory_map->entries[i].base, memory_map->entries[i].length, memory_map->entries[i].type);
         if(max_address < memory_map->entries[i].base) max_address = memory_map->entries[i].base;
     }
     u32_t gb_page_count = (max_address >> 32) + ((max_address & 0xFFFFFFFF) == 0 ? 0 : 1);
@@ -74,7 +74,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
     for(u64_t page = 0; page < 1024*1024; page += 4096) set_page_status(page, 1);
     freeable_mem->add(0, 1024*1024);
 
-    kprintf("[Kernel] Found %d KiB of free memory\n", free_mem/1024);
+    kprintf("[%T] (Kernel) Found %d KiB of free memory\n", free_mem/1024);
 
     pmm_lock = SpinLock();
 }
@@ -86,7 +86,7 @@ extern "C" void pmm_release_bootloader_resources() {
         pfree(iter->start, (iter->end - iter->start) >> 12);
     }
     delete freeable_mem;
-    kprintf("[Kernel] Freed %d KiB of bootloader memory\n", freed_mem/1024);
+    kprintf("[%T] (Kernel) Freed %d KiB of bootloader memory\n", freed_mem/1024);
 }
 
 extern "C" physaddr_t palloc(size_t page_count) {

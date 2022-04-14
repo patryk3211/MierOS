@@ -13,7 +13,7 @@ Module::Module(void* elf_file, u16_t major_num) : major_num(major_num) {
     u8_t* elf_file_c = (u8_t*)elf_file;
     Elf64_Header* elf_header = (Elf64_Header*)elf_file;
     if(!memcmp(elf_header, ELF_HEADER, 8)) {
-        dmesg("[Kernel] \033[31;1mError!\033[0m Invalid module ELF header!\n");
+        dmesg("(Kernel) \033[31;1mError!\033[0m Invalid module ELF header!");
         return;
     }
 
@@ -69,18 +69,18 @@ Module::Module(void* elf_file, u16_t major_num) : major_num(major_num) {
     auto symstr = get_section(".dynstr");
     if(symtab) symbol_table = &*symtab;
     else {
-        dmesg("[Kernel] \033[31;1mError!\033[0m Module does not have a dynamic symbol table\n");
+        dmesg("(Kernel) \033[31;1mError!\033[0m Module does not have a dynamic symbol table");
         return;
     }
     if(symstr) symbol_names = &*symstr;
     else {
-        dmesg("[Kernel] \033[31;1mError!\033[0m Module does not have a dynamic symbol name table\n");
+        dmesg("(Kernel) \033[31;1mError!\033[0m Module does not have a dynamic symbol name table");
         return;
     }
 
     auto header_sec = get_section(".modulehdr");
     if(!header_sec) {
-        dmesg("[Kernel] \033[31;1mError!\033[0m Module does not have a header section\n");
+        dmesg("(Kernel) \033[31;1mError!\033[0m Module does not have a header section");
         return;
     }
 
@@ -131,7 +131,7 @@ void Module::link() {
                 switch(ELF64_REL_TYPE(rela->info)) {
                     case 0x06: { // R_x86_64_GLOB_DATA
                         auto symbol = get_symbol(ELF64_REL_SYM(rela->info));
-                        if(!symbol) dmesg("[Kernel] \033[31;1mError!\033[0m Could not find symbol referenced in relocation section in the .dynsym section\n");
+                        if(!symbol) dmesg("(Kernel) \033[31;1mError!\033[0m Could not find symbol referenced in relocation section in the .dynsym section");
                         if(symbol->addr != 0) *(u64_t*)(address_base+rela->addr) = symbol->addr;
                         else {
                             // Start looking for the symbol elsewhere
@@ -143,14 +143,14 @@ void Module::link() {
                             }
 
                             /// TODO: [29.01.2022] Look in the dependencies of this module.
-                            dmesg("[Kernel] TODO: Look in the dependencies of this module.\n");
+                            dmesg("(Kernel) TODO: Look in the dependencies of this module.");
                         }
                         break;
                     } case 0x08: { // R_x86_64_RELATIVE
                         *(u64_t*)(address_base+rela->addr) = address_base + rela->addend;
                         break;
                     } default:
-                        kprintf("[Kernel] \033[31;1mError!\033[0m Unknown relocation type %d\n", ELF64_REL_TYPE(rela->info));
+                        kprintf("[%T] (Kernel) \033[31;1mError!\033[0m Unknown relocation type %d\n", ELF64_REL_TYPE(rela->info));
                         break;
                 }
             }
