@@ -39,6 +39,23 @@ extern void interrupt0x1D();
 extern void interrupt0x1E();
 extern void interrupt0x1F();
 
+extern void interrupt0x20();
+extern void interrupt0x21();
+extern void interrupt0x22();
+extern void interrupt0x23();
+extern void interrupt0x24();
+extern void interrupt0x25();
+extern void interrupt0x26();
+extern void interrupt0x27();
+extern void interrupt0x28();
+extern void interrupt0x29();
+extern void interrupt0x2A();
+extern void interrupt0x2B();
+extern void interrupt0x2C();
+extern void interrupt0x2D();
+extern void interrupt0x2E();
+extern void interrupt0x2F();
+
 extern void interrupt0xFE();
 
 #if defined(__cplusplus)

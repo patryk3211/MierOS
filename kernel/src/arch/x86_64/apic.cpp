@@ -2,6 +2,8 @@
 #include <list.hpp>
 #include <memory/virtual.hpp>
 #include <locking/locker.hpp>
+#include <arch/x86_64/ports.h>
+#include <arch/x86_64/cpu.h>
 
 using namespace kernel;
 
@@ -84,6 +86,60 @@ void add_ioapic_intentry(u8_t interruptVector, u32_t globalSystemInterrupt, u8_t
             apic.usedPins |= 1 << entryOffset;
 
             return;
+        }
+    }
+}
+
+#define MASTER_PIC_COMMAND 0x20
+#define MASTER_PIC_DATA 0x21
+#define SLAVE_PIC_COMMAND 0xA0
+#define SLAVE_PIC_DATA 0xA1
+#define HARDWARE_IRQ_BASE 0x20
+
+bool use_apic;
+void init_pic() {
+    if(ioApics.size() == 0) {
+        // Fallback to legacy PICs
+        kprintf("[Kernel] Falling back to legacy PIC pair\n");
+        // Reinitialize the PICs
+        outb(MASTER_PIC_COMMAND, 0x11);
+        outb(SLAVE_PIC_COMMAND, 0x11);
+
+        // Set the IRQ base
+        outb(MASTER_PIC_DATA, HARDWARE_IRQ_BASE);
+        outb(SLAVE_PIC_DATA, HARDWARE_IRQ_BASE+0x08);
+
+        // Chain the PICs
+        outb(MASTER_PIC_DATA, 4);
+        outb(SLAVE_PIC_DATA, 2);
+
+        // 8086 mode
+        outb(MASTER_PIC_DATA, 0x01);
+        outb(SLAVE_PIC_DATA, 0x01);
+
+        // Unmask all IRQs
+        outb(MASTER_PIC_DATA, 0x00);
+        outb(SLAVE_PIC_DATA, 0x00);
+
+        use_apic = false;
+    } else {
+        kprintf("[Kernel] Found %d I/O APIC\n", ioApics.size());
+
+        // Mask the legacy PICs
+        outb(MASTER_PIC_DATA, 0xFF);
+        outb(SLAVE_PIC_DATA, 0xFF);
+
+        use_apic = true;
+    }
+}
+
+void pic_eoi(u8_t vector) {
+    if(use_apic) {
+        write_lapic(0xB0, 0);
+    } else {
+        if(vector >= HARDWARE_IRQ_BASE && vector < HARDWARE_IRQ_BASE+16) {
+            if(vector >= HARDWARE_IRQ_BASE+8) outb(SLAVE_PIC_COMMAND, 0x20);
+            outb(MASTER_PIC_COMMAND, 0x20);
         }
     }
 }

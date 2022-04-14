@@ -7,6 +7,7 @@
 #include <arch/cpu.h>
 #include <tasking/thread.hpp>
 #include <trace.h>
+#include <arch/x86_64/apic.h>
 
 struct interrupt_descriptor {
     u16_t offset_015;
@@ -87,6 +88,23 @@ extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     create_descriptor(idt[0x1E], &interrupt0x1E, 0xE, 0);
     create_descriptor(idt[0x1F], &interrupt0x1F, 0xE, 0);
 
+    create_descriptor(idt[0x20], &interrupt0x20, 0xE, 0);
+    create_descriptor(idt[0x21], &interrupt0x21, 0xE, 0);
+    create_descriptor(idt[0x22], &interrupt0x22, 0xE, 0);
+    create_descriptor(idt[0x23], &interrupt0x23, 0xE, 0);
+    create_descriptor(idt[0x24], &interrupt0x24, 0xE, 0);
+    create_descriptor(idt[0x25], &interrupt0x25, 0xE, 0);
+    create_descriptor(idt[0x26], &interrupt0x26, 0xE, 0);
+    create_descriptor(idt[0x27], &interrupt0x27, 0xE, 0);
+    create_descriptor(idt[0x28], &interrupt0x28, 0xE, 0);
+    create_descriptor(idt[0x29], &interrupt0x29, 0xE, 0);
+    create_descriptor(idt[0x2A], &interrupt0x2A, 0xE, 0);
+    create_descriptor(idt[0x2B], &interrupt0x2B, 0xE, 0);
+    create_descriptor(idt[0x2C], &interrupt0x2C, 0xE, 0);
+    create_descriptor(idt[0x2D], &interrupt0x2D, 0xE, 0);
+    create_descriptor(idt[0x2E], &interrupt0x2E, 0xE, 0);
+    create_descriptor(idt[0x2F], &interrupt0x2F, 0xE, 0);
+
     create_descriptor(idt[0xFE], &interrupt0xFE, 0xE, 0);
 
     idtr.length = sizeof(idt);
@@ -113,6 +131,8 @@ void trace_stack(void* base_pointer) {
 
 extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
     CPUState* state = (CPUState*)rsp;
+    u8_t intVec = state->int_num;
+
     if(state->int_num == 0xFE) {
         state = _tsh(state);
         set_kernel_stack(current_core(), rsp+sizeof(CPUState));
@@ -145,7 +165,7 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
             handler->handler();
     }
 
-    write_lapic(0xB0, 0);
+    pic_eoi(intVec);
     return (u64_t)state;
 }
 

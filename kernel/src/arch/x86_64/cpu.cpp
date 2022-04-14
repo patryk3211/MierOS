@@ -134,7 +134,7 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                 kprintf("[Kernel] Int Source Override BUS=%x2 INT=%x2 GLOBAL=%x8 FLAGS=%x4\n", bus, interrupt, gsi, flags);
 
                 pager.unlock();
-                add_ioapic_intentry(interrupt, gsi, flags & 8, flags & 2, 0);
+                add_ioapic_intentry(interrupt+0x20, gsi, flags & 8, flags & 2, 0);
                 pager.lock();
                 break;
             } case 0x03: { // NMI Source Override Entry
@@ -332,6 +332,8 @@ extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
 
     init_gdt();
     init_interrupts();
+
+    init_pic();
 
     // Measure Local APIC timer ticks for 1 millisecond
     measure_lapic_timer();
