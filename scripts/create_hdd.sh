@@ -5,6 +5,13 @@ if [ "$1" = "" ]; then
     exit
 fi
 
+DIR=$(dirname $1)
+if [ "$DIR" != "" ] then
+    mkdir -p $DIR
+fi
+
+mkdir -p $(dirname $1)
+
 dd if=/dev/zero of=$1 count=262144
 
 mkdir -p imgmnt
