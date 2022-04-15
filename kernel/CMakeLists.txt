@@ -76,3 +76,10 @@ install(TARGETS kernel.bin DESTINATION ${SYSROOT_DIR}/)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/kernel.map DESTINATION ${SYSROOT_DIR}/)
 
 add_subdirectory(modules)
+
+file(GLOB_RECURSE FORMAT_SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.c
+                                                   include/*.hpp include/*.h
+                                                   modules/*.cpp modules/*.c
+                                                   modules/*.hpp modules/*.h
+                                                   std/*.hpp std/*.h)
+add_custom_target(format_kernel_code sh ${CMAKE_SOURCE_DIR}/scripts/format_code.sh "${FORMAT_SOURCES}" COMMENT "Formatting code..." VERBATIM)

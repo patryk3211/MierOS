@@ -8,12 +8,16 @@ namespace kernel {
         Thread* last;
 
         size_t length;
+
     public:
         class iterator {
             Thread* thread;
             Thread* prev;
 
-            iterator(Thread* thread, Thread* prev) : thread(thread), prev(prev) { }
+            iterator(Thread* thread, Thread* prev)
+                : thread(thread)
+                , prev(prev) { }
+
         public:
             ~iterator();
 
@@ -37,8 +41,8 @@ namespace kernel {
         };
 
         ThreadQueue() {
-            first  = 0;
-            last   = 0;
+            first = 0;
+            last = 0;
             length = 0;
         }
 
@@ -72,7 +76,8 @@ namespace kernel {
             if(first == last) {
                 first = 0;
                 last = 0;
-            } else first = first->next;
+            } else
+                first = first->next;
             --length;
         }
 
@@ -93,8 +98,10 @@ namespace kernel {
             Thread* prev = 0;
             for(Thread* thread = first; thread != 0; thread = thread->next) {
                 if(best_thread->preferred_core != core && thread->preferred_core == core) {
-                    if(prev != 0) prev->next = best_thread->next;
-                    else first = best_thread->next;
+                    if(prev != 0)
+                        prev->next = best_thread->next;
+                    else
+                        first = best_thread->next;
 
                     if(best_thread == last) last = prev;
                     best_thread->next = 0;
@@ -110,7 +117,8 @@ namespace kernel {
                 if(best_thread == first) {
                     first = best_thread->next;
                     prev = 0;
-                } else prev->next = best_thread->next;
+                } else
+                    prev->next = best_thread->next;
 
                 if(best_thread == last) last = prev;
                 best_thread->next = 0;

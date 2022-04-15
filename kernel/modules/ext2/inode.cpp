@@ -16,7 +16,9 @@ INodePtr read_inode(MountInfo& mi, u32_t inode_idx) {
     return ptr;
 }
 
-INodePtr::INodePtr(CacheBlock* block, u32_t offset) : f_block(block), f_offset(offset) {
+INodePtr::INodePtr(CacheBlock* block, u32_t offset)
+    : f_block(block)
+    , f_offset(offset) {
     f_block->ref();
 }
 
@@ -24,12 +26,15 @@ INodePtr::~INodePtr() {
     if(f_block != 0) f_block->unref();
 }
 
-INodePtr::INodePtr(const INodePtr& other) : f_block(other.f_block), f_offset(other.f_offset) {
+INodePtr::INodePtr(const INodePtr& other)
+    : f_block(other.f_block)
+    , f_offset(other.f_offset) {
     f_block->ref();
 }
 
-INodePtr::INodePtr(INodePtr&& other) : f_block(other.leak_ptr()), f_offset(other.f_offset) {
-
+INodePtr::INodePtr(INodePtr&& other)
+    : f_block(other.leak_ptr())
+    , f_offset(other.f_offset) {
 }
 
 INodePtr& INodePtr::operator=(const INodePtr& other) {

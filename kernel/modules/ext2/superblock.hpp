@@ -1,7 +1,7 @@
 #pragma once
 
-#include <types.h>
 #include <defines.h>
+#include <types.h>
 
 struct Superblock {
     // Base superblock fields

@@ -7,15 +7,20 @@ namespace std {
     template<typename T> class Optional {
         alignas(T) unsigned char storage[sizeof(T)];
         bool exists;
-    public:
-        Optional() : exists(false) { }
-        Optional(const T& value) : exists(true) { new(storage) T(value); }
 
-        Optional(const Optional<T>& other) : exists(other.exists) {
+    public:
+        Optional()
+            : exists(false) { }
+        Optional(const T& value)
+            : exists(true) { new(storage) T(value); }
+
+        Optional(const Optional<T>& other)
+            : exists(other.exists) {
             if(exists) new(storage) T(other.value());
         }
 
-        Optional(Optional<T>&& other) : exists(other.exists) {
+        Optional(Optional<T>&& other)
+            : exists(other.exists) {
             if(exists) {
                 new(storage) T(move(other.value()));
                 other.exists = false;
@@ -69,9 +74,12 @@ namespace std {
 
     template<typename T> class OptionalRef {
         T* reference;
+
     public:
-        OptionalRef() : reference(0) { }
-        OptionalRef(T& value) : reference(&value) { }
+        OptionalRef()
+            : reference(0) { }
+        OptionalRef(T& value)
+            : reference(&value) { }
 
         T& operator*() { return *reference; }
         T* operator->() { return reference; }

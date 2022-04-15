@@ -1,7 +1,7 @@
 #pragma once
 
-#include <fs/filesystem.hpp>
 #include <errno.h>
+#include <fs/filesystem.hpp>
 #include <fs/vnode.hpp>
 
 namespace kernel {
@@ -15,6 +15,7 @@ namespace kernel {
     class ModuleFilesystem : public Filesystem {
         u16_t major;
         u16_t minor;
+
     public:
         ModuleFilesystem(u16_t major, u16_t minor);
         virtual ~ModuleFilesystem();

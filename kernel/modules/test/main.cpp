@@ -1,7 +1,7 @@
-#include <dmesg.h>
-#include <vector.hpp>
-#include <modules/module_header.h>
 #include <defines.h>
+#include <dmesg.h>
+#include <modules/module_header.h>
+#include <vector.hpp>
 
 extern char header_mod_name[];
 extern char init_on[];

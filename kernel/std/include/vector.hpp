@@ -1,8 +1,8 @@
 #pragma once
 
-#include <types.h>
 #include <allocator.hpp>
 #include <stdlib.h>
+#include <types.h>
 
 namespace std {
     template<typename T, class Allocator = heap_allocator> class Vector {
@@ -12,12 +12,14 @@ namespace std {
         size_t f_capacity;
 
         Allocator alloc;
+
     public:
         static constexpr size_t INITIAL_SIZE = 16;
 
         typedef T* iterator;
 
-        Vector() : Vector(INITIAL_SIZE) { f_size = 0; }
+        Vector()
+            : Vector(INITIAL_SIZE) { f_size = 0; }
         Vector(size_t size) {
             this->f_size = size;
             this->f_capacity = size;
@@ -28,7 +30,7 @@ namespace std {
         Vector(size_t size, const T& initial_value) {
             this->f_size = size;
             this->f_capacity = size;
-            
+
             elements = alloc.template alloc<T>(size);
             for(size_t i = 0; i < size; ++i) elements[i] = initial_value;
         }
@@ -47,7 +49,7 @@ namespace std {
             this->f_capacity = vector.f_capacity;
 
             this->elements = alloc.template alloc<T>(this->f_capacity);
-            memcpy(this->elements, vector.elements, this->f_size);            
+            memcpy(this->elements, vector.elements, this->f_size);
         }
 
         Vector(Vector<T>&& vector) {
@@ -80,7 +82,7 @@ namespace std {
 
             size_t new_size = capacity < f_size ? capacity : f_size;
 
-            if(elements != 0) memcpy(new_buffer, elements, new_size*sizeof(T));
+            if(elements != 0) memcpy(new_buffer, elements, new_size * sizeof(T));
 
             f_capacity = capacity;
             f_size = new_size;
@@ -108,7 +110,7 @@ namespace std {
         }
 
         void push_back(const T& value) {
-            if(f_size == f_capacity) reserve(f_capacity+INITIAL_SIZE);
+            if(f_size == f_capacity) reserve(f_capacity + INITIAL_SIZE);
             this->elements[f_size++] = value;
         }
 

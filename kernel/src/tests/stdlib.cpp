@@ -1,14 +1,14 @@
+#include <assert.h>
+#include <errno.h>
+#include <function.hpp>
+#include <functional.hpp>
+#include <list.hpp>
+#include <string.hpp>
 #include <tests/stdlib.hpp>
 #include <tests/test.hpp>
 #include <unique_pointer.hpp>
-#include <function.hpp>
-#include <functional.hpp>
-#include <assert.h>
-#include <list.hpp>
 #include <unordered_map.hpp>
-#include <string.hpp>
 #include <vector.hpp>
-#include <errno.h>
 
 using namespace std;
 
@@ -25,7 +25,7 @@ bool kernel::tests::stdlib_test() {
 
     { // Function test
         int i = 5;
-        Function<int(void)> func1 = [=]() mutable { 
+        Function<int(void)> func1 = [=]() mutable {
             return i++;
         };
 
@@ -40,13 +40,13 @@ bool kernel::tests::stdlib_test() {
     }
 
     { // Operator test
-        TEST(less<int>{}(1, 2), "(SL3.1) std::less test failed");
-        TEST(!less<int>{}(2, 1), "(SL3.2) std::less test failed");
-        TEST(!less<int>{}(1, 1), "(SL3.3) std::less test failed");
+        TEST(less<int> {}(1, 2), "(SL3.1) std::less test failed");
+        TEST(!less<int> {}(2, 1), "(SL3.2) std::less test failed");
+        TEST(!less<int> {}(1, 1), "(SL3.3) std::less test failed");
 
-        TEST(!greater<int>{}(1, 2), "(SL3.4) std::greater test failed");
-        TEST(greater<int>{}(2, 1), "(SL3.5) std::greater test failed");
-        TEST(!greater<int>{}(1, 1), "(SL3.6) std::greater test failed");
+        TEST(!greater<int> {}(1, 2), "(SL3.4) std::greater test failed");
+        TEST(greater<int> {}(2, 1), "(SL3.5) std::greater test failed");
+        TEST(!greater<int> {}(1, 1), "(SL3.6) std::greater test failed");
     }
 
     { // List test
@@ -87,7 +87,7 @@ bool kernel::tests::stdlib_test() {
         str1 = "";
 
         TEST(str1 == "" && copy1 == "Testing String12321" && copy2 == "Testing String12321Testing String", "(SL5.1) std::String test failed");
-    
+
         auto str2 = num_to_string(5231);
         TEST(str2 == "5231", "(SL5.2) std::num_to_string test failed");
     }
@@ -109,7 +109,7 @@ bool kernel::tests::stdlib_test() {
         vec.push_back(2);
         vec.push_back(8);
         vec.resize(4, 10);
-        
+
         TEST(vec[0] == 6 && vec[1] == 2 && vec[2] == 8 && vec[3] == 10, "(SL6.1) std::Vector test failed");
     }
 

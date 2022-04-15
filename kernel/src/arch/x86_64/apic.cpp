@@ -1,9 +1,9 @@
 #include <arch/x86_64/apic.h>
-#include <list.hpp>
-#include <memory/virtual.hpp>
-#include <locking/locker.hpp>
-#include <arch/x86_64/ports.h>
 #include <arch/x86_64/cpu.h>
+#include <arch/x86_64/ports.h>
+#include <list.hpp>
+#include <locking/locker.hpp>
+#include <memory/virtual.hpp>
 
 using namespace kernel;
 
@@ -69,12 +69,7 @@ extern u32_t bsp_apic_id;
 void add_ioapic_intentry(u8_t interruptVector, u32_t globalSystemInterrupt, u8_t triggerMode, u8_t polarity, u8_t mask) {
     for(auto& apic : ioApics) {
         if(globalSystemInterrupt >= apic.gsiBase && globalSystemInterrupt < apic.gsiBase + apic.maxEntries) {
-            u64_t entry =
-                interruptVector |
-                (polarity ? (1 << 13) : 0) |
-                (triggerMode ? (1 << 15) : 0) |
-                (mask ? (1 << 16) : 0) |
-                (u64_t)bsp_apic_id << 56;
+            u64_t entry = interruptVector | (polarity ? (1 << 13) : 0) | (triggerMode ? (1 << 15) : 0) | (mask ? (1 << 16) : 0) | (u64_t)bsp_apic_id << 56;
 
             u32_t entryOffset = (globalSystemInterrupt - apic.gsiBase);
 
@@ -107,7 +102,7 @@ void init_pic() {
 
         // Set the IRQ base
         outb(MASTER_PIC_DATA, HARDWARE_IRQ_BASE);
-        outb(SLAVE_PIC_DATA, HARDWARE_IRQ_BASE+0x08);
+        outb(SLAVE_PIC_DATA, HARDWARE_IRQ_BASE + 0x08);
 
         // Chain the PICs
         outb(MASTER_PIC_DATA, 4);
@@ -137,8 +132,8 @@ void pic_eoi(u8_t vector) {
     if(use_apic) {
         write_lapic(0xB0, 0);
     } else {
-        if(vector >= HARDWARE_IRQ_BASE && vector < HARDWARE_IRQ_BASE+16) {
-            if(vector >= HARDWARE_IRQ_BASE+8) outb(SLAVE_PIC_COMMAND, 0x20);
+        if(vector >= HARDWARE_IRQ_BASE && vector < HARDWARE_IRQ_BASE + 16) {
+            if(vector >= HARDWARE_IRQ_BASE + 8) outb(SLAVE_PIC_COMMAND, 0x20);
             outb(MASTER_PIC_COMMAND, 0x20);
         }
     }

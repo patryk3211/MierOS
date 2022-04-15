@@ -1,0 +1,19 @@
+BasedOnStyle: WebKit
+
+Language: Cpp
+
+AlignOperands: AlignAfterOperator
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: true
+
+BreakBeforeBraces: Attach
+IndentCaseLabels: true
+SpaceBeforeParens: Never
+NamespaceIndentation: All
+AlignConsecutiveBitFields: Consecutive
+AlwaysBreakTemplateDeclarations: No
+SpaceAfterTemplateKeyword: false

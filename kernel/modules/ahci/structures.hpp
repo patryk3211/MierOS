@@ -1,8 +1,8 @@
 #pragma once
 
 #include "ahci_structures.hpp"
-#include <locking/spinlock.hpp>
 #include <fs/vnode.hpp>
+#include <locking/spinlock.hpp>
 
 struct drive_information {
     bool atapi;

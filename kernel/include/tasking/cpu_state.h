@@ -1,8 +1,8 @@
 #ifndef _MIEROS_KERNEL_TASKING_CPU_STATE_H
 #define _MIEROS_KERNEL_TASKING_CPU_STATE_H
 
-#include <types.h>
 #include <defines.h>
+#include <types.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -17,7 +17,7 @@ struct CPUState {
     u64_t rbx;
     u64_t rcx;
     u64_t rdx;
-    
+
     u64_t rsi;
     u64_t rdi;
 

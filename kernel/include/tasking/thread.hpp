@@ -1,14 +1,14 @@
 #pragma once
 
-#include <types.h>
-#include <tasking/cpu_state.h>
 #include <function.hpp>
-#include <memory/kbuffer.hpp>
-#include <locking/spinlock.hpp>
 #include <list.hpp>
+#include <locking/spinlock.hpp>
+#include <memory/kbuffer.hpp>
 #include <memory/virtual.hpp>
-#include <unordered_map.hpp>
 #include <modules/module.hpp>
+#include <tasking/cpu_state.h>
+#include <types.h>
+#include <unordered_map.hpp>
 
 namespace kernel {
     enum ThreadState {
@@ -36,13 +36,14 @@ namespace kernel {
         Process& parent;
 
         pid_t _pid;
+
     public:
         Module* current_module;
 
         Thread* next;
 
         int preferred_core;
-    
+
         Thread(u64_t ip, bool isKernel, Process& process);
         ~Thread();
 
@@ -67,7 +68,7 @@ namespace kernel {
 
         friend class Scheduler;
         friend class Process;
-    
+
     private:
         static pid_t generate_pid();
     };

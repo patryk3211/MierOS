@@ -1,6 +1,6 @@
+#include <atomic.hpp>
 #include <tests/atomic.hpp>
 #include <tests/test.hpp>
-#include <atomic.hpp>
 #include <types.h>
 
 bool kernel::tests::atomic_test() {

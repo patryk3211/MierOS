@@ -1,10 +1,10 @@
 #pragma once
 
-#include <types.h>
-#include <function.hpp>
-#include <optional.hpp>
 #include <atomic.hpp>
 #include <cstddef.hpp>
+#include <function.hpp>
+#include <optional.hpp>
+#include <types.h>
 
 namespace std {
     template<typename T> class SharedPtr {
@@ -14,7 +14,8 @@ namespace std {
             std::Optional<std::Function<void(T&)>> destructor;
 
             T& value() { return *reinterpret_cast<T*>(storage); }
-        } *data;
+        } * data;
+
     public:
         SharedPtr() {
             data = 0;
@@ -35,7 +36,8 @@ namespace std {
             clear();
         }
 
-        SharedPtr(const SharedPtr<T>& ptr) : data(ptr.data) {
+        SharedPtr(const SharedPtr<T>& ptr)
+            : data(ptr.data) {
             if(this->data != 0) this->data->ref_count.fetch_add(1);
         }
 
@@ -47,7 +49,8 @@ namespace std {
             return *this;
         }
 
-        SharedPtr(SharedPtr<T>&& ptr) : data(ptr.leak_ptr()) { }
+        SharedPtr(SharedPtr<T>&& ptr)
+            : data(ptr.leak_ptr()) { }
 
         SharedPtr<T>& operator=(SharedPtr<T>&& ptr) {
             clear();

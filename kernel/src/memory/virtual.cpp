@@ -1,27 +1,27 @@
-#include <memory/virtual.hpp>
-#include <memory/physical.h>
-#include <stdlib.h>
 #include <defines.h>
 #include <locking/locker.hpp>
+#include <memory/physical.h>
+#include <memory/virtual.hpp>
+#include <stdlib.h>
 
 using namespace kernel;
 
 union PageStructuresEntry {
     struct {
-        u64_t present:1;
-        u64_t write:1;
-        u64_t user:1;
-        u64_t write_through:1;
-        u64_t cache_disabled:1;
-        u64_t accesed:1;
-        u64_t dirty:1;
-        u64_t pat_ps:1;
-        u64_t global:1;
-        u64_t available:3;
-        u64_t address:40;
-        u64_t available2:7;
-        u64_t protection_key:4;
-        u64_t execute_disable:1;
+        u64_t present         : 1;
+        u64_t write           : 1;
+        u64_t user            : 1;
+        u64_t write_through   : 1;
+        u64_t cache_disabled  : 1;
+        u64_t accesed         : 1;
+        u64_t dirty           : 1;
+        u64_t pat_ps          : 1;
+        u64_t global          : 1;
+        u64_t available       : 3;
+        u64_t address         : 40;
+        u64_t available2      : 7;
+        u64_t protection_key  : 4;
+        u64_t execute_disable : 1;
     } structured;
     u64_t raw;
 };
@@ -58,9 +58,15 @@ Pager::Pager() {
     memset(WORKPAGE(index2), 0, 4096);
 
     // Map the kernel pages
-    WORKPAGE(index)[511].raw = pdpt | 0x03;
-    WORKPAGE(index2)[510].raw = kernel_pd[0] | 0x03;
-    WORKPAGE(index2)[511].raw = kernel_pd[1] | 0x03;
+    WORKPAGE(index)
+    [511].raw
+        = pdpt | 0x03;
+    WORKPAGE(index2)
+    [510].raw
+        = kernel_pd[0] | 0x03;
+    WORKPAGE(index2)
+    [511].raw
+        = kernel_pd[1] | 0x03;
 
     releaseWorkpageIndex(index);
     releaseWorkpageIndex(index2);
@@ -93,13 +99,13 @@ TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kerne
     memset((void*)kernel_pd[0], 0, 4096);
     memset((void*)kernel_pd[1], 0, 4096);
 
-    ((PageStructuresEntry*)init_pml4)[511].raw = init_pdpt    | 0x03;
+    ((PageStructuresEntry*)init_pml4)[511].raw = init_pdpt | 0x03;
     ((PageStructuresEntry*)init_pdpt)[510].raw = kernel_pd[0] | 0x03;
     ((PageStructuresEntry*)init_pdpt)[511].raw = kernel_pd[1] | 0x03;
 
     for(u64_t i = 0; i < pmrs->entry_count; ++i) {
         for(u64_t offset = 0; offset < pmrs->entries[i].length; offset += 0x1000) {
-            u64_t addr = pmrs->entries[i].base+offset;
+            u64_t addr = pmrs->entries[i].base + offset;
             u64_t perms = pmrs->entries[i].permissions;
             PageStructuresEntry& pde = ((PageStructuresEntry*)kernel_pd[0])[(addr >> 21) & 0x1FF];
             physaddr_t pt = 0;
@@ -109,7 +115,8 @@ TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kerne
                 pde.structured.present = 1;
                 pde.structured.write = 1;
                 memset((void*)pt, 0, 4096);
-            } else pt = pde.raw & ~0xFFF;
+            } else
+                pt = pde.raw & ~0xFFF;
             PageStructuresEntry& pte = ((PageStructuresEntry*)pt)[(addr >> 12) & 0x1FF];
             pte.raw = addr - kernel_base_v + kernel_base_p;
             pte.structured.present = 1;
@@ -126,7 +133,9 @@ TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kerne
 
     kernel_locker = SpinLock();
 
-    asm volatile("mov %0, %%cr3" : : "a"(init_pml4));
+    asm volatile("mov %0, %%cr3"
+                 :
+                 : "a"(init_pml4));
 
     first_potential_kernel_page = KERNEL_START;
 
@@ -178,7 +187,9 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
             REFRESH_TLB;
         } else {
             physaddr_t pdpt_addr = palloc(1);
-            WORKPAGE(pml4_work)[new_pml4e].raw = pdpt_addr | 0x07;
+            WORKPAGE(pml4_work)
+            [new_pml4e].raw
+                = pdpt_addr | 0x07;
             CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000003;
             REFRESH_TLB;
             memset(WORKPAGE(pdpt_work), 0, 4096);
@@ -196,7 +207,9 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
             REFRESH_TLB;
         } else {
             physaddr_t pd_addr = palloc(1);
-            WORKPAGE(pdpt_work)[new_pdpte].raw = pd_addr | 0x07;
+            WORKPAGE(pdpt_work)
+            [new_pdpte].raw
+                = pd_addr | 0x07;
             CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000003;
             REFRESH_TLB;
             memset(WORKPAGE(pd_work), 0, 4096);
@@ -213,7 +226,9 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
             REFRESH_TLB;
         } else {
             physaddr_t pt_addr = palloc(1);
-            WORKPAGE(pd_work)[new_pde].raw = pt_addr | 0x07;
+            WORKPAGE(pd_work)
+            [new_pde].raw
+                = pt_addr | 0x07;
             CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000003;
             REFRESH_TLB;
             memset(WORKPAGE(pt_work), 0, 4096);
@@ -244,29 +259,31 @@ void Pager::unlock() {
 }
 
 void Pager::enable() {
-    asm volatile("mov %0, %%cr3" : : "a"(pml4));
+    asm volatile("mov %0, %%cr3"
+                 :
+                 : "a"(pml4));
 }
 
 void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags) {
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
     ASSERT_F(virt != 0, "Mapping to address 0");
 
-    bool kernel = (virt >= KERNEL_START || virt+(length<<12) > KERNEL_START) && !has_kernel_lock;
+    bool kernel = (virt >= KERNEL_START || virt + (length << 12) > KERNEL_START) && !has_kernel_lock;
     if(kernel) kernel_locker.lock();
 
     virt >>= 12;
     phys >>= 12;
     int pt_work = getWorkpage(3);
     for(size_t i = 0; i < length; ++i) {
-        int pml4e = ((virt+i) >> 27) & 0x1FF;
-        int pdpte = ((virt+i) >> 18) & 0x1FF;
-        int pde = ((virt+i) >> 9) & 0x1FF;
-        int pte = ((virt+i) >> 0) & 0x1FF;
+        int pml4e = ((virt + i) >> 27) & 0x1FF;
+        int pdpte = ((virt + i) >> 18) & 0x1FF;
+        int pde = ((virt + i) >> 9) & 0x1FF;
+        int pte = ((virt + i) >> 0) & 0x1FF;
 
         mapStructures(pml4e, pdpte, pde);
 
         PageStructuresEntry& entry = WORKPAGE(pt_work)[pte];
-        entry.structured.address = phys+i;
+        entry.structured.address = phys + i;
         entry.structured.present = 1;
         entry.structured.write = flags.writable;
         entry.structured.user = flags.user_accesible;
@@ -296,7 +313,7 @@ virtaddr_t Pager::kmap(physaddr_t phys, size_t length, PageFlags flags) {
 physaddr_t Pager::unmap(virtaddr_t virt, size_t length) {
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
 
-    bool kernel = (virt >= KERNEL_START || virt+(length<<12) > KERNEL_START) && !has_kernel_lock;
+    bool kernel = (virt >= KERNEL_START || virt + (length << 12) > KERNEL_START) && !has_kernel_lock;
     if(kernel) kernel_locker.lock();
 
     physaddr_t addr = 0;
@@ -304,10 +321,10 @@ physaddr_t Pager::unmap(virtaddr_t virt, size_t length) {
     virt >>= 12;
     int pt_work = getWorkpage(3);
     for(size_t i = 0; i < length; ++i) {
-        int pml4e = ((virt+i) >> 27) & 0x1FF;
-        int pdpte = ((virt+i) >> 18) & 0x1FF;
-        int pde = ((virt+i) >> 9) & 0x1FF;
-        int pte = ((virt+i) >> 0) & 0x1FF;
+        int pml4e = ((virt + i) >> 27) & 0x1FF;
+        int pdpte = ((virt + i) >> 18) & 0x1FF;
+        int pde = ((virt + i) >> 9) & 0x1FF;
+        int pte = ((virt + i) >> 0) & 0x1FF;
 
         mapStructures(pml4e, pdpte, pde);
 
@@ -343,7 +360,7 @@ PageFlags Pager::getFlags(virtaddr_t virt) {
     mapStructures(pml4e, pdpte, pde);
 
     PageStructuresEntry& entry = WORKPAGE(getWorkpage(3))[pte];
-    PageFlags flags { };
+    PageFlags flags {};
     flags.present = entry.structured.present;
     if(flags.present) {
         flags.writable = entry.structured.write;
@@ -368,8 +385,8 @@ virtaddr_t Pager::kalloc(size_t length) {
         return 0;
     }
 
-    for(size_t i = 0; i < length; ++i) map(palloc(1), start+(i<<12), 1, PageFlags { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
-    
+    for(size_t i = 0; i < length; ++i) map(palloc(1), start + (i << 12), 1, PageFlags { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
+
     has_kernel_lock = false;
     kernel_locker.unlock();
     return start;
@@ -378,7 +395,7 @@ virtaddr_t Pager::kalloc(size_t length) {
 void Pager::free(virtaddr_t ptr, size_t length) {
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
     for(size_t i = 0; i < length; ++i) {
-        physaddr_t addr = unmap(ptr+(i<<12), 1);
+        physaddr_t addr = unmap(ptr + (i << 12), 1);
         pfree(addr, 1);
     }
 }
@@ -386,7 +403,7 @@ void Pager::free(virtaddr_t ptr, size_t length) {
 virtaddr_t Pager::getFreeRange(virtaddr_t start, size_t length) {
     bool kernel = false;
     for(virtaddr_t addr = start; addr != 0; addr += 0x1000) {
-        if((addr >= KERNEL_START || addr+(length<<12) > KERNEL_START) && !kernel && !has_kernel_lock) {
+        if((addr >= KERNEL_START || addr + (length << 12) > KERNEL_START) && !kernel && !has_kernel_lock) {
             kernel_locker.lock();
             kernel = true;
         }
@@ -394,7 +411,7 @@ virtaddr_t Pager::getFreeRange(virtaddr_t start, size_t length) {
         bool found = true;
         virtaddr_t offset;
         for(offset = 0; offset < (length << 12); offset += 0x1000) {
-            if(getFlags(addr+offset).present) {
+            if(getFlags(addr + offset).present) {
                 found = false;
                 break;
             }
@@ -413,7 +430,8 @@ virtaddr_t Pager::getFreeRange(virtaddr_t start, size_t length) {
 
 Pager& Pager::active() {
     u64_t cr3;
-    asm volatile("mov %%cr3, %0" : "=a"(cr3));
+    asm volatile("mov %%cr3, %0"
+                 : "=a"(cr3));
     cr3 &= ~0xFFF;
     for(auto& pager : pagers) {
         if(pager->pml4 == cr3) {
@@ -421,7 +439,8 @@ Pager& Pager::active() {
         }
     }
     ASSERT_NOT_REACHED("Invalid CR3 value (no pager associated)");
-    while(true);
+    while(true)
+        ;
 }
 
 Pager& Pager::kernel() {

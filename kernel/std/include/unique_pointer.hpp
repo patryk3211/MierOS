@@ -1,15 +1,17 @@
 #pragma once
 
-#include <stdlib.h>
-#include <memory/liballoc.h>
 #include <cstddef.hpp>
+#include <memory/liballoc.h>
+#include <stdlib.h>
 
 namespace std {
     template<typename T> class UniquePtr {
         T* value;
+
     public:
         UniquePtr() { value = 0; }
-        UniquePtr(T* value) : value(value) { }
+        UniquePtr(T* value)
+            : value(value) { }
 
         UniquePtr(nullptr_t) { value = 0; }
         UniquePtr<T>& operator=(nullptr_t) {
@@ -17,21 +19,24 @@ namespace std {
             value = 0;
         }
 
-        UniquePtr(const UniquePtr<T>& ptr) : value(new T(*ptr.ptr())) { }
+        UniquePtr(const UniquePtr<T>& ptr)
+            : value(new T(*ptr.ptr())) { }
         UniquePtr<T>& operator=(const UniquePtr<T>& ptr) {
             delete value;
             value = new T(*ptr.ptr());
             return *this;
         }
 
-        UniquePtr(UniquePtr<T>&& ptr) : value(ptr.leak_ptr()) { }
+        UniquePtr(UniquePtr<T>&& ptr)
+            : value(ptr.leak_ptr()) { }
         UniquePtr<T>& operator=(UniquePtr<T>&& ptr) {
             delete value;
             value = ptr.leak_ptr();
             return *this;
         }
 
-        template<typename U> UniquePtr(UniquePtr<U>&& ptr) : value(static_cast<T*>(ptr.leak_ptr())) { }
+        template<typename U> UniquePtr(UniquePtr<U>&& ptr)
+            : value(static_cast<T*>(ptr.leak_ptr())) { }
         template<typename U> UniquePtr<T>& operator=(UniquePtr<U>&& ptr) {
             delete value;
             value = ptr.leak_ptr();

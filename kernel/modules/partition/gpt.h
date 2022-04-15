@@ -1,8 +1,8 @@
 #ifndef _MIEROS_KERNEL_GPT_H
 #define _MIEROS_KERNEL_GPT_H
 
-#include <types.h>
 #include <defines.h>
+#include <types.h>
 
 #if defined(__cplusplus)
 extern "C" {

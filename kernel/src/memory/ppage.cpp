@@ -1,5 +1,5 @@
-#include <memory/ppage.hpp>
 #include <memory/physical.h>
+#include <memory/ppage.hpp>
 
 #include <assert.h>
 
@@ -8,7 +8,7 @@ using namespace kernel;
 PhysicalPage::PhysicalPage() {
     _addr = palloc(1);
 }
-        
+
 PhysicalPage::~PhysicalPage() {
     if(_ref_count.load() == 0) pfree(_addr, 1);
 }

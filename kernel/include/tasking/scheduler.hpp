@@ -1,7 +1,7 @@
 #pragma once
 
-#include <tasking/thread_queue.hpp>
 #include <tasking/cpu_state.h>
+#include <tasking/thread_queue.hpp>
 
 #include <tasking/process.hpp>
 
@@ -18,8 +18,9 @@ namespace kernel {
         KBuffer idle_stack;
         CPUState* idle_ksp;
 
-        bool _is_idle:1;
-        bool first_switch:1;
+        bool _is_idle     : 1;
+        bool first_switch : 1;
+
     public:
         Scheduler();
         ~Scheduler();
@@ -34,6 +35,7 @@ namespace kernel {
         static void schedule_process(Process& proc);
 
         bool is_idle() { return _is_idle; }
+
     private:
         static void idle();
     };

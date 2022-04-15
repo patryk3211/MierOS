@@ -1,13 +1,13 @@
-#include <tasking/thread.hpp>
-#include <tasking/scheduler.hpp>
 #include <arch/cpu.h>
-#include <tasking/process.hpp>
 #include <arch/interrupts.h>
 #include <locking/locker.hpp>
+#include <tasking/process.hpp>
+#include <tasking/scheduler.hpp>
+#include <tasking/thread.hpp>
 
 using namespace kernel;
 
-#define KERNEL_STACK_SIZE 1024*16 // 16 KiB stack
+#define KERNEL_STACK_SIZE 1024 * 16 // 16 KiB stack
 
 NO_EXPORT pid_t Thread::next_pid = 1;
 NO_EXPORT std::UnorderedMap<pid_t, Thread*> Thread::threads;
@@ -21,9 +21,11 @@ pid_t Thread::generate_pid() {
     }
 }
 
-Thread::Thread(u64_t ip, bool isKernel, Process& process) : kernel_stack(KERNEL_STACK_SIZE), parent(process) {
+Thread::Thread(u64_t ip, bool isKernel, Process& process)
+    : kernel_stack(KERNEL_STACK_SIZE)
+    , parent(process) {
     preferred_core = -1;
-    ksp = (CPUState*)((virtaddr_t)kernel_stack.ptr()+KERNEL_STACK_SIZE-sizeof(CPUState));
+    ksp = (CPUState*)((virtaddr_t)kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 
     memset(ksp, 0, sizeof(CPUState));
     ksp->cr3 = process.pager().cr3();
@@ -33,7 +35,7 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process) : kernel_stack(KERNEL_
     ksp->cs = isKernel ? 0x08 : 0x1B;
     ksp->ss = isKernel ? 0x10 : 0x23;
 
-    if(isKernel) ksp->rsp = (virtaddr_t)kernel_stack.ptr()+KERNEL_STACK_SIZE;
+    if(isKernel) ksp->rsp = (virtaddr_t)kernel_stack.ptr() + KERNEL_STACK_SIZE;
 
     current_module = 0;
 
@@ -54,12 +56,14 @@ bool Thread::try_wakeup() {
     while(iter != blockers.end()) {
         if((*iter)()) {
             iter = blockers.erase(iter);
-        } else ++iter;
+        } else
+            ++iter;
     }
     if(blockers.empty()) {
         state = RUNNABLE;
         return true;
-    } else return false;
+    } else
+        return false;
 }
 
 Thread* Thread::current() {

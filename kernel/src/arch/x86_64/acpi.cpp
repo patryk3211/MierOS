@@ -1,11 +1,11 @@
-#include <arch/x86_64/acpi.h>
-#include <memory/virtual.hpp>
-#include <locking/locker.hpp>
-#include <defines.h>
 #include <arch/cpu.h>
-#include <unordered_map.hpp>
+#include <arch/x86_64/acpi.h>
+#include <defines.h>
 #include <dmesg.h>
+#include <locking/locker.hpp>
+#include <memory/virtual.hpp>
 #include <string.hpp>
+#include <unordered_map.hpp>
 
 using namespace kernel;
 
@@ -43,7 +43,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
     Locker locker(pager);
 
     virtaddr_t mapped_addr = pager.kmap(rsdp, 2, { 1, 0, 0, 0, 0, 0 });
-    
+
     u8_t check1 = 0;
     for(size_t i = 0; i < sizeof(ACPI_RSDP); ++i) check1 += ((u8_t*)mapped_addr)[i];
     u8_t check2 = 0;
@@ -54,7 +54,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
         dmesg("(Kernel) Found a valid ACPI XSDT");
         physaddr_t xsdt_addr = ((ACPI_RSDP2*)mapped_addr)->xsdtAddress;
         ACPI_XSDT* xsdt = (ACPI_XSDT*)pager.kmap(xsdt_addr, 2, { 1, 0, 0, 0, 0, 0 });
-        
+
         size_t byte_size = xsdt->header.length + (xsdt_addr & 0xFFF);
         size_t page_size = (byte_size >> 12) + ((byte_size & 0xFFF) == 0 ? 0 : 1);
         pager.unmap((virtaddr_t)xsdt, 2);
@@ -63,7 +63,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
         size_t entries = (xsdt->header.length - sizeof(xsdt->header)) / 8;
         for(size_t i = 0; i < entries; ++i) {
             u64_t addr = xsdt->other[i];
-            
+
             ACPI_SDTHeader* header = (ACPI_SDTHeader*)pager.kmap(addr, 1, { 1, 0, 0, 0, 0, 0 });
             char sign[5];
             memcpy(sign, header->sign, 4);
@@ -80,7 +80,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
         dmesg("(Kernel) Found a valid ACPI RSDT");
         physaddr_t rsdt_addr = ((ACPI_RSDP*)mapped_addr)->rsdtAddress;
         ACPI_RSDT* rsdt = (ACPI_RSDT*)pager.kmap(rsdt_addr, 2, { 1, 0, 0, 0, 0, 0 });
-        
+
         size_t byte_size = rsdt->header.length + (rsdt_addr & 0xFFF);
         size_t page_size = (byte_size >> 12) + ((byte_size & 0xFFF) == 0 ? 0 : 1);
         pager.unmap((virtaddr_t)rsdt, 2);
@@ -89,7 +89,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
         size_t entries = (rsdt->header.length - sizeof(rsdt->header)) / 4;
         for(size_t i = 0; i < entries; ++i) {
             u32_t addr = rsdt->other[i];
-            
+
             ACPI_SDTHeader* header = (ACPI_SDTHeader*)pager.kmap(addr, 1, { 1, 0, 0, 0, 0, 0 });
             char sign[5];
             memcpy(sign, header->sign, 4);
@@ -111,6 +111,8 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
 
 extern "C" physaddr_t get_table(const char* sign) {
     auto value = acpi_tables.at(sign);
-    if(value) return *value;
-    else return 0;
+    if(value)
+        return *value;
+    else
+        return 0;
 }

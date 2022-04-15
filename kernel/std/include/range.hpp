@@ -6,7 +6,9 @@ namespace std {
         T end;
 
         Range() { }
-        Range(T start, T end) : start(start), end(end) { }
+        Range(T start, T end)
+            : start(start)
+            , end(end) { }
         ~Range() { }
     };
 }

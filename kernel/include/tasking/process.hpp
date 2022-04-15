@@ -10,6 +10,7 @@ namespace kernel {
         Pager* _pager;
 
         Process(virtaddr_t entry_point, Pager* kern_pager);
+
     public:
         Process(virtaddr_t entry_point);
         ~Process();

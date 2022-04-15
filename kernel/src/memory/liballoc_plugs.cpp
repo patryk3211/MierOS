@@ -1,10 +1,10 @@
-#include <memory/liballoc.h>
-#include <stdlib.h>
 #include <assert.h>
-#include <locking/spinlock.hpp>
-#include <locking/locker.hpp>
 #include <defines.h>
+#include <locking/locker.hpp>
+#include <locking/spinlock.hpp>
+#include <memory/liballoc.h>
 #include <memory/virtual.hpp>
+#include <stdlib.h>
 
 using namespace kernel;
 
@@ -19,11 +19,11 @@ extern "C" int liballoc_unlock() {
     return 0;
 }
 
-#define HEAP_SIZE 1024*1024*16 // 16 MiB heap
+#define HEAP_SIZE 1024 * 1024 * 16 // 16 MiB heap
 
-#define HEAP_PAGE_SIZE HEAP_SIZE/4096
+#define HEAP_PAGE_SIZE HEAP_SIZE / 4096
 
-NO_EXPORT u8_t heap_usage_bitmap[HEAP_PAGE_SIZE/8];
+NO_EXPORT u8_t heap_usage_bitmap[HEAP_PAGE_SIZE / 8];
 NO_EXPORT u32_t heap_first_potential_page;
 NO_EXPORT SECTION(".heap") u8_t initial_heap[HEAP_SIZE];
 
@@ -52,16 +52,16 @@ extern "C" void* liballoc_alloc(size_t page_count) {
         for(u32_t page = heap_first_potential_page; page < HEAP_PAGE_SIZE; ++page) {
             bool found_block = true;
             for(u32_t i = 0; i < page_count; ++i) {
-                if(i+page >= HEAP_PAGE_SIZE) goto fail;
-                if(is_page_used(page+i)) {
-                    page += i-1;
+                if(i + page >= HEAP_PAGE_SIZE) goto fail;
+                if(is_page_used(page + i)) {
+                    page += i - 1;
                     found_block = false;
                     break;
                 }
             }
             if(!found_block) continue;
-            heap_first_potential_page = page+page_count;
-            for(u32_t i = 0; i < page_count; ++i) set_page_used(page+i, true);
+            heap_first_potential_page = page + page_count;
+            for(u32_t i = 0; i < page_count; ++i) set_page_used(page + i, true);
             return initial_heap + (page << 12);
         }
     fail:;
@@ -70,10 +70,10 @@ extern "C" void* liballoc_alloc(size_t page_count) {
 }
 
 extern "C" int liballoc_free(void* ptr, size_t page_count) {
-    if(ptr >= initial_heap && ptr < initial_heap+HEAP_PAGE_SIZE) {
+    if(ptr >= initial_heap && ptr < initial_heap + HEAP_PAGE_SIZE) {
         // Free on local heap.
         u32_t page = ((u64_t)ptr - (u64_t)heap_usage_bitmap) >> 12;
-        for(u32_t i = 0; i < page_count; ++i) set_page_used(page+i, 0);
+        for(u32_t i = 0; i < page_count; ++i) set_page_used(page + i, 0);
         if(page < heap_first_potential_page) heap_first_potential_page = page;
         return 0;
     }

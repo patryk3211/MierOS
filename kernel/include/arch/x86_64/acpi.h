@@ -1,8 +1,8 @@
 #ifndef _MIEROS_KERNEL_ARCH_X86_64_ACPI_H
 #define _MIEROS_KERNEL_ARCH_X86_64_ACPI_H
 
-#include <types.h>
 #include <defines.h>
+#include <types.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -13,7 +13,7 @@ struct ACPI_SDTHeader {
     u32_t length;
     u8_t revision;
     u8_t checksum;
-    
+
     char oemId[6];
     char oemTableId[8];
     u32_t oemRevision;

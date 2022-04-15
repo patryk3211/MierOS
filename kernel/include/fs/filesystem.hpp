@@ -1,9 +1,9 @@
 #pragma once
 
-#include <types.h>
-#include <list.hpp>
 #include <errno.h>
+#include <list.hpp>
 #include <shared_pointer.hpp>
+#include <types.h>
 
 namespace kernel {
     class FileStream;
@@ -15,13 +15,13 @@ namespace kernel {
          * @brief If the target file is a link the return value will be the node pointed to by this link
          * 
          */
-        bool resolve_link:1;
-        
+        bool resolve_link : 1;
+
         /**
          * @brief Resolve links in the path, if this value is false will return ERR_LINK if a link is found
          * 
          */
-        bool follow_links:1;
+        bool follow_links : 1;
     };
 
     class Filesystem {
@@ -35,7 +35,7 @@ namespace kernel {
 
         virtual ValueOrError<std::SharedPtr<VNode>> get_file(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
         virtual ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
-    
+
         virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link);
 
         virtual ValueOrError<void> open(FileStream* stream, int mode);

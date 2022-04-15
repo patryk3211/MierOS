@@ -1,10 +1,10 @@
 #pragma once
 
-#include <fs/vnode.hpp>
-#include "superblock.hpp"
 #include "blockgroup.hpp"
-#include <memory/kbuffer.hpp>
 #include "cache.hpp"
+#include "superblock.hpp"
+#include <fs/vnode.hpp>
+#include <memory/kbuffer.hpp>
 #include <unordered_map.hpp>
 
 struct MountInfo {
@@ -18,7 +18,8 @@ struct MountInfo {
     std::UnorderedMap<u32_t, CacheBlock*> cache_block_table;
     std::SharedPtr<kernel::VNode> root;
 
-    MountInfo() : block_groups(0) { }
+    MountInfo()
+        : block_groups(0) { }
 
     // Get the LBA address of this block
     u64_t get_lba(u32_t block) {
