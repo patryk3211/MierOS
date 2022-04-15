@@ -13,3 +13,4 @@ AllowShortLoopsOnASingleLine: true
 BreakBeforeBraces: Attach
 IndentCaseLabels: true
 SpaceBeforeParens: Never
+NamespaceIndentation: All
