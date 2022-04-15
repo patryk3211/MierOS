@@ -1,9 +1,9 @@
 #pragma once
 
-#include <types.h>
-#include <util/crc.h>
 #include "gpt.h"
 #include <list.hpp>
+#include <types.h>
+#include <util/crc.h>
 
 namespace kernel {
     struct PartitionParseInformation {
@@ -12,7 +12,7 @@ namespace kernel {
         virtual ~PartitionParseInformation() { }
     };
 
-    #define GPT_PPI_TYPE 0x01
+#define GPT_PPI_TYPE 0x01
     struct GPTParttionParseInformation : public PartitionParseInformation {
         struct Partition {
             uuid_t part_id;
@@ -20,7 +20,7 @@ namespace kernel {
             u64_t start_lba;
             u64_t end_lba;
         };
-        
+
         uuid_t disk_id;
         size_t partition_count;
         Partition* partitions;
@@ -30,7 +30,7 @@ namespace kernel {
         }
 
         Partition* begin() { return partitions; }
-        Partition* end() { return partitions+partition_count; }
+        Partition* end() { return partitions + partition_count; }
     };
 
     template<typename ReadSector, typename WriteSector> PartitionParseInformation* parse_partitions(u32_t sector_size, u64_t disk_sector_count, ReadSector read_sector_func, WriteSector write_sector_func) {
@@ -71,7 +71,7 @@ namespace kernel {
                 for(size_t j = 0; j < entries_per_sector; ++j) {
                     GPT_PartitionEntry* partition = (GPT_PartitionEntry*)(buffer2 + j * header->partition_entry_size);
                     if(partition->partition_type.is_zero()) continue;
-                    
+
                     partitions.push_back({ partition->partition_uuid.to_uuid(), partition->partition_type.to_uuid(), partition->first_lba, partition->last_lba });
                 }
             }
@@ -92,7 +92,7 @@ namespace kernel {
             size_t index = 0;
             for(auto& part : partitions)
                 return_info->partitions[index++] = part;
-            
+
             return return_info;
         } else {
             // Try MBR

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <range.hpp>
 #include <allocator.hpp>
+#include <range.hpp>
 
 namespace std {
     template<typename T, class Allocator = heap_allocator> class RangeMap {
@@ -16,21 +16,29 @@ namespace std {
         class iterator {
             range_en* value;
 
-            iterator(range_en* value) : value(value) { }
+            iterator(range_en* value)
+                : value(value) { }
+
         public:
             ~iterator() { }
 
             Range<T>& operator*() { return value->rang; }
             Range<T>* operator->() { return &value->rang; }
 
-            iterator& operator++() { value = value->next; return *this; }
+            iterator& operator++() {
+                value = value->next;
+                return *this;
+            }
             iterator operator++(int) {
                 iterator old = *this;
                 value = value->next;
                 return old;
             }
 
-            iterator& operator--() { value = value->prev; return *this; }
+            iterator& operator--() {
+                value = value->prev;
+                return *this;
+            }
             iterator operator--(int) {
                 iterator old = *this;
                 value = value->prev;
@@ -42,6 +50,7 @@ namespace std {
 
             friend class RangeMap;
         };
+
     private:
         Allocator alloc;
 
@@ -56,6 +65,7 @@ namespace std {
             alloc.free(r);
             return n;
         }
+
     public:
         RangeMap() {
             head.prev = 0;
@@ -76,19 +86,22 @@ namespace std {
 
         void add(T start, T end) {
             // Append the new range
-            range_en* inserted = alloc.template alloc<range_en>();//new range_en();
+            range_en* inserted = alloc.template alloc<range_en>(); //new range_en();
             inserted->rang = { start, end };
             inserted->next = &tail;
             inserted->prev = tail.prev;
             tail.prev->next = inserted;
             tail.prev = inserted;
-            
+
             // Loop through the entire list and check if any ranges can be merged
             auto resultRange = head.next;
             while(resultRange != &tail) {
                 auto mergedRange = head.next;
                 while(mergedRange != &tail) {
-                    if(resultRange == mergedRange) { mergedRange = mergedRange->next; continue; } // Don't try to merge the range onto itself.
+                    if(resultRange == mergedRange) {
+                        mergedRange = mergedRange->next;
+                        continue;
+                    } // Don't try to merge the range onto itself.
                     if(mergedRange->rang.start >= resultRange->rang.start && mergedRange->rang.start <= resultRange->rang.end) {
                         // Start of merged range is in bounds of the result range.
                         if(mergedRange->rang.end > resultRange->rang.end) {
@@ -106,7 +119,8 @@ namespace std {
                         resultRange->rang.start = mergedRange->rang.start;
                         resultRange->rang.end = mergedRange->rang.end;
                         mergedRange = delete_range(mergedRange);
-                    } else mergedRange = mergedRange->next; // The ranges are unrelated, iterate to the next one.
+                    } else
+                        mergedRange = mergedRange->next; // The ranges are unrelated, iterate to the next one.
                 }
                 resultRange = resultRange->next;
             }
@@ -130,7 +144,7 @@ namespace std {
                     r->rang.start = end;
                 } else if(startBound && endBound) {
                     // Unmapping in the middle
-                    range_en* firstHalf = alloc.template alloc<range_en>();//new range_en();
+                    range_en* firstHalf = alloc.template alloc<range_en>(); //new range_en();
                     firstHalf->rang.start = r->rang.start;
                     firstHalf->rang.end = start;
                     firstHalf->prev = r->prev;

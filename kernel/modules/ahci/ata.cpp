@@ -1,7 +1,7 @@
+#include "defines.hpp"
 #include "structures.hpp"
 #include <memory/physical.h>
 #include <memory/virtual.hpp>
-#include "defines.hpp"
 
 int get_cmd_slot(drive_information* drive) {
     u32_t slots = drive->hba->ports[drive->port_id].command_issue | drive->hba->ports[drive->port_id].sata_active;
@@ -16,7 +16,7 @@ int get_cmd_slot(drive_information* drive) {
                 kernel::Pager& pager = kernel::Pager::kernel();
                 pager.lock();
                 drive->tables[i] = (Port_Command_Table*)pager.kmap(addr, COMMAND_TABLE_PAGES, { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 1 });
-                memset(drive->tables[i], 0, COMMAND_TABLE_PAGES*4096);
+                memset(drive->tables[i], 0, COMMAND_TABLE_PAGES * 4096);
                 pager.unlock();
             }
             return i;
@@ -28,12 +28,13 @@ int get_cmd_slot(drive_information* drive) {
 size_t ahci_ata_read(drive_information* drive, u64_t lba, u16_t sector_count, void* buffer) {
     drive->lock.lock();
     int cmd_slot_index;
-    while((cmd_slot_index = get_cmd_slot(drive)) == -1);
+    while((cmd_slot_index = get_cmd_slot(drive)) == -1)
+        ;
 
     Port_Command_Header* cmd_header = &drive->command_list->command_headers[cmd_slot_index];
     Port_Command_Table* cmd_table = drive->tables[cmd_slot_index];
-    
-    cmd_header->flags = sizeof(FIS_Host2Dev)/sizeof(u32_t);
+
+    cmd_header->flags = sizeof(FIS_Host2Dev) / sizeof(u32_t);
     FIS_Host2Dev* fis = (FIS_Host2Dev*)cmd_table->command_fis;
     fis->type = 0x27;
     fis->reserved = 0;
@@ -60,7 +61,7 @@ size_t ahci_ata_read(drive_information* drive, u64_t lba, u16_t sector_count, vo
         physaddr_t start_phys = pager.getPhysicalAddress(current_addr);
         size_t entry_byte_count = 0;
 
-        while(pager.getPhysicalAddress(current_addr) == start_phys+entry_byte_count && entry_byte_count < 4096*1024 && left_to_read > 0) {
+        while(pager.getPhysicalAddress(current_addr) == start_phys + entry_byte_count && entry_byte_count < 4096 * 1024 && left_to_read > 0) {
             size_t offset = 4096 - (current_addr & 0xFFF);
             if(offset > left_to_read) offset = left_to_read;
 
@@ -88,7 +89,8 @@ size_t ahci_ata_read(drive_information* drive, u64_t lba, u16_t sector_count, vo
     drive->lock.unlock();
 
     /// TODO: [02.02.2022] Use interrupts here.
-    while((port->command_issue | port->sata_active) & (1 << cmd_slot_index));
+    while((port->command_issue | port->sata_active) & (1 << cmd_slot_index))
+        ;
 
     return sectors_read;
 }

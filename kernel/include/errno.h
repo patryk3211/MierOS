@@ -9,14 +9,14 @@ extern "C" {
 
 typedef int err_t;
 
-#define ERR_UNIMPLEMENTED           (err_t)1
-#define ERR_FILE_NOT_FOUND          (err_t)2
-#define ERR_NOT_A_DIRECTORY         (err_t)3
-#define ERR_FILE_EXISTS             (err_t)4
-#define ERR_LINK                    (err_t)5
-#define ERR_DEVICE_DOES_NOT_EXIST   (err_t)6
-#define ERR_MOUNT_FAILED            (err_t)7
-#define ERR_NOT_LINK                (err_t)8
+#define ERR_UNIMPLEMENTED (err_t)1
+#define ERR_FILE_NOT_FOUND (err_t)2
+#define ERR_NOT_A_DIRECTORY (err_t)3
+#define ERR_FILE_EXISTS (err_t)4
+#define ERR_LINK (err_t)5
+#define ERR_DEVICE_DOES_NOT_EXIST (err_t)6
+#define ERR_MOUNT_FAILED (err_t)7
+#define ERR_NOT_LINK (err_t)8
 
 #if defined(__cplusplus)
 } // extern "C"
@@ -28,9 +28,12 @@ namespace kernel {
     template<typename T> class ValueOrError {
         alignas(T) u8_t storage[sizeof(T)];
         int error;
+
     public:
-        ValueOrError(const T& value) : error(0) { new(storage) T(value); }
-        ValueOrError(err_t errno) : error(errno) { }
+        ValueOrError(const T& value)
+            : error(0) { new(storage) T(value); }
+        ValueOrError(err_t errno)
+            : error(errno) { }
 
         ValueOrError(const ValueOrError<T>& other) {
             error = other.error;
@@ -91,12 +94,17 @@ namespace kernel {
 
     template<> class ValueOrError<void> {
         int error;
-    public:
-        ValueOrError() : error(0) { }
-        ValueOrError(err_t errno) : error(errno) { }
 
-        ValueOrError(const ValueOrError<void>& other) : error(other.error) { }
-        ValueOrError(ValueOrError<void>&& other) : error(other.error) { }
+    public:
+        ValueOrError()
+            : error(0) { }
+        ValueOrError(err_t errno)
+            : error(errno) { }
+
+        ValueOrError(const ValueOrError<void>& other)
+            : error(other.error) { }
+        ValueOrError(ValueOrError<void>&& other)
+            : error(other.error) { }
 
         ValueOrError& operator=(const ValueOrError<void>& other) {
             error = other.error;

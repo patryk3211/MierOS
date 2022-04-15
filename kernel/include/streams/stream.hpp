@@ -3,14 +3,16 @@
 #include <types.h>
 
 namespace kernel {
-    #define SEEK_MODE_CUR 0
-    #define SEEK_MODE_BEG 1
-    #define SEEK_MODE_END 2
+#define SEEK_MODE_CUR 0
+#define SEEK_MODE_BEG 1
+#define SEEK_MODE_END 2
 
     class Stream {
         unsigned char f_type;
+
     protected:
-        Stream(unsigned char type) : f_type(type) { }
+        Stream(unsigned char type)
+            : f_type(type) { }
 
     public:
         virtual ~Stream() = default;

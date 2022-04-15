@@ -1,7 +1,7 @@
 #pragma once
 
-#include <types.h>
 #include <modules/module.hpp>
+#include <types.h>
 
 namespace kernel {
     u16_t add_preloaded_module(void* file);

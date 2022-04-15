@@ -1,11 +1,11 @@
 #pragma once
 
-#include <types.h>
-#include <functional.hpp>
 #include <allocator.hpp>
-#include <stdlib.h>
-#include <pair.hpp>
+#include <functional.hpp>
 #include <optional.hpp>
+#include <pair.hpp>
+#include <stdlib.h>
+#include <types.h>
 
 namespace std {
     template<typename K, typename V, class Hasher = std::hash<K>, class Pred = std::equal_to<K>, class Alloc = std::heap_allocator> class UnorderedMap {
@@ -16,8 +16,12 @@ namespace std {
             V value;
             Entry* next;
 
-            Entry() : next(0) { }
-            Entry(const K& key, const V& value) : key(key), value(value), next(0) { }
+            Entry()
+                : next(0) { }
+            Entry(const K& key, const V& value)
+                : key(key)
+                , value(value)
+                , next(0) { }
             ~Entry() = default;
         };
 
@@ -26,13 +30,18 @@ namespace std {
         Entry** bucket;
         size_t capacity;
         size_t _size;
+
     public:
         class iterator {
             size_t index;
             Entry* entry;
             UnorderedMap& map;
 
-            iterator(size_t index, Entry* entry, UnorderedMap& map) : index(index), entry(entry), map(map) { }
+            iterator(size_t index, Entry* entry, UnorderedMap& map)
+                : index(index)
+                , entry(entry)
+                , map(map) { }
+
         public:
             ~iterator() = default;
 
@@ -44,7 +53,8 @@ namespace std {
                         new_entry = map.bucket[index++];
                     entry = new_entry;
                     if(entry != 0) --index;
-                } else entry = entry->next;
+                } else
+                    entry = entry->next;
                 return *this;
             }
 
@@ -73,14 +83,18 @@ namespace std {
             friend class UnorderedMap;
         };
 
-        UnorderedMap() : UnorderedMap(initial_bucket_size) { }
-        UnorderedMap(size_t initial_capacity) : capacity(initial_capacity) {
+        UnorderedMap()
+            : UnorderedMap(initial_bucket_size) { }
+        UnorderedMap(size_t initial_capacity)
+            : capacity(initial_capacity) {
             bucket = allocator.template alloc<Entry*>(capacity);
             memset(bucket, 0, sizeof(Entry*) * capacity);
             _size = 0;
         }
 
-        UnorderedMap(const UnorderedMap<K, V>& other) : capacity(other.capacity), _size(other._size) {
+        UnorderedMap(const UnorderedMap<K, V>& other)
+            : capacity(other.capacity)
+            , _size(other._size) {
             bucket = allocator.template alloc<Entry*>(capacity);
             memset(bucket, 0, sizeof(Entry*) * capacity);
             for(size_t i = 0; i < capacity; ++i) {
@@ -126,7 +140,9 @@ namespace std {
             }
         }
 
-        UnorderedMap(UnorderedMap<K, V>&& other) : capacity(other.capacity), _size(other._size) {
+        UnorderedMap(UnorderedMap<K, V>&& other)
+            : capacity(other.capacity)
+            , _size(other._size) {
             bucket = other.bucket;
             other.bucket = 0;
         }
@@ -175,11 +191,11 @@ namespace std {
         }
 
         iterator find(const K& key) {
-            size_t bucket_pos = Hasher{}(key) % capacity;
+            size_t bucket_pos = Hasher {}(key) % capacity;
 
             if(bucket[bucket_pos] != 0) {
                 for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
-                    if(Pred{}(key, entry->key)) {
+                    if(Pred {}(key, entry->key)) {
                         return iterator(bucket_pos, entry, *this);
                     }
                 }
@@ -191,14 +207,14 @@ namespace std {
             Entry* entry = allocator.template alloc<Entry>(value.key, value.value);
             entry->next = 0;
 
-            size_t bucket_pos = Hasher{}(value.key) % capacity;
+            size_t bucket_pos = Hasher {}(value.key) % capacity;
 
             if(bucket[bucket_pos] == 0) {
                 bucket[bucket_pos] = entry;
             } else {
                 Entry* last;
                 for(Entry* lentry = bucket[bucket_pos]; lentry != 0; lentry = lentry->next) {
-                    if(Pred{}(value.key, lentry->key)) {
+                    if(Pred {}(value.key, lentry->key)) {
                         // Duplicate key
                         allocator.free(entry);
                         return false;
@@ -213,11 +229,11 @@ namespace std {
         }
 
         OptionalRef<V> at(const K& key) {
-            size_t bucket_pos = Hasher{}(key) % capacity;
-            
+            size_t bucket_pos = Hasher {}(key) % capacity;
+
             if(bucket[bucket_pos] == 0) return {};
             for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
-                if(Pred{}(key, entry->key)) {
+                if(Pred {}(key, entry->key)) {
                     // This is the value
                     return entry->value;
                 }
@@ -226,7 +242,7 @@ namespace std {
         }
 
         V& operator[](const K& key) {
-            size_t bucket_pos = Hasher{}(key) % capacity;
+            size_t bucket_pos = Hasher {}(key) % capacity;
             if(bucket[bucket_pos] == 0) {
                 bucket[bucket_pos] = new Entry();
                 bucket[bucket_pos]->key = key;
@@ -234,7 +250,7 @@ namespace std {
             }
             Entry* last = 0;
             for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
-                if(Pred{}(key, entry->key)) {
+                if(Pred {}(key, entry->key)) {
                     return entry->value;
                 }
                 last = entry;
@@ -246,15 +262,17 @@ namespace std {
         }
 
         void erase(const K& key) {
-            size_t bucket_pos = Hasher{}(key) % capacity;
+            size_t bucket_pos = Hasher {}(key) % capacity;
 
             if(bucket[bucket_pos] == 0) return;
             Entry* prev = 0;
             for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
-                if(Pred{}(key, entry->key)) {
+                if(Pred {}(key, entry->key)) {
                     // Delete this
-                    if(prev == 0) bucket[bucket_pos] = entry->next;
-                    else prev->next = entry->next;
+                    if(prev == 0)
+                        bucket[bucket_pos] = entry->next;
+                    else
+                        prev->next = entry->next;
                     allocator.free(entry);
                     return;
                 }

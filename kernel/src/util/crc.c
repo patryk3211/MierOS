@@ -28,8 +28,10 @@ u32_t calc_crc32(const void* data, size_t length) {
         remainder ^= reflect8(data_byte[i]) << 24;
 
         for(size_t j = 0; j < 8; ++j) {
-            if(remainder & 0x80000000) remainder = (remainder << 1) ^ CRC32_POLYNOMIAL;
-            else remainder <<= 1;
+            if(remainder & 0x80000000)
+                remainder = (remainder << 1) ^ CRC32_POLYNOMIAL;
+            else
+                remainder <<= 1;
         }
     }
 
@@ -47,8 +49,10 @@ u32_t continue_calc_crc32(u32_t remainder, const void* data, size_t length) {
         remainder ^= reflect8(data_byte[i]) << 24;
 
         for(size_t j = 0; j < 8; ++j) {
-            if(remainder & 0x80000000) remainder = (remainder << 1) ^ CRC32_POLYNOMIAL;
-            else remainder <<= 1;
+            if(remainder & 0x80000000)
+                remainder = (remainder << 1) ^ CRC32_POLYNOMIAL;
+            else
+                remainder <<= 1;
         }
     }
 

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <assert.h>
 #include <stdlib.h>
 #include <unique_pointer.hpp>
 #include <utility.hpp>
-#include <assert.h>
 
 namespace std {
     template<typename> class Function;
@@ -44,8 +44,10 @@ namespace std {
             Func func;
 
         public:
-            Callable(Func& func) : func(move(func)) { }
-            Callable(const Callable& other) : func(other.func) { }
+            Callable(Func& func)
+                : func(move(func)) { }
+            Callable(const Callable& other)
+                : func(other.func) { }
 
             ~Callable() override = default;
 

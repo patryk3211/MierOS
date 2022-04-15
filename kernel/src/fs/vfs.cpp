@@ -11,18 +11,19 @@ VFS::VFS() {
 }
 
 VFS::~VFS() {
-    
 }
 
 ValueOrError<void> VFS::mount(Filesystem* fs, const char* location) {
     if(!strcmp(location, "/")) {
         // Mounting root
-        auto value = fs->get_file(nullptr, "/", { });
+        auto value = fs->get_file(nullptr, "/", {});
 
-        if(value) f_rootNode = *value;
-        else return value.errno();
+        if(value)
+            f_rootNode = *value;
+        else
+            return value.errno();
 
-        return { };
+        return {};
     }
 
     auto locationNode = get_file(nullptr, (std::String(location) + "/..").c_str(), { .resolve_link = true, .follow_links = true });
@@ -36,7 +37,7 @@ ValueOrError<void> VFS::umount(const char* location) {
 
 ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, FilesystemFlags flags) {
     if(!root) root = f_rootNode;
-    
+
     const char* path_ptr = path;
     const char* next_separator = path;
     while(*next_separator != 0 && ((next_separator = strchr(path_ptr, '/')) != 0 || (next_separator = strchr(path_ptr, 0)))) {
@@ -44,9 +45,12 @@ ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, Filesystem
         if(root->type() == VNode::LINK) {
             if(flags.follow_links) {
                 auto linkDest = root->filesystem()->resolve_link(root);
-                if(!linkDest) return linkDest.errno();
-                else root = *linkDest;
-            } else return ERR_LINK;
+                if(!linkDest)
+                    return linkDest.errno();
+                else
+                    root = *linkDest;
+            } else
+                return ERR_LINK;
         }
 
         size_t length = next_separator - path_ptr;
@@ -55,7 +59,7 @@ ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, Filesystem
             continue;
         }
 
-        char part[length+1];
+        char part[length + 1];
         memcpy(part, path_ptr, length);
         part[length] = 0;
 
@@ -83,8 +87,10 @@ ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, Filesystem
         if(root->type() == VNode::LINK) {
             if(flags.resolve_link) {
                 auto linkDest = root->filesystem()->resolve_link(root);
-                if(!linkDest) return linkDest.errno();
-                else return *linkDest;
+                if(!linkDest)
+                    return linkDest.errno();
+                else
+                    return *linkDest;
             }
         }
         return root;

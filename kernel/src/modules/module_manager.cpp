@@ -1,13 +1,13 @@
-#include <modules/module_manager.hpp>
-#include <unordered_map.hpp>
-#include <modules/module.hpp>
-#include <modules/module_header.h>
 #include <defines.h>
 #include <dmesg.h>
-#include <string.hpp>
-#include <locking/spinlock.hpp>
-#include <locking/locker.hpp>
 #include <list.hpp>
+#include <locking/locker.hpp>
+#include <locking/spinlock.hpp>
+#include <modules/module.hpp>
+#include <modules/module_header.h>
+#include <modules/module_manager.hpp>
+#include <string.hpp>
+#include <unordered_map.hpp>
 
 using namespace kernel;
 
@@ -60,9 +60,12 @@ u16_t kernel::add_preloaded_module(void* file) {
     u16_t major = 0;
     if(header->preferred_major != 0) {
         auto mapped_mod = module_map.at(header->preferred_major);
-        if(!mapped_mod) major = header->preferred_major;
-        else major = find_major();
-    } else major = find_major();
+        if(!mapped_mod)
+            major = header->preferred_major;
+        else
+            major = find_major();
+    } else
+        major = find_major();
 
     mod->major_num = major;
     module_map.insert({ major, mod });
@@ -70,13 +73,14 @@ u16_t kernel::add_preloaded_module(void* file) {
 
     auto module_path = std::String<>("/init/") + (const char*)header->name_ptr;
     path_map.insert({ module_path, major });
-    for(char* signal = (char*)header->init_on_ptr; *signal != 0; signal += strlen(signal)+1) {
+    for(char* signal = (char*)header->init_on_ptr; *signal != 0; signal += strlen(signal) + 1) {
         for(auto& entry : module_index) {
             if(entry.init_signal == signal) {
                 entry.modules.push_back({ (bool)(header->flags & 1), module_path });
                 goto found;
             }
-        } {
+        }
+        {
             std::List<module_index_list_entry> mods;
             mods.push_back({ (bool)(header->flags & 1), module_path });
             module_index.push_back({ signal, mods });

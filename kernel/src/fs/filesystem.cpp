@@ -18,7 +18,7 @@ ValueOrError<std::List<std::SharedPtr<VNode>>> Filesystem::get_files(std::Shared
 ValueOrError<VNodePtr> Filesystem::resolve_link(VNodePtr link) {
     return ERR_UNIMPLEMENTED;
 }
-    
+
 ValueOrError<void> Filesystem::open(FileStream*, int) {
     return ERR_UNIMPLEMENTED;
 }

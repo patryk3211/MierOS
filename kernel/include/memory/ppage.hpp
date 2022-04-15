@@ -1,12 +1,13 @@
 #pragma once
 
-#include <types.h>
 #include <atomic.hpp>
+#include <types.h>
 
 namespace kernel {
     class PhysicalPage {
         physaddr_t _addr;
         std::Atomic<u32_t> _ref_count;
+
     public:
         PhysicalPage();
         ~PhysicalPage();

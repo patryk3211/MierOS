@@ -1,7 +1,7 @@
-#include "fs_func.hpp"
-#include "mount_info.hpp"
 #include "data_storage.hpp"
 #include "dirent.hpp"
+#include "fs_func.hpp"
+#include "mount_info.hpp"
 
 using namespace kernel;
 
@@ -9,7 +9,7 @@ extern std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
 VNode::Type inode_to_vnode_type(u16_t inode_type) {
     switch(inode_type) {
-        case INODE_TYPE_CHARDEV: 
+        case INODE_TYPE_CHARDEV:
         case INODE_TYPE_BLOCKDEV:
             return VNode::DEVICE;
         case INODE_TYPE_DIRECTORY:
@@ -41,7 +41,7 @@ ValueOrError<std::SharedPtr<VNode>> get_file(u16_t minor, std::SharedPtr<VNode> 
             continue;
         }
 
-        char part[length+1];
+        char part[length + 1];
         memcpy(part, path_ptr, length);
         part[length] = 0;
 
@@ -56,7 +56,8 @@ ValueOrError<std::SharedPtr<VNode>> get_file(u16_t minor, std::SharedPtr<VNode> 
         }
 
         auto next_root = root->f_children.at(part);
-        if(next_root) root = *next_root;
+        if(next_root)
+            root = *next_root;
         else {
             // Read from disk
             auto* node_data = static_cast<Ext2VNodeDataStorage*>(root->fs_data);
@@ -67,7 +68,7 @@ ValueOrError<std::SharedPtr<VNode>> get_file(u16_t minor, std::SharedPtr<VNode> 
 
                 DirectoryEntry* dir_ent;
                 for(size_t offset = 0; offset < mi.block_size; offset += dir_ent->entry_size) {
-                    dir_ent = (DirectoryEntry*)((u8_t*)cb->ptr()+offset);
+                    dir_ent = (DirectoryEntry*)((u8_t*)cb->ptr() + offset);
 
                     if(length != dir_ent->name_length) continue;
                     if(strncmp(part, dir_ent->name, length)) continue;
@@ -92,17 +93,20 @@ ValueOrError<std::SharedPtr<VNode>> get_file(u16_t minor, std::SharedPtr<VNode> 
         found:;
         }
 
-        path_ptr = next_separator+1;
+        path_ptr = next_separator + 1;
     }
 
     if(path_ptr[0] == 0 || (path_ptr[0] == '.' && path_ptr[1] == 0)) return root;
     if(!strcmp(path_ptr, "..")) {
-        if(root->f_parent) return root->f_parent;
-        else return root;
+        if(root->f_parent)
+            return root->f_parent;
+        else
+            return root;
     }
 
     auto file = root->f_children.at(path_ptr);
-    if(file) return *file;
+    if(file)
+        return *file;
     else {
         // Read from disk
         auto* node_data = static_cast<Ext2VNodeDataStorage*>(root->fs_data);
@@ -149,8 +153,10 @@ ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(u16_t minor, std::Share
 
     auto node = *val;
     if(node->type() == VNode::LINK) {
-        if(flags.follow_links) return ERR_UNIMPLEMENTED; /// TODO: [13.03.2022] Handle symbolic links
-        else return ERR_LINK;
+        if(flags.follow_links)
+            return ERR_UNIMPLEMENTED; /// TODO: [13.03.2022] Handle symbolic links
+        else
+            return ERR_LINK;
     }
 
     std::List<std::SharedPtr<VNode>> nodes;
@@ -169,7 +175,7 @@ ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(u16_t minor, std::Share
             dir_ent = (DirectoryEntry*)((u8_t*)cb->ptr() + offset);
             if(dir_ent->inode == 0) continue;
 
-            char name_cp[dir_ent->name_length+1];
+            char name_cp[dir_ent->name_length + 1];
             memcpy(name_cp, dir_ent->name, dir_ent->name_length);
             name_cp[dir_ent->name_length] = 0;
 

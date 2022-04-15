@@ -77,12 +77,12 @@ struct Elf64_Phdr {
 #define SHF_ALLOC (1 << 1)
 #define SHF_EXECINSTR (1 << 2)
 #define SHF_MERGE (1 << 4)
-#define SHF_STRINGS	(1 << 5)
+#define SHF_STRINGS (1 << 5)
 #define SHF_INFO_LINK (1 << 6)
 #define SHF_LINK_ORDER (1 << 7)
 #define SHF_OS_NONCONFORMING (1 << 8)
 #define SHF_GROUP (1 << 9)
-#define SHF_TLS	(1 << 10)
+#define SHF_TLS (1 << 10)
 #define SHF_COMPRESSED (1 << 11)
 
 struct Elf64_Section {
@@ -105,16 +105,16 @@ struct Elf64_Section {
 #define STT_FILE 4
 #define STT_COMMON 5
 #define STT_TLS 6
-#define	STT_NUM 7
+#define STT_NUM 7
 
 #define STB_LOCAL 0
 #define STB_GLOBAL 1
 #define STB_WEAK 2
-#define	STB_NUM	3
+#define STB_NUM 3
 
-#define ELF64_ST_BIND(val) (((u8_t) (val)) >> 4)
-#define ELF64_ST_TYPE(val) ((val) & 0xf)
-#define ELF64_ST_INFO(bind, type) (((bind) << 4) + ((type) & 0xf))
+#define ELF64_ST_BIND(val) (((u8_t)(val)) >> 4)
+#define ELF64_ST_TYPE(val) ((val)&0xf)
+#define ELF64_ST_INFO(bind, type) (((bind) << 4) + ((type)&0xf))
 
 struct Elf64_Symbol {
     u32_t name_idx;
@@ -132,7 +132,7 @@ struct Elf64_Rela {
 };
 
 #define ELF64_REL_SYM(i) ((i) >> 32)
-#define ELF64_REL_TYPE(i) ((i) & 0xffffffff)
+#define ELF64_REL_TYPE(i) ((i)&0xffffffff)
 
 #if defined(__cplusplus)
 } // extern "C"

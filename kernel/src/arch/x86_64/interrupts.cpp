@@ -1,13 +1,13 @@
+#include <arch/cpu.h>
 #include <arch/interrupts.h>
+#include <arch/x86_64/apic.h>
+#include <arch/x86_64/cpu.h>
 #include <arch/x86_64/int_handlers.h>
+#include <defines.h>
 #include <dmesg.h>
 #include <stdlib.h>
-#include <defines.h>
-#include <arch/x86_64/cpu.h>
-#include <arch/cpu.h>
 #include <tasking/thread.hpp>
 #include <trace.h>
-#include <arch/x86_64/apic.h>
 
 struct interrupt_descriptor {
     u16_t offset_015;
@@ -110,7 +110,9 @@ extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     idtr.length = sizeof(idt);
     idtr.ptr = (u64_t)idt;
 
-    asm volatile("lidt %0; sti" : : "m"(idtr));
+    asm volatile("lidt %0; sti"
+                 :
+                 : "m"(idtr));
 }
 
 extern u32_t lapic_timer_ticks;
@@ -135,24 +137,25 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
 
     if(state->int_num == 0xFE) {
         state = _tsh(state);
-        set_kernel_stack(current_core(), rsp+sizeof(CPUState));
+        set_kernel_stack(current_core(), rsp + sizeof(CPUState));
 
         u64_t timer_value = state->next_switch_time * lapic_timer_ticks / 1000;
         write_lapic(0x380, timer_value);
     } else if(state->int_num == 0x8F) {
         state->rax = _sh(state->rbx,
-                         state->rcx,
-                         state->rdx,
-                         state->rsi,
-                         state->rdi,
-                         state->rbp);
+            state->rcx,
+            state->rdx,
+            state->rsi,
+            state->rdi,
+            state->rbp);
     } else if(state->int_num < 0x20) {
         file_line_pair p = addr_to_line(state->rip);
         kprintf("Exception 0x%x2 on core %d\nRip: 0x%x16 %s:%d\n", state->int_num, current_core(), state->rip, p.name, p.line);
         switch(state->int_num) {
             case 0x0e: {
                 u64_t cr2;
-                asm volatile("mov %%cr2, %0" : "=a"(cr2));
+                asm volatile("mov %%cr2, %0"
+                             : "=a"(cr2));
                 kprintf("cr2: 0x%x16 code: 0x%x16\n", cr2, state->err_code);
                 break;
             }
@@ -173,8 +176,9 @@ extern "C" void register_handler(u8_t vector, void (*handler)()) {
     handler_entry* entry = new handler_entry();
     entry->next = 0;
     entry->handler = handler;
-    
-    if(handlers[vector] == 0) handlers[vector] = entry;
+
+    if(handlers[vector] == 0)
+        handlers[vector] = entry;
     else {
         handler_entry* last = handlers[vector];
         while(last->next != 0) last = last->next;

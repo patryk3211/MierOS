@@ -1,17 +1,17 @@
 #pragma once
 
-#include <types.h>
+#include "mount_info.hpp"
 #include <defines.h>
 #include <shared_pointer.hpp>
-#include "mount_info.hpp"
+#include <types.h>
 
-#define INODE_TYPE_FIFO       0x1000
-#define INODE_TYPE_CHARDEV    0x2000
-#define INODE_TYPE_DIRECTORY  0x4000
-#define INODE_TYPE_BLOCKDEV   0x6000
-#define INODE_TYPE_FILE       0x8000
-#define INODE_TYPE_SYMLINK    0xA000
-#define INODE_TYPE_SOCKET     0xC000
+#define INODE_TYPE_FIFO 0x1000
+#define INODE_TYPE_CHARDEV 0x2000
+#define INODE_TYPE_DIRECTORY 0x4000
+#define INODE_TYPE_BLOCKDEV 0x6000
+#define INODE_TYPE_FILE 0x8000
+#define INODE_TYPE_SYMLINK 0xA000
+#define INODE_TYPE_SOCKET 0xC000
 
 struct Inode {
     u16_t type_and_perm;
@@ -40,6 +40,7 @@ struct Inode {
 class INodePtr {
     CacheBlock* f_block;
     u32_t f_offset;
+
 public:
     INodePtr(CacheBlock* block, u32_t offset);
     ~INodePtr();
@@ -50,8 +51,8 @@ public:
     INodePtr& operator=(const INodePtr& other);
     INodePtr& operator=(INodePtr&& other);
 
-    Inode* ptr() { return (Inode*)((u8_t*)f_block->ptr()+f_offset); }
-    const Inode* ptr() const { return (Inode*)((u8_t*)f_block->ptr()+f_offset); }
+    Inode* ptr() { return (Inode*)((u8_t*)f_block->ptr() + f_offset); }
+    const Inode* ptr() const { return (Inode*)((u8_t*)f_block->ptr() + f_offset); }
 
     Inode* operator->() { return ptr(); }
     const Inode* operator->() const { return ptr(); }

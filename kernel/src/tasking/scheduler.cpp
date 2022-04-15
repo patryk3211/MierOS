@@ -1,7 +1,7 @@
-#include <tasking/scheduler.hpp>
-#include <defines.h>
 #include <arch/cpu.h>
 #include <arch/interrupts.h>
+#include <defines.h>
+#include <tasking/scheduler.hpp>
 
 using namespace kernel;
 
@@ -10,16 +10,17 @@ NO_EXPORT ThreadQueue Scheduler::runnable_queue = ThreadQueue();
 NO_EXPORT Scheduler* Scheduler::schedulers;
 NO_EXPORT SpinLock Scheduler::queue_lock;
 
-TEXT_FREE_AFTER_INIT Scheduler::Scheduler() : idle_stack(4096) {
+TEXT_FREE_AFTER_INIT Scheduler::Scheduler()
+    : idle_stack(4096) {
     current_thread = 0;
-    idle_ksp = (CPUState*)((virtaddr_t)idle_stack.ptr()+4096-sizeof(CPUState));
+    idle_ksp = (CPUState*)((virtaddr_t)idle_stack.ptr() + 4096 - sizeof(CPUState));
 
     idle_ksp->rip = (u64_t)&idle;
     idle_ksp->cs = 0x08;
     idle_ksp->rflags = 0x202;
 
     idle_ksp->cr3 = Pager::active().cr3();
-    idle_ksp->rsp = (virtaddr_t)idle_stack.ptr()+4096;
+    idle_ksp->rsp = (virtaddr_t)idle_stack.ptr() + 4096;
     idle_ksp->ss = 0x10;
 
     _is_idle = false;
@@ -27,7 +28,6 @@ TEXT_FREE_AFTER_INIT Scheduler::Scheduler() : idle_stack(4096) {
 }
 
 Scheduler::~Scheduler() {
-
 }
 
 CPUState* Scheduler::schedule(CPUState* current_state) {
@@ -48,7 +48,8 @@ CPUState* Scheduler::schedule(CPUState* current_state) {
             }
             current_thread = 0;
         }
-    } else first_switch = false;
+    } else
+        first_switch = false;
 
     Thread* new_thread = runnable_queue.get_optimal_thread(core_id);
     queue_lock.unlock();
@@ -89,8 +90,10 @@ Scheduler& Scheduler::scheduler(int core) {
 void Scheduler::schedule_process(Process& proc) {
     queue_lock.lock();
     for(auto& thread : proc.threads) {
-        if(thread->state == RUNNABLE) runnable_queue.push_back(thread);
-        else wait_queue.push_back(thread);
+        if(thread->state == RUNNABLE)
+            runnable_queue.push_back(thread);
+        else
+            wait_queue.push_back(thread);
     }
     queue_lock.unlock();
 }

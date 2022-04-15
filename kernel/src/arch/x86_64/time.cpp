@@ -1,10 +1,10 @@
+#include <arch/interrupts.h>
 #include <arch/time.h>
 #include <arch/x86_64/acpi.h>
 #include <arch/x86_64/hpet.h>
-#include <memory/virtual.hpp>
-#include <arch/interrupts.h>
-#include <locking/locker.hpp>
 #include <arch/x86_64/ports.h>
+#include <locking/locker.hpp>
+#include <memory/virtual.hpp>
 
 using namespace kernel;
 
@@ -15,7 +15,7 @@ time_t current_time = 0;
 
 void time_interrupt() {
     uptime += 1;
-    
+
     ++time_ms;
     if(time_ms == 1000) {
         time_ms = 0;

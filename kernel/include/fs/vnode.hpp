@@ -1,17 +1,17 @@
 #pragma once
 
-#include <types.h>
-#include <string.hpp>
-#include <fs/filesystem.hpp>
-#include <streams/filestream.hpp>
 #include <atomic.hpp>
+#include <fs/filesystem.hpp>
 #include <shared_pointer.hpp>
+#include <streams/filestream.hpp>
+#include <string.hpp>
+#include <types.h>
 #include <unordered_map.hpp>
 
 namespace kernel {
-    #define FILE_OPEN_MODE_READ 0b01
-    #define FILE_OPEN_MODE_WRITE 0b10
-    #define FILE_OPEN_MODE_READ_WRITE 0b11
+#define FILE_OPEN_MODE_READ 0b01
+#define FILE_OPEN_MODE_WRITE 0b10
+#define FILE_OPEN_MODE_READ_WRITE 0b11
 
     struct VNodeDataStorage {
         virtual ~VNodeDataStorage() { }
@@ -41,12 +41,14 @@ namespace kernel {
         std::UnorderedMap<std::String<>, std::SharedPtr<VNode>> f_children;
 
         VNodeDataStorage* fs_data;
+
     private:
         std::String<> f_name;
 
         Filesystem* f_filesystem;
 
         Type f_type;
+
     public:
         VNode(u16_t permissions, u16_t user_id, u16_t group_id, time_t create_time, time_t access_time, time_t modify_time, u64_t size, const std::String<>& name, VNode::Type type, Filesystem* fs);
         ~VNode();

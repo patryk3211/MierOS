@@ -1,7 +1,7 @@
 #pragma once
 
-#include <fs/modulefs.hpp>
 #include "inode.hpp"
+#include <fs/modulefs.hpp>
 
 struct Ext2VNodeDataStorage : public kernel::ModuleVNodeDataStorage {
     INodePtr inode;

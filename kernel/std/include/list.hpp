@@ -13,27 +13,37 @@ namespace std {
         struct Entry : public EntryBase {
             T value;
 
-            Entry(T value) : value(value) { }
+            Entry(T value)
+                : value(value) { }
         };
+
     public:
         class iterator {
             Entry* value;
 
-            iterator(Entry* value) : value(value) { }
+            iterator(Entry* value)
+                : value(value) { }
+
         public:
             ~iterator() { }
 
             T& operator*() { return value->value; }
             T* operator->() { return &value->value; }
 
-            iterator& operator++() { value = static_cast<Entry*>(value->next); return *this; }
+            iterator& operator++() {
+                value = static_cast<Entry*>(value->next);
+                return *this;
+            }
             iterator operator++(int) {
                 iterator old = *this;
                 value = static_cast<Entry*>(value->next);
                 return old;
             }
 
-            iterator& operator--() { value = static_cast<Entry*>(value->prev); return *this; }
+            iterator& operator--() {
+                value = static_cast<Entry*>(value->prev);
+                return *this;
+            }
             iterator operator--(int) {
                 iterator old = *this;
                 value = static_cast<Entry*>(value->prev);
@@ -49,21 +59,29 @@ namespace std {
         class reverse_iterator {
             Entry* value;
 
-            reverse_iterator(Entry* value) : value(value) { }
+            reverse_iterator(Entry* value)
+                : value(value) { }
+
         public:
             ~reverse_iterator() { }
 
             T& operator*() { return value->value; }
             T& operator->() { return value->value; }
 
-            reverse_iterator& operator++() { value = value->prev; return *this; }
+            reverse_iterator& operator++() {
+                value = value->prev;
+                return *this;
+            }
             reverse_iterator operator++(int) {
                 reverse_iterator old = *this;
                 value = value->prev;
                 return old;
             }
 
-            reverse_iterator& operator--() { value = value->next; return *this; }
+            reverse_iterator& operator--() {
+                value = value->next;
+                return *this;
+            }
             reverse_iterator operator--(int) {
                 reverse_iterator old = *this;
                 value = value->next;
@@ -75,6 +93,7 @@ namespace std {
         };
 
         Allocator allocator;
+
     public:
         List() {
             head.prev = 0;
@@ -94,7 +113,7 @@ namespace std {
             Entry* last = static_cast<Entry*>(&head);
             for(Entry* entry = static_cast<Entry*>(other.head.next); entry != &other.tail; entry = static_cast<Entry*>(entry->next)) {
                 Entry* e = allocator.template alloc<Entry>(entry->value);
-                
+
                 e->next = last->next;
                 e->prev = last;
 
@@ -120,7 +139,7 @@ namespace std {
             Entry* last = &head;
             for(Entry* entry = other.head.next; entry != &other.tail; entry = entry->next) {
                 Entry* e = allocator.template alloc<Entry>(entry->value);
-                
+
                 e->next = last->next;
                 e->prev = last;
 
@@ -260,6 +279,7 @@ namespace std {
                 current = next;
             }
         }
+
     private:
         EntryBase head;
         EntryBase tail;

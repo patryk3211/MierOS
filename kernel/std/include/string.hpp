@@ -10,6 +10,7 @@ namespace std {
         C* characters;
 
         size_t len;
+
     public:
         String() {
             characters = allocator.template alloc<C>(1);
@@ -19,15 +20,15 @@ namespace std {
 
         String(const C* init_str) {
             len = strlen(init_str);
-            characters = allocator.template alloc<C>(len+1);
-            memcpy(characters, init_str, sizeof(C)*len);
+            characters = allocator.template alloc<C>(len + 1);
+            memcpy(characters, init_str, sizeof(C) * len);
             characters[len] = 0;
         }
 
         String(const String& init_str) {
             len = init_str.len;
-            characters = allocator.template alloc<C>(len+1);
-            memcpy(characters, init_str.characters, sizeof(C)*len);
+            characters = allocator.template alloc<C>(len + 1);
+            memcpy(characters, init_str.characters, sizeof(C) * len);
             characters[len] = 0;
         }
 
@@ -37,9 +38,9 @@ namespace std {
 
         String& operator+=(const String& other) {
             size_t newLen = len + other.len;
-            C* newChars = allocator.template alloc<C>(newLen+1);
-            memcpy(newChars, characters, sizeof(C)*len);
-            memcpy(newChars+len, other.characters, sizeof(C)*other.len);
+            C* newChars = allocator.template alloc<C>(newLen + 1);
+            memcpy(newChars, characters, sizeof(C) * len);
+            memcpy(newChars + len, other.characters, sizeof(C) * other.len);
             newChars[newLen] = 0;
             allocator.free_array(characters);
             characters = newChars;
@@ -49,9 +50,9 @@ namespace std {
 
         String& operator+=(const C* c_str) {
             size_t newLen = len + strlen(c_str);
-            C* newChars = allocator.template alloc<C>(newLen+1);
-            memcpy(newChars, characters, sizeof(C)*len);
-            memcpy(newChars+len, c_str, sizeof(C)*(newLen-len));
+            C* newChars = allocator.template alloc<C>(newLen + 1);
+            memcpy(newChars, characters, sizeof(C) * len);
+            memcpy(newChars + len, c_str, sizeof(C) * (newLen - len));
             newChars[newLen] = 0;
             allocator.free_array(characters);
             characters = newChars;
@@ -61,9 +62,9 @@ namespace std {
 
         String& operator+=(const C character) {
             size_t newLen = len + 1;
-            C* newChars = allocator.template alloc<C>(newLen+1);
-            memcpy(newChars, characters, sizeof(C)*len);
-            newChars[newLen-1] = character;
+            C* newChars = allocator.template alloc<C>(newLen + 1);
+            memcpy(newChars, characters, sizeof(C) * len);
+            newChars[newLen - 1] = character;
             newChars[newLen] = 0;
             allocator.free_array(characters);
             characters = newChars;
@@ -92,8 +93,8 @@ namespace std {
         String& operator=(const C* c_str) {
             allocator.free_array(characters);
             len = strlen(c_str);
-            characters = allocator.template alloc<C>(len+1);
-            memcpy(characters, c_str, sizeof(C)*len);
+            characters = allocator.template alloc<C>(len + 1);
+            memcpy(characters, c_str, sizeof(C) * len);
             characters[len] = 0;
             return *this;
         }
@@ -101,8 +102,8 @@ namespace std {
         String& operator=(const String& str) {
             allocator.free_array(characters);
             len = str.len;
-            characters = allocator.template alloc<C>(len+1);
-            memcpy(characters, str.characters, sizeof(C)*len);
+            characters = allocator.template alloc<C>(len + 1);
+            memcpy(characters, str.characters, sizeof(C) * len);
             characters[len] = 0;
             return *this;
         }
@@ -119,16 +120,19 @@ namespace std {
         const C* c_str() const { return characters; }
         bool empty() const { return len == 0; }
 
-        bool operator==(const std::String<C>& other) const { 
+        bool operator==(const std::String<C>& other) const {
             if(other.len != len) return false;
-            for(size_t i = 0; i < len; ++i) if(characters[i] != other.characters[i]) return false;
+            for(size_t i = 0; i < len; ++i)
+                if(characters[i] != other.characters[i]) return false;
             return true;
         }
         bool operator==(const C* c_str) const {
             size_t len;
-            for(len = 0; c_str[len] != 0; ++len);
+            for(len = 0; c_str[len] != 0; ++len)
+                ;
             if(this->len != len) return false;
-            for(size_t i = 0; i < len; ++i) if(characters[i] != c_str[i]) return false;
+            for(size_t i = 0; i < len; ++i)
+                if(characters[i] != c_str[i]) return false;
             return true;
         }
     };
@@ -142,11 +146,11 @@ namespace std {
             num /= 10;
             buffer[index++] = '0' + digit;
         } while(num > 0);
-        char fin[index+neg+1];
-        for(int i = 0; i < index; i++) fin[i+neg] = buffer[index-i-1];
+        char fin[index + neg + 1];
+        for(int i = 0; i < index; i++) fin[i + neg] = buffer[index - i - 1];
         if(neg) fin[0] = '-';
 
-        fin[index+neg] = 0;
+        fin[index + neg] = 0;
         return String(fin);
     }
 
@@ -166,11 +170,11 @@ namespace std {
 
         buffer[8] = '-';
 
-        buffer[9]  = lookup[as_bytes[4] >> 4];
+        buffer[9] = lookup[as_bytes[4] >> 4];
         buffer[10] = lookup[as_bytes[4] & 15];
         buffer[11] = lookup[as_bytes[5] >> 4];
         buffer[12] = lookup[as_bytes[5] & 15];
-        
+
         buffer[13] = '-';
 
         buffer[14] = lookup[as_bytes[6] >> 4];

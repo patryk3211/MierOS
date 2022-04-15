@@ -1,10 +1,10 @@
-#include <modules/module_header.h>
-#include <defines.h>
-#include <fs/modulefs_functions.hpp>
 #include "fs_func.hpp"
 #include "mount_info.hpp"
-#include <unordered_map.hpp>
+#include <defines.h>
+#include <fs/modulefs_functions.hpp>
+#include <modules/module_header.h>
 #include <tasking/thread.hpp>
+#include <unordered_map.hpp>
 
 using namespace kernel;
 
@@ -32,7 +32,7 @@ fs_function_table fs_func_tab {
 
     .get_file = &get_file,
     .get_files = &get_files,
-    
+
     .open = &open,
     .close = &close,
 

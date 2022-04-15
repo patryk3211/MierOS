@@ -1,6 +1,6 @@
-#include <trace.h>
 #include <defines.h>
 #include <stdlib.h>
+#include <trace.h>
 
 struct record {
     u64_t address;
@@ -19,7 +19,7 @@ struct file_line_pair addr_to_line(u64_t address) {
     struct record* current_record = line_map;
     while((len = strlen(current_record->name)) != 0) {
         if(current_record->address > address) break;
-        current_record = (struct record*)((u8_t*)current_record+len+13);
+        current_record = (struct record*)((u8_t*)current_record + len + 13);
     }
     struct file_line_pair pair;
     pair.line = current_record->line;

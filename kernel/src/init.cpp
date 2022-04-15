@@ -1,19 +1,19 @@
-#include <stivale.h>
-#include <defines.h>
 #include <arch/cpu.h>
-#include <tests/test.hpp>
+#include <defines.h>
+#include <dmesg.h>
+#include <fs/devicefs.hpp>
+#include <fs/vfs.hpp>
+#include <fs/vnode.hpp>
+#include <initrd.h>
 #include <memory/liballoc.h>
 #include <memory/physical.h>
 #include <memory/virtual.hpp>
+#include <modules/module_manager.hpp>
+#include <stivale.h>
 #include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
-#include <modules/module_manager.hpp>
-#include <initrd.h>
-#include <dmesg.h>
+#include <tests/test.hpp>
 #include <trace.h>
-#include <fs/devicefs.hpp>
-#include <fs/vnode.hpp>
-#include <fs/vfs.hpp>
 
 #include <fs/modulefs.hpp>
 #include <fs/modulefs_functions.hpp>
@@ -43,7 +43,8 @@ FREE_AFTER_INIT stivale2_module sym_map;
 void stage2_init();
 extern "C" TEXT_FREE_AFTER_INIT void _start() {
     stivale2_struct* structure;
-    asm volatile("mov %%rdi, %0" : "=a"(structure));
+    asm volatile("mov %%rdi, %0"
+                 : "=a"(structure));
 
     // Init serial for debug messages.
     init_serial();

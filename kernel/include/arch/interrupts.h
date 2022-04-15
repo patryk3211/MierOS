@@ -1,8 +1,8 @@
 #ifndef _MIEROS_KERNEL_ARCH_INTERRUPTS_H
 #define _MIEROS_KERNEL_ARCH_INTERRUPTS_H
 
-#include <types.h>
 #include <tasking/cpu_state.h>
+#include <types.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -22,6 +22,5 @@ extern void force_task_switch();
 
 #endif // _MIEROS_KERNEL_ARCH_INTERRUPTS_H
 
-
-#include <types.h>
 #include <tasking/cpu_state.h>
+#include <types.h>

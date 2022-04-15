@@ -5,6 +5,7 @@
 namespace kernel {
     class SpinLock {
         u32_t locked;
+
     public:
         SpinLock() {
             locked = false;
@@ -28,12 +29,15 @@ namespace kernel {
                 "pause\n"
                 "jmp _SpinLock.lock_pause\n"
                 "_SpinLock.lock_out:"
-             : : "m"(locked) : "eax", "ecx");
+                :
+                : "m"(locked)
+                : "eax", "ecx");
         }
 
         void unlock() {
             ASSERT_F(locked, "Unlocking an unlocked lock");
-            asm volatile("" ::: "memory");
+            asm volatile("" ::
+                             : "memory");
             locked = false;
         }
 
@@ -46,7 +50,9 @@ namespace kernel {
                 "jne _SpinLock.try_lock_out\n"
                 "movb $1, %1\n"
                 "_SpinLock.try_lock_out:"
-            : : "m"(locked), "m"(has_locked) : "eax", "ecx");
+                :
+                : "m"(locked), "m"(has_locked)
+                : "eax", "ecx");
             return has_locked;
         }
 

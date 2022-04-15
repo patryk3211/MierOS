@@ -1,22 +1,22 @@
 #pragma once
 
-#include <stivale.h>
-#include <locking/spinlock.hpp>
 #include <list.hpp>
+#include <locking/spinlock.hpp>
+#include <stivale.h>
 
 namespace kernel {
-    #define MAX_WORK_PAGES 4
+#define MAX_WORK_PAGES 4
 
     struct PageFlags {
-        bool present:1;
-        bool writable:1;
-        bool user_accesible:1;
-        bool executable:1;
-        bool global:1;
-        bool cache_disable:1;
+        bool present        : 1;
+        bool writable       : 1;
+        bool user_accesible : 1;
+        bool executable     : 1;
+        bool global         : 1;
+        bool cache_disable  : 1;
     };
 
-    #define KERNEL_START 0xFFFFFFFF80000000
+#define KERNEL_START 0xFFFFFFFF80000000
 
     class Pager {
         static physaddr_t kernel_pd[2];
@@ -67,6 +67,7 @@ namespace kernel {
 
         static Pager& active();
         static Pager& kernel();
+
     private:
         void mapStructures(int new_pml4e, int new_pdpte, int new_pde);
         int getWorkpage(int index);

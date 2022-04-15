@@ -1,11 +1,11 @@
 #pragma once
 
-#include <streams/stream.hpp>
-#include <shared_pointer.hpp>
 #include <errno.h>
+#include <shared_pointer.hpp>
+#include <streams/stream.hpp>
 
 namespace kernel {
-    #define STREAM_TYPE_FILE 1
+#define STREAM_TYPE_FILE 1
 
     class VNode;
     class FileStream : public Stream {

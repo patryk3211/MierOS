@@ -20,6 +20,7 @@ namespace kernel {
         static DeviceFilesystem* s_instance;
 
         std::SharedPtr<VNode> root;
+
     public:
         DeviceFilesystem();
         virtual ~DeviceFilesystem() { }
@@ -28,7 +29,7 @@ namespace kernel {
         virtual ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
 
         virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link);
-    
+
         virtual ValueOrError<void> open(FileStream* stream, int mode);
         virtual ValueOrError<void> close(FileStream* stream);
 

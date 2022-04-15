@@ -1,9 +1,9 @@
 #ifndef _MIEROS_KERNEL_ARCH_X86_64_HPET_H
 #define _MIEROS_KERNEL_ARCH_X86_64_HPET_H
 
-#include <types.h>
-#include <defines.h>
 #include <arch/x86_64/acpi.h>
+#include <defines.h>
+#include <types.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -12,10 +12,10 @@ extern "C" {
 struct ACPI_HPET_Table {
     struct ACPI_SDTHeader header;
     u8_t hardwareRevision;
-    u8_t comparatorCount:5;
-    u8_t counterSize:1;
-    u8_t reserved:1;
-    u8_t legacyReplacement:1;
+    u8_t comparatorCount   : 5;
+    u8_t counterSize       : 1;
+    u8_t reserved          : 1;
+    u8_t legacyReplacement : 1;
     u16_t pciVendor;
     struct ACPI_AddressStructure address;
     u8_t hpetNumber;

@@ -33,8 +33,8 @@ struct stivale2_stag_kernel_base {
 };
 
 #define STIVALE2_PMR_EXECUTABLE ((u64_t)1 << 0)
-#define STIVALE2_PMR_WRITABLE   ((u64_t)1 << 1)
-#define STIVALE2_PMR_READABLE   ((u64_t)1 << 2)
+#define STIVALE2_PMR_WRITABLE ((u64_t)1 << 1)
+#define STIVALE2_PMR_READABLE ((u64_t)1 << 2)
 
 struct stivale2_pmr {
     u64_t base;

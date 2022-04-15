@@ -1,6 +1,6 @@
+#include "pci_header.h"
 #include <arch/x86_64/ports.h>
 #include <list.hpp>
-#include "pci_header.h"
 
 #include <dmesg.h>
 
@@ -17,7 +17,7 @@ void detect_pci() {
             for(int func = 0; func < 8; ++func) {
                 u16_t vendor_id = pci_read(bus, device, func, 0x00);
                 if(vendor_id != 0xFFFF) {
-                    PCI_Header header { };
+                    PCI_Header header {};
                     u8_t header_type = pci_read(bus, device, func, 0x0E);
                     if((header_type & 0x7F) == 0) {
                         header.vendor_id = vendor_id;

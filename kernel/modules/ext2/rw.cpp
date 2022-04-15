@@ -1,6 +1,6 @@
+#include "data_storage.hpp"
 #include "fs_func.hpp"
 #include "mount_info.hpp"
-#include "data_storage.hpp"
 #include <fs/devicefs.hpp>
 
 using namespace kernel;
@@ -25,7 +25,7 @@ ValueOrError<size_t> read(u16_t minor, FileStream* filestream, void* buffer, siz
     // Read until the file offset is aligned to filesystem block size
     size_t sizeToRead = mi.block_size - (file_data->position & (mi.block_size - 1));
     if(sizeToRead == mi.block_size) sizeToRead = 0;
-    
+
     if(sizeToRead > leftToRead) sizeToRead = leftToRead;
 
     if(sizeToRead > 0) {
@@ -46,7 +46,7 @@ ValueOrError<size_t> read(u16_t minor, FileStream* filestream, void* buffer, siz
         // Try to combine as much blocks into one read request as possible
         u32_t startBlock = file_data->position >> (mi.superblock->blocks_size + 10);
         u32_t block = get_inode_block(mi, vnode_data->inode, startBlock);
-        
+
         size_t blkCount = 0;
         while(get_inode_block(mi, vnode_data->inode, startBlock + blkCount) == block + blkCount) ++blkCount;
 

@@ -1,6 +1,6 @@
+#include "data_storage.hpp"
 #include "fs_func.hpp"
 #include "mount_info.hpp"
-#include "data_storage.hpp"
 
 using namespace kernel;
 
@@ -16,7 +16,7 @@ ValueOrError<void> open(u16_t minor, FileStream* filestream, int mode) {
     filestream->fs_data = new Ext2StreamDataStorage(mi);
 
     /// TODO: [13.03.2022] Check if this file can be opened in the given mode and if permissions match.
-    return { };
+    return {};
 }
 
 ValueOrError<void> close(u16_t minor, FileStream* filestream) {
@@ -29,5 +29,5 @@ ValueOrError<void> close(u16_t minor, FileStream* filestream) {
     delete static_cast<Ext2StreamDataStorage*>(filestream->fs_data);
 
     /// TODO: [13.03.2022] Flush the buffer and do some other things too probably.
-    return { };
+    return {};
 }

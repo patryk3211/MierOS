@@ -5,7 +5,10 @@
 
 using namespace kernel;
 
-CacheBlock::CacheBlock(MountInfo& mi, u32_t block_addr) : f_mi(mi), f_block_addr(block_addr), f_ref_count(0) {
+CacheBlock::CacheBlock(MountInfo& mi, u32_t block_addr)
+    : f_mi(mi)
+    , f_block_addr(block_addr)
+    , f_ref_count(0) {
     f_base = 0;
     f_dirty = false;
 }
@@ -22,7 +25,7 @@ void CacheBlock::sync() {
 void CacheBlock::free() {
     if(f_base == 0) return;
     sync();
-    
+
     auto& pager = Pager::active();
     pager.lock();
     pager.free((virtaddr_t)f_base, f_mi.block_size / 4096 + (f_mi.block_size % 4096 == 0 ? 0 : 1));
@@ -56,7 +59,8 @@ void* CacheBlock::ptr() {
 CacheBlock* MountInfo::read_cache_block(u32_t block_index) {
     auto cache = cache_block_table.at(block_index);
     CacheBlock* cb = 0;
-    if(cache) cb = *cache;
+    if(cache)
+        cb = *cache;
     else {
         cb = new CacheBlock(*this, block_index);
         cache_block_table.insert({ block_index, cb });

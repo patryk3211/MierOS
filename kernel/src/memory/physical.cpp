@@ -1,12 +1,12 @@
-#include <memory/physical.h>
-#include <dmesg.h>
-#include <memory/liballoc.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <defines.h>
+#include <dmesg.h>
+#include <memory/liballoc.h>
+#include <memory/physical.h>
+#include <stdlib.h>
 
-#include <locking/spinlock.hpp>
 #include <locking/locker.hpp>
+#include <locking/spinlock.hpp>
 #include <range_map.hpp>
 
 using namespace kernel;
@@ -59,22 +59,22 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
     for(u64_t i = 0; i < memory_map->entry_count; ++i) {
         if(memory_map->entries[i].type == STIVALE2_MEMMAP_TYPE_USABLE) {
             // Push back the first_potential_page pointer if a lower page is available.
-            if(pmm_first_potential_page > memory_map->entries[i].base) pmm_first_potential_page = memory_map->entries[i].base; 
+            if(pmm_first_potential_page > memory_map->entries[i].base) pmm_first_potential_page = memory_map->entries[i].base;
             // Set the memory block as free.
-            for(u64_t page = 0; page < memory_map->entries[i].length; page += 4096) set_page_status(memory_map->entries[i].base+page, 0);
+            for(u64_t page = 0; page < memory_map->entries[i].length; page += 4096) set_page_status(memory_map->entries[i].base + page, 0);
 
             free_mem += memory_map->entries[i].length;
         } else if(memory_map->entries[i].type == STIVALE2_MEMMAP_TYPE_BOOTLOADER_RECLAIMABLE) {
             // Add bootloader chunks to freeable range map.
-            freeable_mem->add(memory_map->entries[i].base, memory_map->entries[i].base+memory_map->entries[i].length);
+            freeable_mem->add(memory_map->entries[i].base, memory_map->entries[i].base + memory_map->entries[i].length);
         }
     }
 
     // Mark the first MiB as used since it could be utilized in the startup of AP cores.
-    for(u64_t page = 0; page < 1024*1024; page += 4096) set_page_status(page, 1);
-    freeable_mem->add(0, 1024*1024);
+    for(u64_t page = 0; page < 1024 * 1024; page += 4096) set_page_status(page, 1);
+    freeable_mem->add(0, 1024 * 1024);
 
-    kprintf("[%T] (Kernel) Found %d KiB of free memory\n", free_mem/1024);
+    kprintf("[%T] (Kernel) Found %d KiB of free memory\n", free_mem / 1024);
 
     pmm_lock = SpinLock();
 }
@@ -86,7 +86,7 @@ extern "C" void pmm_release_bootloader_resources() {
         pfree(iter->start, (iter->end - iter->start) >> 12);
     }
     delete freeable_mem;
-    kprintf("[%T] (Kernel) Freed %d KiB of bootloader memory\n", freed_mem/1024);
+    kprintf("[%T] (Kernel) Freed %d KiB of bootloader memory\n", freed_mem / 1024);
 }
 
 extern "C" physaddr_t palloc(size_t page_count) {

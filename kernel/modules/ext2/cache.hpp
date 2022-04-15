@@ -1,6 +1,6 @@
 #pragma once
-#include <types.h>
 #include <atomic.hpp>
+#include <types.h>
 
 struct MountInfo;
 class CacheBlock {
@@ -10,7 +10,7 @@ class CacheBlock {
     std::Atomic<u32_t> f_ref_count;
     bool f_dirty;
 
-public: 
+public:
     CacheBlock(MountInfo& mi, u32_t block_addr);
     ~CacheBlock();
 

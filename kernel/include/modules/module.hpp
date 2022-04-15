@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector.hpp>
 #include <elf.h>
-#include <string.hpp>
-#include <range_map.hpp>
-#include <optional.hpp>
 #include <locking/spinlock.hpp>
+#include <optional.hpp>
+#include <range_map.hpp>
+#include <string.hpp>
+#include <vector.hpp>
 
 namespace kernel {
     class Module {
@@ -18,6 +18,7 @@ namespace kernel {
             u32_t flags;
             u32_t entry_size;
         };
+
     private:
         struct ThreadModuleSetter {
             Module* old_mod;
@@ -40,6 +41,7 @@ namespace kernel {
         bool initialized;
 
         SpinLock locker;
+
     public:
         Module(void* elf_file, u16_t major_num);
         ~Module();
@@ -56,7 +58,7 @@ namespace kernel {
 
         template<typename Ret, typename... Args> Ret run_function(const char* func_name, Args... args) {
             ThreadModuleSetter setter(this);
-            return ((Ret (*)(Args...))(address_base + get_symbol(func_name)->addr))(args...);
+            return ((Ret(*)(Args...))(address_base + get_symbol(func_name)->addr))(args...);
         }
 
         virtaddr_t get_symbol_addr(const char* name) {
@@ -64,6 +66,7 @@ namespace kernel {
         }
 
         u16_t major() { return major_num; }
+
     private:
         void link();
         void run_ctors();

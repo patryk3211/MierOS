@@ -1,23 +1,23 @@
-#include <modules/module_header.h>
-#include <defines.h>
-#include <stdlib.h>
-#include <dmesg.h>
+#include "../partition/parse.hpp"
 #include "../pci/pci_header.h"
-#include "structures.hpp"
+#include "ata.hpp"
 #include "defines.hpp"
-#include <memory/virtual.hpp>
+#include "structures.hpp"
+#include <defines.h>
+#include <dmesg.h>
+#include <fs/devicefs.hpp>
 #include <locking/locker.hpp>
 #include <memory/physical.h>
-#include <unordered_map.hpp>
-#include <fs/devicefs.hpp>
+#include <memory/virtual.hpp>
+#include <modules/module_header.h>
+#include <stdlib.h>
 #include <tasking/thread.hpp>
-#include "../partition/parse.hpp"
-#include "ata.hpp"
+#include <unordered_map.hpp>
 
-#define	SATA_SIG_ATA    0x00000101
-#define	SATA_SIG_ATAPI  0xEB140101
-#define	SATA_SIG_SEMB   0xC33C0101
-#define	SATA_SIG_PM	    0x96690101
+#define SATA_SIG_ATA 0x00000101
+#define SATA_SIG_ATAPI 0xEB140101
+#define SATA_SIG_SEMB 0xC33C0101
+#define SATA_SIG_PM 0x96690101
 
 extern char header_mod_name[];
 extern char init_on[];
@@ -43,7 +43,8 @@ std::UnorderedMap<u16_t, drive_file> drives;
 
 void find_partitions(drive_information* drive, const std::String<>& disk_name, u16_t disk_minor) {
     if(!drive->atapi) {
-        auto* parse_info = kernel::parse_partitions(512, 1, [drive](u64_t lba, void* buffer){ return ahci_ata_read(drive, lba, 1, buffer); }, [drive](u64_t lba, void* buffer){ return (size_t)0; });
+        auto* parse_info = kernel::parse_partitions(
+            512, 1, [drive](u64_t lba, void* buffer) { return ahci_ata_read(drive, lba, 1, buffer); }, [drive](u64_t lba, void* buffer) { return (size_t)0; });
 
         if(parse_info->type == GPT_PPI_TYPE) {
             auto* gpt = (kernel::GPTParttionParseInformation*)parse_info;
@@ -57,11 +58,11 @@ void find_partitions(drive_information* drive, const std::String<>& disk_name, u
             for(auto& part : *gpt) {
                 u16_t minor = minor_num++;
                 drives.insert({ minor, { drive, part.start_lba, part.end_lba, nullptr } });
-                
+
                 auto file = kernel::DeviceFilesystem::instance()->add_dev((disk_name + "p" + std::num_to_string(minor)).c_str(), module_major_num, minor);
                 if(file) {
                     drives[minor].node = *file;
-                
+
                     std::String<> part_by_id = "block/by-id/";
                     part_by_id += std::uuid_to_string(part.part_id);
                     kernel::DeviceFilesystem::instance()->add_link(part_by_id.c_str(), *file);
@@ -113,7 +114,8 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
 
     // Stop command processor and FIS receiver
     port->command_status &= ~((1 << 4) | (1 << 0));
-    while((port->command_status & (1 << 15)) || (port->command_status & (1 << 14)));
+    while((port->command_status & (1 << 15)) || (port->command_status & (1 << 14)))
+        ;
 
     // Allocate required structures
     physaddr_t command_list_p = palloc(1);
@@ -128,7 +130,8 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
     if(support64) port->fis_base_upper = command_list_p >> 32;
 
     // Start command processor and FIS receiver
-    while((port->command_status & (1 << 15)));
+    while((port->command_status & (1 << 15)))
+        ;
     port->command_status |= (1 << 4) | (1 << 0);
 
     u16_t minor = minor_num++;
@@ -160,7 +163,7 @@ extern "C" int init(PCI_Header* header) {
     drive_count = 0;
     minor_num = 0;
     module_major_num = kernel::Thread::current()->current_module->major();
-    
+
     HBA_MEM* hba = (HBA_MEM*)pager.kmap(header->bar[5] & ~0xFFF, 1, { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 1 });
     if(!(hba->capabilities & (1 << 18))) hba->global_host_control |= (1 << 31); // Enable AHCI mode
 
@@ -206,5 +209,3 @@ extern "C" int destroy() {
     }
     return 0;
 }
-
-

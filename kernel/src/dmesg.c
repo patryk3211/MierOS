@@ -1,30 +1,31 @@
+#include <arch/time.h>
+#include <arch/x86_64/ports.h>
+#include <defines.h>
 #include <dmesg.h>
 #include <types.h>
-#include <defines.h>
-#include <arch/x86_64/ports.h>
-#include <arch/time.h>
 
 #define IO_PORT 0x3F8
 
 TEXT_FREE_AFTER_INIT void init_serial() {
     // Disable Interrupts
-    outb(IO_PORT+1, 0b00000000);
+    outb(IO_PORT + 1, 0b00000000);
     // Set DLAB
-    outb(IO_PORT+3, 0b10000000);
+    outb(IO_PORT + 3, 0b10000000);
 
     // Set Divisor (to 3)
-    outb(IO_PORT+0, 0b00000011);
-    outb(IO_PORT+1, 0b00000000);
+    outb(IO_PORT + 0, 0b00000011);
+    outb(IO_PORT + 1, 0b00000000);
 
     // Clear DLAB and set mode to 8 bits, no parity, 1 stop bit (8N1)
-    outb(IO_PORT+3, 0b00000011);
+    outb(IO_PORT + 3, 0b00000011);
 
     // Enable DTR and RTS
-    outb(IO_PORT+4, 0b00000011);
+    outb(IO_PORT + 4, 0b00000011);
 }
 
 void write_serial(char c) {
-    while(!(inb(IO_PORT+5) & 0x20));
+    while(!(inb(IO_PORT + 5) & 0x20))
+        ;
     outb(IO_PORT, c);
 }
 
@@ -61,7 +62,7 @@ void va_kprintf(const char* format, va_list args) {
     for(i = 0; format[i] != 0; ++i) {
         if(format[i] == '%') {
             if(dwOffset != -1) {
-                dmesgl(format+dwOffset, i-dwOffset);
+                dmesgl(format + dwOffset, i - dwOffset);
                 dwOffset = -1;
             }
             switch(format[++i]) {
@@ -69,12 +70,14 @@ void va_kprintf(const char* format, va_list args) {
                     char* str = va_arg(args, char*);
                     raw_dmesg(str);
                     break;
-                } case 'c': {
+                }
+                case 'c': {
                     char val = va_arg(args, int);
                     dmesgl(&val, 1);
                     break;
-                } case 'i':
-                  case 'd': {
+                }
+                case 'i':
+                case 'd': {
                     int n = va_arg(args, int);
                     int neg = n < 0;
                     char buffer[80];
@@ -84,40 +87,44 @@ void va_kprintf(const char* format, va_list args) {
                         n /= 10;
                         buffer[index++] = '0' + digit;
                     } while(n > 0);
-                    char fin[index+neg];
-                    for(int i = 0; i < index; i++) fin[i+neg] = buffer[index-i-1];
+                    char fin[index + neg];
+                    for(int i = 0; i < index; i++) fin[i + neg] = buffer[index - i - 1];
                     if(neg) fin[0] = '-';
-                    dmesgl(fin, index+neg);
+                    dmesgl(fin, index + neg);
                     break;
-                } case 'x': 
-                  case 'X': {
+                }
+                case 'x':
+                case 'X': {
                     const char* lookup;
-                    if(format[i++] == 'x') lookup = lookup_lower;
-                    else lookup = lookup_upper;
-                    
+                    if(format[i++] == 'x')
+                        lookup = lookup_lower;
+                    else
+                        lookup = lookup_upper;
+
                     int count = 0;
-                    while(format[i] >= '0' && format[i] <= '9') count = count*10+((format[i++])-'0');
-                    
+                    while(format[i] >= '0' && format[i] <= '9') count = count * 10 + ((format[i++]) - '0');
+
                     if(count > 16) count = 16; // Max size
 
                     u64_t num_to_conv = va_arg(args, u64_t);
                     if(count == 0) {
                         int started = 0;
                         for(int j = 15; j >= 0; --j) {
-                            char digit = (num_to_conv >> (j*4)) & 0xF;
+                            char digit = (num_to_conv >> (j * 4)) & 0xF;
                             if(digit == 0 && !started) continue;
-                            dmesgl(lookup+digit, 1);
+                            dmesgl(lookup + digit, 1);
                             started = 1;
                         }
                     } else {
-                        for(int j = count-1; j >= 0; --j) {
-                            char digit = (num_to_conv >> (j*4)) & 0xF;
-                            dmesgl(lookup+digit, 1);
+                        for(int j = count - 1; j >= 0; --j) {
+                            char digit = (num_to_conv >> (j * 4)) & 0xF;
+                            dmesgl(lookup + digit, 1);
                         }
                     }
                     --i;
                     break;
-                } case 'T': {
+                }
+                case 'T': {
                     // Timestamp
                     time_t uptime = get_uptime();
                     {
@@ -130,9 +137,9 @@ void va_kprintf(const char* format, va_list args) {
                             buffer[index++] = '0' + digit;
                         } while(seconds > 0);
                         char fin[index];
-                        for(int i = 0; i < index; i++) fin[i] = buffer[index-i-1];
+                        for(int i = 0; i < index; i++) fin[i] = buffer[index - i - 1];
                         dmesgl(fin, index);
-                    } 
+                    }
                     raw_dmesg(".");
                     {
                         time_t millis = uptime % 1000;
@@ -145,7 +152,8 @@ void va_kprintf(const char* format, va_list args) {
                     break;
                 }
             }
-        } else if(dwOffset == -1) dwOffset = i;
+        } else if(dwOffset == -1)
+            dwOffset = i;
     }
-    if(dwOffset != -1) dmesgl(format+dwOffset, i-dwOffset);
+    if(dwOffset != -1) dmesgl(format + dwOffset, i - dwOffset);
 }

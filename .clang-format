@@ -15,3 +15,5 @@ IndentCaseLabels: true
 SpaceBeforeParens: Never
 NamespaceIndentation: All
 AlignConsecutiveBitFields: Consecutive
+AlwaysBreakTemplateDeclarations: No
+SpaceAfterTemplateKeyword: false

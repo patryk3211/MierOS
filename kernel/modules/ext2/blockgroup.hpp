@@ -1,7 +1,7 @@
 #pragma once
 
-#include <types.h>
 #include <defines.h>
+#include <types.h>
 
 struct BlockGroup {
     u32_t block_usage_bitmap;

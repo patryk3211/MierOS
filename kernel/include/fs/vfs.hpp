@@ -1,13 +1,14 @@
 #pragma once
 
-#include <fs/vnode.hpp>
 #include <fs/filesystem.hpp>
+#include <fs/vnode.hpp>
 
 namespace kernel {
     class VFS {
         static VFS* s_instance;
 
         VNodePtr f_rootNode;
+
     public:
         VFS();
         ~VFS();

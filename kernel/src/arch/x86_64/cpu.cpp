@@ -1,15 +1,15 @@
 #include <arch/cpu.h>
-#include <arch/x86_64/acpi.h>
-#include <memory/virtual.hpp>
-#include <locking/locker.hpp>
-#include <unordered_map.hpp>
-#include <arch/x86_64/cpu.h>
 #include <arch/interrupts.h>
-#include <memory/physical.h>
-#include <tasking/scheduler.hpp>
-#include <defines.h>
-#include <arch/x86_64/ports.h>
+#include <arch/x86_64/acpi.h>
 #include <arch/x86_64/apic.h>
+#include <arch/x86_64/cpu.h>
+#include <arch/x86_64/ports.h>
+#include <defines.h>
+#include <locking/locker.hpp>
+#include <memory/physical.h>
+#include <memory/virtual.hpp>
+#include <tasking/scheduler.hpp>
+#include <unordered_map.hpp>
 
 using namespace kernel;
 
@@ -37,17 +37,18 @@ NO_EXPORT std::UnorderedMap<u32_t, u32_t> core_map(16);
 #define LAPIC_VIRTUAL_ADDRESS 0xFFFFFFFFFFDFF000
 
 extern "C" void write_lapic(u32_t offset, u32_t value) {
-    *((volatile u32_t*)(LAPIC_VIRTUAL_ADDRESS+offset)) = value;
+    *((volatile u32_t*)(LAPIC_VIRTUAL_ADDRESS + offset)) = value;
 }
 
 extern "C" u32_t read_lapic(u32_t offset) {
-    return *((volatile u32_t*)(LAPIC_VIRTUAL_ADDRESS+offset));
+    return *((volatile u32_t*)(LAPIC_VIRTUAL_ADDRESS + offset));
 }
 
 void send_init_deassert(u8_t destination) {
     write_lapic(0x310, destination << 24);
     write_lapic(0x300, (0x5 << 8) | (1 << 15));
-    while(read_lapic(0x300) & (1 << 12));
+    while(read_lapic(0x300) & (1 << 12))
+        ;
 }
 
 void send_ipi(u8_t vector, u8_t mode, u8_t destination) {
@@ -82,11 +83,11 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
 
     { // Get the address override before anything else
         size_t record_length = madt->header.length - sizeof(madt->header);
-        for(size_t offset = 0; offset < record_length; offset += *(madt->records+offset+1)) {
-            MADT_Record* record = (MADT_Record*)(madt->records+offset);
+        for(size_t offset = 0; offset < record_length; offset += *(madt->records + offset + 1)) {
+            MADT_Record* record = (MADT_Record*)(madt->records + offset);
             if(record->type == 0x05) {
                 // Address override.
-                lapic_addr = *((u64_t*)record->rest+2);
+                lapic_addr = *((u64_t*)record->rest + 2);
                 break;
             }
         }
@@ -102,8 +103,8 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
 
     // Parse the rest of the records
     size_t record_length = madt->header.length - sizeof(madt->header);
-    for(size_t offset = 0; offset < record_length; offset += *(madt->records+offset+1)) {
-        MADT_Record* record = (MADT_Record*)(madt->records+offset);
+    for(size_t offset = 0; offset < record_length; offset += *(madt->records + offset + 1)) {
+        MADT_Record* record = (MADT_Record*)(madt->records + offset);
         switch(record->type) {
             case 0x00: { // Local APIC Entry
                 u8_t acpi_id = record->rest[0];
@@ -115,10 +116,11 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                     core_map.insert({ apic_id, static_cast<u32_t>(core_map.size()) });
                 }
                 break;
-            } case 0x01: { // IO APIC Entry
+            }
+            case 0x01: { // IO APIC Entry
                 u8_t apic_id = record->rest[0];
-                u32_t apic_addr = ((u32_t*)(record->rest+2))[0];
-                u32_t global_system_interrupt_base = ((u32_t*)(record->rest+2))[1];
+                u32_t apic_addr = ((u32_t*)(record->rest + 2))[0];
+                u32_t global_system_interrupt_base = ((u32_t*)(record->rest + 2))[1];
                 kprintf("[%T] (Kernel) I/O APIC ID=%x2 ADDR=%x8 INT_BASE=%x8\n", apic_id, apic_addr, global_system_interrupt_base);
 
                 // This should probably be a recursive lock or something.
@@ -126,21 +128,23 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                 add_ioapic(apic_id, apic_addr, global_system_interrupt_base);
                 pager.lock();
                 break;
-            } case 0x02: { // Interrupt Source Override Entry
+            }
+            case 0x02: { // Interrupt Source Override Entry
                 u8_t bus = record->rest[0];
                 u8_t interrupt = record->rest[1];
-                u32_t gsi = *((u32_t*)(record->rest+2));
-                u16_t flags = *((u16_t*)(record->rest+6));
+                u32_t gsi = *((u32_t*)(record->rest + 2));
+                u16_t flags = *((u16_t*)(record->rest + 6));
                 kprintf("[%T] (Kernel) Int Source Override BUS=%x2 INT=%x2 GLOBAL=%x8 FLAGS=%x4\n", bus, interrupt, gsi, flags);
 
                 pager.unlock();
-                add_ioapic_intentry(interrupt+0x20, gsi, flags & 8, flags & 2, 0);
+                add_ioapic_intentry(interrupt + 0x20, gsi, flags & 8, flags & 2, 0);
                 pager.lock();
                 break;
-            } case 0x03: { // NMI Source Override Entry
+            }
+            case 0x03: { // NMI Source Override Entry
                 u8_t nmi = record->rest[0];
-                u16_t flags = *((u16_t*)(record->rest+2));
-                u32_t gsi = *((u32_t*)record->rest+4);
+                u16_t flags = *((u16_t*)(record->rest + 2));
+                u32_t gsi = *((u32_t*)record->rest + 4);
                 kprintf("[%T] (Kernel) NMI Source Override NMI=%x2 GLOBAL=%x8 FLAGS=%x4\n", nmi, gsi, flags);
 
                 break;
@@ -156,8 +160,8 @@ struct gdt_entry {
     u16_t base_015;
     u8_t base_1623;
     u8_t access;
-    u8_t limit_1619:4;
-    u8_t flags:4;
+    u8_t limit_1619 : 4;
+    u8_t flags      : 4;
     u8_t base_2431;
 
 } PACKED;
@@ -193,7 +197,7 @@ NO_EXPORT gdtr gdt_ptr;
 NO_EXPORT TSS* tsses;
 
 TEXT_FREE_AFTER_INIT void init_gdt() {
-    gdt = new gdt_entry[5+core_count()*2];
+    gdt = new gdt_entry[5 + core_count() * 2];
     memset(&gdt[0], 0, sizeof(gdt_entry));
 
     // Kernel Code
@@ -235,17 +239,17 @@ TEXT_FREE_AFTER_INIT void init_gdt() {
     // Create a Task State Segment for each core
     tsses = new TSS[core_count()];
     for(int i = 0; i < core_count(); ++i) {
-        gdt[5+(i*2)].base_015 = (u64_t)&tsses[i];
-        gdt[5+(i*2)].base_1623 = (u64_t)&tsses[i] >> 16;
-        gdt[5+(i*2)].base_2431 = (u64_t)&tsses[i] >> 24;
-        *((u64_t*)&gdt[5+(i*2)+1]) = (u64_t)&tsses[i] >> 32;
-        gdt[5+(i*2)].limit_015 = sizeof(TSS);
-        gdt[5+(i*2)].limit_1619 = 0;
-        gdt[5+(i*2)].flags = 0b1000;
-        gdt[5+(i*2)].access = 0b11101001;
+        gdt[5 + (i * 2)].base_015 = (u64_t)&tsses[i];
+        gdt[5 + (i * 2)].base_1623 = (u64_t)&tsses[i] >> 16;
+        gdt[5 + (i * 2)].base_2431 = (u64_t)&tsses[i] >> 24;
+        *((u64_t*)&gdt[5 + (i * 2) + 1]) = (u64_t)&tsses[i] >> 32;
+        gdt[5 + (i * 2)].limit_015 = sizeof(TSS);
+        gdt[5 + (i * 2)].limit_1619 = 0;
+        gdt[5 + (i * 2)].flags = 0b1000;
+        gdt[5 + (i * 2)].access = 0b11101001;
     }
 
-    gdt_ptr.size = sizeof(gdt_entry)*(5+core_count()*2);
+    gdt_ptr.size = sizeof(gdt_entry) * (5 + core_count() * 2);
     gdt_ptr.base = (u64_t)gdt;
 
     asm volatile(
@@ -262,7 +266,9 @@ TEXT_FREE_AFTER_INIT void init_gdt() {
         "mov %%ax, %%gs\n"
         "mov $0x2B, %%ax\n"
         "ltr %%ax"
-    : : "m"(gdt_ptr) : "rax");
+        :
+        : "m"(gdt_ptr)
+        : "rax");
 }
 
 extern "C" void set_kernel_stack(int core, u64_t rsp) {
@@ -290,7 +296,9 @@ inline void init_lapic_timer() {
 }
 
 TEXT_FREE_AFTER_INIT void core_init() {
-    asm volatile("lidt %0" : : "m"(idtr));
+    asm volatile("lidt %0"
+                 :
+                 : "m"(idtr));
     int core_id = current_core();
 
     init_lapic_timer();
@@ -310,8 +318,11 @@ TEXT_FREE_AFTER_INIT void core_init() {
         "ltr %%cx\n"
         "sti\n"
         "int $0xFE"
-    : : "m"(gdt_ptr), "c"(0x2B+(core_id*16)) : "rax");
-    while(true);
+        :
+        : "m"(gdt_ptr), "c"(0x2B + (core_id * 16))
+        : "rax");
+    while(true)
+        ;
 }
 
 NO_EXPORT u32_t lapic_timer_ticks;
@@ -344,7 +355,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
     auto& pager = Pager::active();
     pager.lock();
     pager.map(0x1000, 0x1000, 3, { 1, 1, 0, 1, 0, 0 });
-    memcpy((void*)0x1000, _binary_ap_starter_start, _binary_ap_starter_end-_binary_ap_starter_start);
+    memcpy((void*)0x1000, _binary_ap_starter_start, _binary_ap_starter_end - _binary_ap_starter_start);
     *((u64_t*)0x2008) = pager.cr3();
     *((u64_t*)0x2010) = (u64_t)&core_init;
     for(auto item : core_map) {
@@ -359,7 +370,8 @@ extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
                 crude_delay_1msec();
                 if(*((u32_t*)0x2000) == 1) break;
             }
-            while(!Scheduler::scheduler(item.value).is_idle());
+            while(!Scheduler::scheduler(item.value).is_idle())
+                ;
         }
     }
     pager.unlock();
@@ -373,7 +385,8 @@ extern "C" int core_count() {
 
 extern "C" int current_core() {
     auto value = core_map.at(read_lapic(0x20) >> 24);
-    if(value) return *value;
+    if(value)
+        return *value;
     else {
         ASSERT_NOT_REACHED("Running on core outside of our known core map");
         return -1;

@@ -1,6 +1,6 @@
+#include <locking/locker.hpp>
 #include <memory/kbuffer.hpp>
 #include <memory/virtual.hpp>
-#include <locking/locker.hpp>
 
 using namespace kernel;
 
@@ -30,7 +30,7 @@ KBuffer::~KBuffer() {
     }
 }
 
-KBuffer::KBuffer(KBuffer&& other)  {
+KBuffer::KBuffer(KBuffer&& other) {
     raw_ptr = other.raw_ptr;
     ref_count = other.ref_count;
     page_size = other.page_size;
