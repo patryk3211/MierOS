@@ -4,9 +4,10 @@
 #include <locking/spinlock.hpp>
 #include <stivale.h>
 
-namespace kernel {
 #define MAX_WORK_PAGES 4
+#define KERNEL_START 0xFFFFFFFF80000000
 
+namespace kernel {
     struct PageFlags {
         bool present        : 1;
         bool writable       : 1;
@@ -15,8 +16,6 @@ namespace kernel {
         bool global         : 1;
         bool cache_disable  : 1;
     };
-
-#define KERNEL_START 0xFFFFFFFF80000000
 
     class Pager {
         static physaddr_t kernel_pd[2];

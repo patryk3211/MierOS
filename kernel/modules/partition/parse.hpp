@@ -5,6 +5,8 @@
 #include <types.h>
 #include <util/crc.h>
 
+#define GPT_PPI_TYPE 0x01
+
 namespace kernel {
     struct PartitionParseInformation {
         u8_t type;
@@ -12,7 +14,6 @@ namespace kernel {
         virtual ~PartitionParseInformation() { }
     };
 
-#define GPT_PPI_TYPE 0x01
     struct GPTParttionParseInformation : public PartitionParseInformation {
         struct Partition {
             uuid_t part_id;

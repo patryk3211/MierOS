@@ -4,9 +4,9 @@
 #include <shared_pointer.hpp>
 #include <streams/stream.hpp>
 
-namespace kernel {
 #define STREAM_TYPE_FILE 1
 
+namespace kernel {
     class VNode;
     class FileStream : public Stream {
         std::SharedPtr<VNode> f_file;

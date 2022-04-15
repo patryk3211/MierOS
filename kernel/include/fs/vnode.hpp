@@ -8,11 +8,11 @@
 #include <types.h>
 #include <unordered_map.hpp>
 
-namespace kernel {
 #define FILE_OPEN_MODE_READ 0b01
 #define FILE_OPEN_MODE_WRITE 0b10
 #define FILE_OPEN_MODE_READ_WRITE 0b11
 
+namespace kernel {
     struct VNodeDataStorage {
         virtual ~VNodeDataStorage() { }
     };
