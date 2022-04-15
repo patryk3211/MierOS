@@ -19,19 +19,18 @@
 #include <fs/modulefs_functions.hpp>
 
 #ifdef x86_64
-    #include <arch/x86_64/acpi.h>
+#include <arch/x86_64/acpi.h>
 #endif
 
 FREE_AFTER_INIT u8_t temp_stack[8192];
 
-__attribute__((section(".stivale2hdr"), used))
-static stivale2_header stivalehdr {
+__attribute__((section(".stivale2hdr"), used)) static stivale2_header stivalehdr {
     .entry_point = 0,
 
     .stack = (u64_t)temp_stack + sizeof(temp_stack),
 
     .flags = (4 << 1) | (3 << 1) | (2 << 1) | (1 << 1),
-    
+
     .tags = 0
 };
 
@@ -75,7 +74,7 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
             case 0x9e1786930a375e78: // ACPI RSDP Tag
                 rsdp = ((stivale2_stag_rsdp*)tag)->rsdp_addr;
                 break;
-            case 0x4b6fe466aade04ce: {// Modules
+            case 0x4b6fe466aade04ce: { // Modules
                 stivale2_stag_modules* mod_tag = (stivale2_stag_modules*)tag;
                 for(size_t i = 0; i < mod_tag->module_count; ++i) {
                     if(!strcmp(mod_tag->modules[i].name, "module")) {
@@ -114,7 +113,7 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
     kernel::Process* kern_proc = kernel::Process::construct_kernel_process((virtaddr_t)&stage2_init);
     kernel::Scheduler::schedule_process(*kern_proc);
     asm volatile("int $0xFE");
-    
+
     ASSERT_NOT_REACHED("You should be in stage2 right now");
     while(true) asm volatile("hlt");
 }
@@ -175,12 +174,12 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     u16_t fs_mod = kernel::init_modules("FS-ext2", 0);
     kernel::Thread::current()->current_module = kernel::get_module(fs_mod);
     auto* fs_mount = kernel::get_module_symbol<kernel::fs_function_table>(fs_mod, "fs_func_tab")->mount;
-    u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(nullptr, "ahci0p1", { }));
+    u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(nullptr, "ahci0p1", {}));
     kernel::ModuleFilesystem mfs(fs_mod, minor);
 
     vfs->mount(&mfs, "/");
 
-    auto result = vfs->get_files(nullptr, "", { });
+    auto result = vfs->get_files(nullptr, "", {});
     if(result) {
         auto nodes = *result;
         for(auto& node : nodes) {
@@ -189,7 +188,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         kprintf("\n");
     }
 
-    auto file = vfs->get_file(nullptr, "/limine.cfg", { });
+    auto file = vfs->get_file(nullptr, "/limine.cfg", {});
     if(file) {
         auto& node = *file;
         auto* fstream = new kernel::FileStream(node);
@@ -205,5 +204,5 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     TRACE("Test");
 
-    while(true);
+    while(true) asm volatile("hlt");
 }
