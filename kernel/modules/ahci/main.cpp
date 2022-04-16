@@ -162,7 +162,7 @@ extern "C" int init(PCI_Header* header) {
     /// TODO: [12.03.2022] Currently if there are more than one AHCI controller these variables will be reset and the initialization will not proceed correctly.
     drive_count = 0;
     minor_num = 0;
-    module_major_num = kernel::Thread::current()->current_module->major();
+    module_major_num = kernel::Thread::current()->f_current_module->major();
 
     HBA_MEM* hba = (HBA_MEM*)pager.kmap(header->bar[5] & ~0xFFF, 1, { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 1 });
     if(!(hba->capabilities & (1 << 18))) hba->global_host_control |= (1 << 31); // Enable AHCI mode

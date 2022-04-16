@@ -19,30 +19,30 @@ namespace kernel {
 
     class Process;
     class Thread {
-        static pid_t next_pid;
-        static std::UnorderedMap<pid_t, Thread*> threads;
-        static SpinLock pid_lock;
+        static pid_t s_next_pid;
+        static std::UnorderedMap<pid_t, Thread*> s_threads;
+        static SpinLock s_pid_lock;
 
-        KBuffer kernel_stack;
+        KBuffer f_kernel_stack;
         // Kernel Stack Pointer
-        CPUState* ksp;
+        CPUState* f_ksp;
 
-        SpinLock lock;
+        SpinLock f_lock;
 
-        std::List<std::Function<bool()>> blockers;
+        std::List<std::Function<bool()>> f_blockers;
 
-        ThreadState state;
+        ThreadState f_state;
 
-        Process& parent;
+        Process& f_parent;
 
-        pid_t _pid;
+        pid_t f_pid;
 
     public:
-        Module* current_module;
+        Module* f_current_module;
 
-        Thread* next;
+        Thread* f_next;
 
-        int preferred_core;
+        int f_preferred_core;
 
         Thread(u64_t ip, bool isKernel, Process& process);
         ~Thread();
@@ -62,7 +62,9 @@ namespace kernel {
          */
         bool try_wakeup();
 
-        pid_t pid() { return _pid; }
+        pid_t pid() { return f_pid; }
+
+        Process& parent() { return f_parent; }
 
         static Thread* current();
 

@@ -160,7 +160,7 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
                 break;
             }
         }
-        if(kernel::Thread::current()->current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->current_module->base());
+        if(kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
         trace_stack((void*)state->rbp);
         while(true) asm volatile("hlt");
     } else {

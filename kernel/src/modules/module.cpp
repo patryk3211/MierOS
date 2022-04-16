@@ -174,26 +174,26 @@ int Module::init(void* init_struct) {
 void Module::run_ctors() {
     auto section = get_section(".ctors");
     if(section) {
-        Module* old = Thread::current()->current_module;
-        Thread::current()->current_module = this;
+        Module* old = Thread::current()->f_current_module;
+        Thread::current()->f_current_module = this;
         for(size_t i = 0; i < section->size; i += 8) {
             u64_t constructor_addr = *(u64_t*)(section->address + i);
             ((void (*)())(constructor_addr))();
         }
-        Thread::current()->current_module = old;
+        Thread::current()->f_current_module = old;
     }
 }
 
 void Module::run_dtors() {
     auto section = get_section(".dtors");
     if(section) {
-        Module* old = Thread::current()->current_module;
-        Thread::current()->current_module = this;
+        Module* old = Thread::current()->f_current_module;
+        Thread::current()->f_current_module = this;
         for(size_t i = 0; i < section->size; i += 8) {
             u64_t constructor_addr = *(u64_t*)(section->address + i);
             ((void (*)())(constructor_addr))();
         }
-        Thread::current()->current_module = old;
+        Thread::current()->f_current_module = old;
     }
 }
 
@@ -221,10 +221,10 @@ std::OptionalRef<Elf64_Symbol> Module::get_symbol(size_t index) {
 
 Module::ThreadModuleSetter::ThreadModuleSetter(Module* mod) {
     Thread* thread = Thread::current();
-    old_mod = thread->current_module;
-    thread->current_module = mod;
+    old_mod = thread->f_current_module;
+    thread->f_current_module = mod;
 }
 
 Module::ThreadModuleSetter::~ThreadModuleSetter() {
-    Thread::current()->current_module = old_mod;
+    Thread::current()->f_current_module = old_mod;
 }

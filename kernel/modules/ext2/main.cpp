@@ -44,7 +44,7 @@ u16_t minor_num;
 std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
 extern "C" int init() {
-    mod_major = kernel::Thread::current()->current_module->major();
+    mod_major = kernel::Thread::current()->f_current_module->major();
     minor_num = 0;
     return 0;
 }
