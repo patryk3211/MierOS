@@ -125,6 +125,13 @@ extern "C" void __cxa_pure_virtual() {
     asm("int3");
 }
 
+void test_task() {
+    dmesg("From a new task!\n");
+
+    asm volatile("mov $1, %rax; mov $0, %rbx; int $0x8F");
+    while(1);
+}
+
 TEXT_FREE_AFTER_INIT void stage2_init() {
     kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
 
@@ -208,6 +215,9 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     kernel::Thread::current()->f_current_module = 0;
 
     TRACE("Test");
+
+    auto* proc = new kernel::Process((virtaddr_t)&test_task);
+    kernel::Scheduler::schedule_process(*proc);
 
     while(true) asm volatile("hlt");
 }

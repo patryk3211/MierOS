@@ -9,6 +9,11 @@ Process::Process(virtaddr_t entry_point, Pager* pager)
     f_threads.push_back(new Thread(entry_point, true, *this));
 }
 
+Process::Process(virtaddr_t entry_point)
+    : f_pager(new Pager()) {
+    f_threads.push_back(new Thread(entry_point, true, *this));
+}
+
 Process* Process::construct_kernel_process(virtaddr_t entry_point) {
     return new Process(entry_point, &Pager::kernel());
 }

@@ -66,6 +66,8 @@ int_nc 0x2D
 int_nc 0x2E
 int_nc 0x2F
 
+int_nc 0x8F
+
 int_nc 0xFE
 
 handle_int:

@@ -105,6 +105,8 @@ extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     create_descriptor(idt[0x2E], &interrupt0x2E, 0xE, 0);
     create_descriptor(idt[0x2F], &interrupt0x2F, 0xE, 0);
 
+    create_descriptor(idt[0x8F], &interrupt0x8F, 0xE, 3);
+
     create_descriptor(idt[0xFE], &interrupt0xFE, 0xE, 0);
 
     idtr.length = sizeof(idt);

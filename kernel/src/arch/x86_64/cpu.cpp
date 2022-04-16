@@ -292,6 +292,7 @@ extern "C" u8_t _binary_ap_starter_end[];
 extern "C" u64_t idtr;
 
 inline void init_lapic_timer() {
+    write_lapic(0x3E0, 0b1011);
     write_lapic(0x320, 0x000000FE);
 }
 
@@ -301,6 +302,7 @@ TEXT_FREE_AFTER_INIT void core_init() {
                  : "m"(idtr));
     int core_id = current_core();
 
+    enable_lapic();
     init_lapic_timer();
 
     asm volatile(

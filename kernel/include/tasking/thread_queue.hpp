@@ -116,6 +116,8 @@ namespace kernel {
             Thread* prev = 0;
             for(Thread* thread = first; thread != 0; thread = thread->f_next) {
                 if(best_thread->f_preferred_core != core && thread->f_preferred_core == core) {
+                    best_thread = thread;
+
                     if(prev != 0)
                         prev->f_next = best_thread->f_next;
                     else
@@ -140,9 +142,9 @@ namespace kernel {
 
                 if(best_thread == last) last = prev;
                 best_thread->f_next = 0;
+                best_thread->f_preferred_core = core;
             }
 
-            best_thread->f_preferred_core = core;
             return best_thread;
         }
 
