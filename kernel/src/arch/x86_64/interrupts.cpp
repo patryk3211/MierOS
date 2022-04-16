@@ -47,7 +47,7 @@ struct handler_entry {
 
 NO_EXPORT handler_entry* handlers[256];
 NO_EXPORT CPUState* (*_tsh)(CPUState* current_state);
-NO_EXPORT u32_t (*_sh)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t);
+NO_EXPORT syscall_arg_t (*_sh)(syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t);
 
 extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     memset(handlers, 0, sizeof(handlers));
@@ -142,7 +142,8 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
         u64_t timer_value = state->next_switch_time * lapic_timer_ticks / 1000;
         write_lapic(0x380, timer_value);
     } else if(state->int_num == 0x8F) {
-        state->rax = _sh(state->rbx,
+        state->rax = _sh(state->rax,
+            state->rbx,
             state->rcx,
             state->rdx,
             state->rsi,
@@ -190,7 +191,7 @@ extern "C" void register_task_switch_handler(CPUState* (*handler)(CPUState* curr
     _tsh = handler;
 }
 
-extern "C" void register_syscall_handler(u32_t (*handler)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t)) {
+extern "C" void register_syscall_handler(syscall_arg_t (*handler)(syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t)) {
     _sh = handler;
 }
 

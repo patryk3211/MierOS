@@ -85,8 +85,10 @@ namespace kernel {
             Thread* prev = 0;
             for(Thread* t = first; t != 0; ++t) {
                 if(t == thread) {
-                    if(prev == 0) first = t->f_next;
-                    else prev = t->f_next;
+                    if(prev == 0)
+                        first = t->f_next;
+                    else
+                        prev = t->f_next;
 
                     if(last == t) last = prev;
                     --length;

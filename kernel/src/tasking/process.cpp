@@ -1,5 +1,5 @@
-#include <tasking/process.hpp>
 #include <arch/interrupts.h>
+#include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
 
 using namespace kernel;

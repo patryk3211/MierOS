@@ -12,6 +12,7 @@
 #include <stivale.h>
 #include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
+#include <tasking/syscall.h>
 #include <tests/test.hpp>
 #include <trace.h>
 
@@ -126,6 +127,9 @@ extern "C" void __cxa_pure_virtual() {
 
 TEXT_FREE_AFTER_INIT void stage2_init() {
     kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
+
+    init_syscalls();
+
     kernel::tests::do_tests();
 
     physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;
