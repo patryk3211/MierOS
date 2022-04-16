@@ -81,6 +81,22 @@ namespace kernel {
             --length;
         }
 
+        bool erase(Thread* thread) {
+            Thread* prev = 0;
+            for(Thread* t = first; t != 0; ++t) {
+                if(t == thread) {
+                    if(prev == 0) first = t->f_next;
+                    else prev = t->f_next;
+
+                    if(last == t) last = prev;
+                    --length;
+                    return true;
+                }
+                prev = t;
+            }
+            return false;
+        }
+
         iterator erase(const iterator& pos) {
             if(pos.prev == 0) {
                 first = pos.thread->f_next;
@@ -124,6 +140,7 @@ namespace kernel {
                 best_thread->f_next = 0;
             }
 
+            best_thread->f_preferred_core = core;
             return best_thread;
         }
 

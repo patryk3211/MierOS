@@ -32,7 +32,10 @@ Scheduler::~Scheduler() {
 
 CPUState* Scheduler::schedule(CPUState* current_state) {
     // Try to obtain a lock on the thread queue.
-    if(!queue_lock.try_lock()) return current_state;
+    if(!queue_lock.try_lock()) {
+        current_state->next_switch_time = 1; // 1 us
+        return current_state;
+    }
 
     if(!first_switch) {
         if(current_thread == 0) {
@@ -89,11 +92,18 @@ Scheduler& Scheduler::scheduler(int core) {
 
 void Scheduler::schedule_process(Process& proc) {
     queue_lock.lock();
-    for(auto& thread : proc.threads) {
+    for(auto& thread : proc.f_threads) {
         if(thread->f_state == RUNNABLE)
             runnable_queue.push_back(thread);
         else
             wait_queue.push_back(thread);
     }
+    queue_lock.unlock();
+}
+
+void Scheduler::remove_thread(Thread* thread) {
+    queue_lock.lock();
+    if(!runnable_queue.erase(thread))
+        wait_queue.erase(thread);
     queue_lock.unlock();
 }

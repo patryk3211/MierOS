@@ -51,7 +51,7 @@ void send_init_deassert(u8_t destination) {
         ;
 }
 
-void send_ipi(u8_t vector, u8_t mode, u8_t destination) {
+extern "C" void send_ipi(u8_t vector, u8_t mode, u8_t destination) {
     write_lapic(0x310, destination << 24);
     write_lapic(0x300, vector | ((mode & 7) << 8) | (1 << 14));
     while(read_lapic(0x300) & (1 << 12)) {
@@ -391,4 +391,9 @@ extern "C" int current_core() {
         ASSERT_NOT_REACHED("Running on core outside of our known core map");
         return -1;
     }
+}
+
+extern "C" void send_task_switch_irq(int core) {
+    auto value = core_map.at(core);
+    if(value) send_ipi(0xFE, 0x00, *value);
 }

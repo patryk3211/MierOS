@@ -36,6 +36,9 @@ set(TESTS_SOURCES src/tests/test.cpp
 
 file(GLOB_RECURSE ARCH_SOURCES CONFIGURE_DEPENDS src/arch/${ARCH}/*.cpp src/arch/${ARCH}/*.c src/arch/${ARCH}/*.s)
 
+file(GLOB_RECURSE SYSCALL_SOURCES CONFIGURE_DEPENDS src/tasking/syscalls/*.cpp)
+set(KERNEL_SOURCES ${KERNEL_SOURCES} ${SYSCALL_SOURCES})
+
 if(${TESTING})
     set(KERNEL_SOURCES ${KERNEL_SOURCES} ${TESTS_SOURCES})
 endif()

@@ -11,6 +11,7 @@ using namespace kernel;
 
 NO_EXPORT pid_t Thread::s_next_pid = 1;
 NO_EXPORT std::UnorderedMap<pid_t, Thread*> Thread::s_threads;
+NO_EXPORT std::List<pid_t> Thread::s_finalizable_threads;
 NO_EXPORT SpinLock Thread::s_pid_lock;
 
 pid_t Thread::generate_pid() {
@@ -38,6 +39,8 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process)
     if(isKernel) f_ksp->rsp = (virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE;
 
     f_current_module = 0;
+
+    f_watched = false;
 
     f_next = 0;
     f_state = RUNNABLE;
@@ -68,4 +71,10 @@ bool Thread::try_wakeup() {
 
 Thread* Thread::current() {
     return Scheduler::scheduler(current_core()).thread();
+}
+
+void Thread::schedule_finalization() {
+    s_finalizable_threads.push_back(f_pid);
+    f_state = DEAD;
+    // At this point, if this thread is the current thread, it can get safely put out of the scheduler list.
 }

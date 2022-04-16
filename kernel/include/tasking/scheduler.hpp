@@ -33,6 +33,7 @@ namespace kernel {
         static Scheduler& scheduler(int core);
 
         static void schedule_process(Process& proc);
+        static void remove_thread(Thread* thread);
 
         bool is_idle() { return _is_idle; }
 

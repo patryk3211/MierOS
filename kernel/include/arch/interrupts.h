@@ -15,6 +15,7 @@ extern void register_task_switch_handler(CPUState* (*handler)(CPUState* current_
 extern void register_syscall_handler(u32_t (*handler)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t));
 
 extern void force_task_switch();
+extern void send_task_switch_irq(int core);
 
 #if defined(__cplusplus)
 } // extern "C"
