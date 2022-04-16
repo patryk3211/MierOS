@@ -1,10 +1,10 @@
 #pragma once
 
 #include <list.hpp>
+#include <streams/stream.hpp>
 #include <string.hpp>
 #include <tasking/thread.hpp>
 #include <unordered_map.hpp>
-#include <streams/stream.hpp>
 
 namespace kernel {
     class Process {

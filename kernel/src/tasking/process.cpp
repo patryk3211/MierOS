@@ -1,18 +1,20 @@
 #include <arch/interrupts.h>
+#include <errno.h>
 #include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
-#include <errno.h>
 
 using namespace kernel;
 
 Process::Process(virtaddr_t entry_point, Pager* pager)
-    : f_pager(pager), f_workingDirectory("/") {
+    : f_pager(pager)
+    , f_workingDirectory("/") {
     f_threads.push_back(new Thread(entry_point, true, *this));
     f_next_fd = 0;
 }
 
 Process::Process(virtaddr_t entry_point)
-    : f_pager(new Pager()), f_workingDirectory("/") {
+    : f_pager(new Pager())
+    , f_workingDirectory("/") {
     f_threads.push_back(new Thread(entry_point, true, *this));
     f_next_fd = 0;
 }

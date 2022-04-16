@@ -133,17 +133,24 @@ void test_task() {
     char buffer[256];
 
     fd_t fd;
-    asm volatile("mov $2, %%rax; int $0x8F" : "=a"(fd) : "b"(filename));
+    asm volatile("mov $2, %%rax; int $0x8F"
+                 : "=a"(fd)
+                 : "b"(filename));
 
     size_t readAmount;
-    asm volatile("mov $4, %%rax; mov $256, %%rdx; int $0x8F" : "=a"(readAmount) : "b"(fd), "c"(buffer));
-    asm volatile("mov $3, %%rax; int $0x8F" : : "b"(fd));
+    asm volatile("mov $4, %%rax; mov $256, %%rdx; int $0x8F"
+                 : "=a"(readAmount)
+                 : "b"(fd), "c"(buffer));
+    asm volatile("mov $3, %%rax; int $0x8F"
+                 :
+                 : "b"(fd));
 
     if(readAmount < 256) buffer[readAmount] = 0;
     dmesg(buffer);
 
     asm volatile("mov $1, %rax; mov $0, %rbx; int $0x8F");
-    while(1);
+    while(1)
+        ;
 }
 
 TEXT_FREE_AFTER_INIT void stage2_init() {
