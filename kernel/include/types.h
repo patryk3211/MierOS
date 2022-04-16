@@ -19,6 +19,8 @@ typedef u32_t pid_t;
 
 typedef u64_t time_t;
 
+typedef u32_t fd_t;
+
 #if !defined(__cplusplus)
 typedef struct uuid_t {
     u8_t part1[4];

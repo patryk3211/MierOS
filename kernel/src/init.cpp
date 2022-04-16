@@ -128,6 +128,20 @@ extern "C" void __cxa_pure_virtual() {
 void test_task() {
     dmesg("From a new task!\n");
 
+    const char* filename = "/limine.cfg";
+
+    char buffer[256];
+
+    fd_t fd;
+    asm volatile("mov $2, %%rax; int $0x8F" : "=a"(fd) : "b"(filename));
+
+    size_t readAmount;
+    asm volatile("mov $4, %%rax; mov $256, %%rdx; int $0x8F" : "=a"(readAmount) : "b"(fd), "c"(buffer));
+    asm volatile("mov $3, %%rax; int $0x8F" : : "b"(fd));
+
+    if(readAmount < 256) buffer[readAmount] = 0;
+    dmesg(buffer);
+
     asm volatile("mov $1, %rax; mov $0, %rbx; int $0x8F");
     while(1);
 }
@@ -198,19 +212,6 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
             kprintf("%s ", node->name().c_str());
         }
         kprintf("\n");
-    }
-
-    auto file = vfs->get_file(nullptr, "/limine.cfg", {});
-    if(file) {
-        auto& node = *file;
-        auto* fstream = new kernel::FileStream(node);
-        fstream->open(0);
-
-        u8_t buffer[node->f_size];
-        fstream->read(buffer, node->f_size);
-        kprintf((const char*)buffer);
-
-        delete fstream;
     }
     kernel::Thread::current()->f_current_module = 0;
 

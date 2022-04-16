@@ -9,11 +9,17 @@ typedef syscall_arg_t syscall_func_t(Process&, syscall_arg_t, syscall_arg_t, sys
 syscall_func_t* syscall_table[64];
 
 extern syscall_arg_t syscall_exit(Process& proc, syscall_arg_t exitCode);
+extern syscall_arg_t syscall_open(Process& proc, syscall_arg_t name, syscall_arg_t flags);
+extern syscall_arg_t syscall_close(Process& proc, syscall_arg_t fd);
+extern syscall_arg_t syscall_read(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
 
     syscall_table[1] = (syscall_func_t*)&syscall_exit;
+    syscall_table[2] = (syscall_func_t*)&syscall_open;
+    syscall_table[3] = (syscall_func_t*)&syscall_close;
+    syscall_table[4] = (syscall_func_t*)&syscall_read;
 
     register_syscall_handler(&run_syscall);
 }
