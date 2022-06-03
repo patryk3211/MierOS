@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <tasking/syscall.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+
 using namespace kernel;
 
 typedef syscall_arg_t syscall_func_t(Process&, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t);
@@ -12,6 +15,7 @@ extern syscall_arg_t syscall_exit(Process& proc, syscall_arg_t exitCode);
 extern syscall_arg_t syscall_open(Process& proc, syscall_arg_t name, syscall_arg_t flags);
 extern syscall_arg_t syscall_close(Process& proc, syscall_arg_t fd);
 extern syscall_arg_t syscall_read(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length);
+extern syscall_arg_t syscall_write(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
@@ -20,6 +24,7 @@ extern "C" void init_syscalls() {
     syscall_table[2] = (syscall_func_t*)&syscall_open;
     syscall_table[3] = (syscall_func_t*)&syscall_close;
     syscall_table[4] = (syscall_func_t*)&syscall_read;
+    syscall_table[5] = (syscall_func_t*)&syscall_write;
 
     register_syscall_handler(&run_syscall);
 }
@@ -30,3 +35,5 @@ extern "C" syscall_arg_t run_syscall(syscall_arg_t call, syscall_arg_t arg1, sys
     else
         return -1;
 }
+
+#pragma GCC diagnostic pop

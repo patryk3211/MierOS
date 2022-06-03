@@ -45,3 +45,13 @@ syscall_arg_t syscall_read(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, s
     size_t size = stream->read((void*)ptr, length);
     return size;
 }
+
+syscall_arg_t syscall_write(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length) {
+    auto* stream = proc.get_stream(fd);
+    if(stream == 0) return -ERR_INVALID_FD;
+
+    /// TODO: [16.04.2022] Check if ptr isn't outside of the program memory
+
+    size_t size = stream->write((const void*)ptr, length);
+    return size;
+}
