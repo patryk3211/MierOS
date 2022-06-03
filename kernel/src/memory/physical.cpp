@@ -7,7 +7,7 @@
 
 #include <locking/locker.hpp>
 #include <locking/spinlock.hpp>
-#include <range_map.hpp>
+#include <range_list.hpp>
 
 using namespace kernel;
 
@@ -34,7 +34,7 @@ int is_page_used(u64_t address) {
 
 NO_EXPORT SpinLock pmm_lock;
 
-NO_EXPORT std::RangeMap<physaddr_t>* freeable_mem;
+NO_EXPORT std::RangeList<physaddr_t>* freeable_mem;
 
 extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) {
     ASSERT_F(memory_map != 0, "\033[1;37mmemory_map\033[0m is null");
@@ -51,7 +51,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
     status_pages = new page_4gb_status_struct[gb_page_count];
     for(u32_t i = 0; i < gb_page_count; ++i) memset(status_pages[i].used_bitmap, 0xFF, sizeof(page_4gb_status_struct));
 
-    freeable_mem = new std::RangeMap<physaddr_t>();
+    freeable_mem = new std::RangeList<physaddr_t>();
 
     u64_t free_mem = 0;
     // Look for usable memory regions and mark them as free.

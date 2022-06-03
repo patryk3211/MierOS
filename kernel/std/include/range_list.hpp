@@ -4,7 +4,7 @@
 #include <range.hpp>
 
 namespace std {
-    template<typename T, class Allocator = heap_allocator> class RangeMap {
+    template<typename T, class Allocator = heap_allocator> class RangeList {
     public:
         struct range_en {
             Range<T> rang;
@@ -48,7 +48,7 @@ namespace std {
             bool operator==(const iterator& other) { return value == other.value; }
             bool operator!=(const iterator& other) { return value != other.value; }
 
-            friend class RangeMap;
+            friend class RangeList;
         };
 
     private:
@@ -67,14 +67,14 @@ namespace std {
         }
 
     public:
-        RangeMap() {
+        RangeList() {
             head.prev = 0;
             head.next = &tail;
             tail.prev = &head;
             tail.next = 0;
         }
 
-        ~RangeMap() {
+        ~RangeList() {
             range_en* r = head.next;
             while(r != &tail) {
                 range_en* n = r->next;
