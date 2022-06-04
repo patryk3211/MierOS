@@ -79,10 +79,14 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
     pmm_lock = SpinLock();
 }
 
+size_t allocated_ppages = 0;
+
 extern "C" void pmm_release_bootloader_resources() {
     u64_t freed_mem = 0;
     for(auto iter = freeable_mem->begin(); iter != freeable_mem->end(); ++iter) {
         freed_mem += iter->end - iter->start;
+
+        allocated_ppages += (iter->end - iter->start) >> 12;
         pfree(iter->start, (iter->end - iter->start) >> 12);
     }
     delete freeable_mem;
@@ -111,6 +115,8 @@ extern "C" physaddr_t palloc(size_t page_count) {
             // Bump address past this allocation.
             pmm_first_potential_page += page_count << 12;
         }
+
+        allocated_ppages += page_count;
         return addr;
     }
 }
@@ -131,4 +137,10 @@ extern "C" void pfree(physaddr_t addr, size_t page_count) {
     Locker lock(pmm_lock);
     for(size_t i = 0; i < page_count; ++i) set_page_status(addr + (i << 12), 0);
     if(addr < pmm_first_potential_page) pmm_first_potential_page = addr;
+
+    allocated_ppages -= page_count;
+}
+
+extern "C" size_t allocated_ppage_count() {
+    return allocated_ppages;
 }
