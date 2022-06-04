@@ -330,7 +330,7 @@ physaddr_t Pager::unmap(virtaddr_t virt, size_t length) {
 
         PageStructuresEntry& entry = WORKPAGE(pt_work)[pte];
         if(addr == 0) addr = entry.structured.address << 12;
-        entry.structured.present = 0;
+        entry.raw = 0;
     }
 
     if(virt < first_potential_kernel_page && virt >= KERNEL_START) first_potential_kernel_page = virt;

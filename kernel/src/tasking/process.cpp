@@ -87,3 +87,24 @@ Stream* Process::get_stream(fd_t fd) {
     if(!val) return 0;
     return *val;
 }
+
+void Process::map_page(virtaddr_t addr, const PhysicalPage& page) {
+    f_lock.lock();
+    f_pager->lock();
+
+    f_pager->map(page.addr(), addr, 1, page.flags());
+
+    MemoryEntry entry {
+        .page = page
+    };
+    f_memorymap[addr] = entry;
+
+    f_pager->unlock();
+    f_lock.unlock();
+}
+
+PhysicalPage Process::get_page(virtaddr_t addr) {
+    auto val = f_memorymap.at(addr);
+    if(val) return val->page;
+    else return PhysicalPage(nullptr);
+}

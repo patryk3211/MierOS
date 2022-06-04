@@ -43,6 +43,9 @@ struct CPUState {
     u64_t ss;
 } PACKED;
 
+#define CPUSTATE_IP(state) state->rip
+#define CPUSTATE_RET(state) state->rax
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

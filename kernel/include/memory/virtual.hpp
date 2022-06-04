@@ -15,6 +15,14 @@ namespace kernel {
         bool executable     : 1;
         bool global         : 1;
         bool cache_disable  : 1;
+
+        PageFlags() : present(true), writable(false), user_accesible(false), executable(false), global(false), cache_disable(false) { }
+        PageFlags(bool present) : present(present), writable(false), user_accesible(false), executable(false), global(false), cache_disable(false) { }
+        PageFlags(bool present, bool writable) : present(present), writable(writable), user_accesible(false), executable(false), global(false), cache_disable(false) { }
+        PageFlags(bool present, bool writable, bool user_accesible) : present(present), writable(writable), user_accesible(user_accesible), executable(false), global(false), cache_disable(false) { }
+        PageFlags(bool present, bool writable, bool user_accesible, bool executable) : present(present), writable(writable), user_accesible(user_accesible), executable(executable), global(false), cache_disable(false) { }
+        PageFlags(bool present, bool writable, bool user_accesible, bool executable, bool global) : present(present), writable(writable), user_accesible(user_accesible), executable(executable), global(global), cache_disable(false) { }
+        PageFlags(bool present, bool writable, bool user_accesible, bool executable, bool global, bool cache_disable) : present(present), writable(writable), user_accesible(user_accesible), executable(executable), global(global), cache_disable(cache_disable) { }
     };
 
     class Pager {
