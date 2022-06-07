@@ -15,7 +15,7 @@ Process::Process(virtaddr_t entry_point, Pager* pager)
 Process::Process(virtaddr_t entry_point)
     : f_pager(new Pager())
     , f_workingDirectory("/") {
-    f_threads.push_back(new Thread(entry_point, true, *this));
+    f_threads.push_back(new Thread(entry_point, false, *this));
     f_next_fd = 0;
 }
 
@@ -88,10 +88,11 @@ Stream* Process::get_stream(fd_t fd) {
     return *val;
 }
 
-void Process::map_page(virtaddr_t addr, const PhysicalPage& page) {
+void Process::map_page(virtaddr_t addr, PhysicalPage& page) {
     f_lock.lock();
     f_pager->lock();
 
+    page.ref();
     f_pager->map(page.addr(), addr, 1, page.flags());
 
     MemoryEntry entry {

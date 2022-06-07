@@ -22,6 +22,7 @@ Process* Process::fork() {
     memcpy(child->main_thread()->f_ksp, main_thread()->f_ksp, sizeof(CPUState));
     CPUSTATE_RET(child->main_thread()->f_ksp) = 0;
 
+    // Copy the memory space
     f_pager->lock();
     for(auto entry : f_memorymap) {
         if(entry.value.page.addr() != 0) { // Memory page
@@ -46,6 +47,8 @@ Process* Process::fork() {
         child->f_streams.insert({ entry.key, entry.value });
     }
 
+    // Copy other properties of the process
+    child->f_workingDirectory = f_workingDirectory;
 
     f_lock.unlock();
 

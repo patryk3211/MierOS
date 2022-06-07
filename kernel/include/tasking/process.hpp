@@ -48,7 +48,7 @@ namespace kernel {
 
         Process* fork();
 
-        void map_page(virtaddr_t addr, const PhysicalPage& page);
+        void map_page(virtaddr_t addr, PhysicalPage& page);
         PhysicalPage get_page(virtaddr_t addr);
 
         static Process* construct_kernel_process(virtaddr_t entry_point);

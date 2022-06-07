@@ -125,34 +125,6 @@ extern "C" void __cxa_pure_virtual() {
     asm("int3");
 }
 
-void test_task() {
-    dmesg("From a new task!\n");
-
-    const char* filename = "/limine.cfg";
-
-    char buffer[256];
-
-    fd_t fd;
-    asm volatile("mov $2, %%rax; int $0x8F"
-                 : "=a"(fd)
-                 : "b"(filename));
-
-    size_t readAmount;
-    asm volatile("mov $4, %%rax; mov $256, %%rdx; int $0x8F"
-                 : "=a"(readAmount)
-                 : "b"(fd), "c"(buffer));
-    asm volatile("mov $3, %%rax; int $0x8F"
-                 :
-                 : "b"(fd));
-
-    if(readAmount < 256) buffer[readAmount] = 0;
-    dmesg(buffer);
-
-    asm volatile("mov $1, %rax; mov $0, %rbx; int $0x8F");
-    while(1)
-        ;
-}
-
 TEXT_FREE_AFTER_INIT void stage2_init() {
     kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
 
@@ -160,23 +132,25 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     kernel::tests::do_tests();
 
-    physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;
-    physaddr_t mod_phys_end = mod.end & 0x7FFFFFFFFFFF;
-    size_t length = mod_phys_end - mod_phys_start;
-    size_t page_size = (length >> 12) + ((length & 0xFFF) == 0 ? 0 : 1);
+    {
+        physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;
+        physaddr_t mod_phys_end = mod.end & 0x7FFFFFFFFFFF;
+        size_t length = mod_phys_end - mod_phys_start;
+        size_t page_size = (length >> 12) + ((length & 0xFFF) == 0 ? 0 : 1);
 
-    physaddr_t map_phys_start = sym_map.start & 0x7FFFFFFFFFFF;
-    physaddr_t map_phys_end = sym_map.end & 0x7FFFFFFFFFFF;
-    size_t length2 = map_phys_end - map_phys_start;
-    size_t page_size2 = (length2 >> 12) + ((length2 & 0xFFF) == 0 ? 0 : 1);
+        physaddr_t map_phys_start = sym_map.start & 0x7FFFFFFFFFFF;
+        physaddr_t map_phys_end = sym_map.end & 0x7FFFFFFFFFFF;
+        size_t length2 = map_phys_end - map_phys_start;
+        size_t page_size2 = (length2 >> 12) + ((length2 & 0xFFF) == 0 ? 0 : 1);
 
-    kernel::Pager::kernel().lock();
-    virtaddr_t mod_start = kernel::Pager::kernel().kmap(mod_phys_start, page_size, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
-    virtaddr_t map_start = kernel::Pager::kernel().kmap(map_phys_start, page_size2, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
-    kernel::Pager::kernel().unlock();
+        kernel::Pager::kernel().lock();
+        virtaddr_t mod_start = kernel::Pager::kernel().kmap(mod_phys_start, page_size, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
+        virtaddr_t map_start = kernel::Pager::kernel().kmap(map_phys_start, page_size2, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
+        kernel::Pager::kernel().unlock();
 
-    set_line_map((void*)map_start);
-    set_initrd((void*)mod_start);
+        set_line_map((void*)map_start);
+        set_initrd((void*)mod_start);
+    }
 
     void** files = get_files("*.mod");
     for(size_t i = 0; files[i] != 0; ++i) {
@@ -224,8 +198,31 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     TRACE("Test");
 
-    auto* proc = new kernel::Process((virtaddr_t)&test_task);
-    kernel::Scheduler::schedule_process(*proc);
+    auto procFileRes = vfs->get_file(nullptr, "thing", {});
+    if(procFileRes) {
+        auto procFile = *procFileRes;
+        auto stream = kernel::FileStream(procFile);
+        stream.open(FILE_OPEN_MODE_READ);
+
+        size_t page_size = (procFile->f_size >> 12) + ((procFile->f_size & 0xFFF) == 0 ? 0 : 1);
+        auto* proc = new kernel::Process(0x1000000);
+
+        for(int i = 0; i < page_size; ++i) {
+            kernel::PhysicalPage page;
+            page.flags().executable = true;
+            page.flags().user_accesible = true;
+            proc->map_page(0x1000000 + (i << 12), page);
+        }
+
+        auto& pager = proc->pager();
+        auto& current = kernel::Pager::active();
+
+        pager.enable();
+        stream.read((void*)0x1000000, procFile->f_size);
+        current.enable();
+
+        kernel::Scheduler::schedule_process(*proc);
+    } else kprintf("[%T] (Kernel) Failed to find executable file\n");
 
     while(true) asm volatile("hlt");
 }
