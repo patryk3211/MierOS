@@ -125,6 +125,22 @@ extern "C" void __cxa_pure_virtual() {
     asm("int3");
 }
 
+class SimpleStream : public kernel::Stream {
+public:
+    SimpleStream() : kernel::Stream(0xFF) {
+
+    }
+
+    virtual size_t read(void* buffer, size_t length) {
+        return 0;
+    }
+
+    virtual size_t write(const void* buffer, size_t length) {
+        dmesgl((char*)buffer, length);
+        return length;
+    }
+};
+
 TEXT_FREE_AFTER_INIT void stage2_init() {
     kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
 
@@ -196,7 +212,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     }
     kernel::Thread::current()->f_current_module = 0;
 
-    TRACE("Test");
+    TRACE("Test\n");
 
     auto procFileRes = vfs->get_file(nullptr, "thing", {});
     if(procFileRes) {
@@ -220,6 +236,11 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         pager.enable();
         stream.read((void*)0x1000000, procFile->f_size);
         current.enable();
+
+        auto* sstream = new SimpleStream();
+        proc->add_stream(sstream);
+        proc->add_stream(sstream);
+        proc->add_stream(sstream);
 
         kernel::Scheduler::schedule_process(*proc);
     } else kprintf("[%T] (Kernel) Failed to find executable file\n");
