@@ -108,22 +108,13 @@ handle_int:
 
 int_ret:
     mov ax, [rsp + 160]
-    cmp ax, 0x08
-    je .kernel
-.user:
-    mov ax, 0x23
+    add ax, 8 # 0x08 -> 0x10, 0x1B -> 0x23
+
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
-    jmp .post
-.kernel:
-    mov ax, 0x10
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-.post:
+
     add rsp, 8
 
     pop rax

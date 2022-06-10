@@ -35,6 +35,8 @@ namespace kernel {
         static void schedule_process(Process& proc);
         static void remove_thread(Thread* thread);
 
+        static void pre_syscall(CPUState* current_state);
+
         bool is_idle() { return _is_idle; }
 
     private:

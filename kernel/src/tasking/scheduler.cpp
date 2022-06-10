@@ -30,6 +30,11 @@ TEXT_FREE_AFTER_INIT Scheduler::Scheduler()
 Scheduler::~Scheduler() {
 }
 
+void Scheduler::pre_syscall(CPUState* current_state) {
+    auto* thread = Thread::current();
+    thread->f_ksp = current_state;
+}
+
 CPUState* Scheduler::schedule(CPUState* current_state) {
     // Try to obtain a lock on the thread queue.
     if(!queue_lock.try_lock()) {

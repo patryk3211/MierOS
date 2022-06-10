@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <tasking/thread.hpp>
 #include <trace.h>
+#include <tasking/scheduler.hpp>
 
 struct interrupt_descriptor {
     u16_t offset_015;
@@ -139,11 +140,14 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
 
     if(state->int_num == 0xFE) {
         state = _tsh(state);
-        set_kernel_stack(current_core(), rsp + sizeof(CPUState));
+        set_kernel_stack(current_core(), (u64_t)state + sizeof(CPUState));
 
         u64_t timer_value = state->next_switch_time * lapic_timer_ticks / 1000;
         write_lapic(0x380, timer_value);
     } else if(state->int_num == 0x8F) {
+        kernel::Scheduler::pre_syscall(state);
+
+        asm volatile("sti");
         state->rax = _sh(state->rax,
             state->rbx,
             state->rcx,
@@ -151,6 +155,7 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
             state->rsi,
             state->rdi,
             state->rbp);
+        asm volatile("cli");
     } else if(state->int_num < 0x20) {
         file_line_pair p = addr_to_line(state->rip);
         kprintf("Exception 0x%x2 on core %d\nRip: 0x%x16 %s:%d\n", state->int_num, current_core(), state->rip, p.name, p.line);
@@ -163,7 +168,7 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
                 break;
             }
         }
-        if(kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
+        if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
         trace_stack((void*)state->rbp);
         while(true) asm volatile("hlt");
     } else {
