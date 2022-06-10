@@ -114,10 +114,8 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
 
     kernel::Process* kern_proc = kernel::Process::construct_kernel_process((virtaddr_t)&stage2_init);
     kernel::Scheduler::schedule_process(*kern_proc);
-    asm volatile("int $0xFE");
 
-    ASSERT_NOT_REACHED("You should be in stage2 right now");
-    while(true) asm volatile("hlt");
+    while(true) asm volatile("int $0xFE");
 }
 
 extern "C" void __cxa_pure_virtual() {
