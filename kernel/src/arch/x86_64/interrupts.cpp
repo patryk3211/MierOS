@@ -128,6 +128,8 @@ void trace_stack(void* base_pointer) {
 
     frame* f = (frame*)base_pointer;
     while(f != 0) {
+        if(!kernel::Pager::active().getFlags((virtaddr_t)f).present) return;
+
         file_line_pair p = addr_to_line(f->ret_ip);
         kprintf("Stack frame 0x%x16 Ret: 0x%x16 %s:%d\n", f, f->ret_ip, p.name, p.line);
         f = f->next_frame;
