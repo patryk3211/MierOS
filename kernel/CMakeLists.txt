@@ -1,5 +1,6 @@
 set(CMAKE_C_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -Wall -Wextra -mcmodel=large -fPIC -Wl,-export-dynamic -mno-red-zone")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -fno-use-cxa-atexit")
+set(CMAKE_ASM_FLAGS "-Wa,-msyntax=intel -Wa,-mnaked-reg")
 
 set(CMAKE_CXX_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-g++")
 set(CMAKE_C_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-gcc")
