@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 
 set(ARCH "x86_64" CACHE STRING "Set the kernel's target architecture")
+set(DEBUG true CACHE BOOL "Set if build should include some debugging features")
 option(TESTING "Enable kernel and module testing" ON)
 
 set(CROSS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cross")

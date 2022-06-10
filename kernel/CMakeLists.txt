@@ -71,7 +71,10 @@ add_custom_command(TARGET kernel.bin POST_BUILD
                     COMMENT "Exporting debug line symbols...")
 
 add_compile_definitions(${ARCH}=1)
-add_compile_definitions(DEBUG_TRACE=1)
+
+if(${DEBUG})
+    add_compile_definitions(DEBUG=true)
+endif()
 
 target_link_options(kernel.bin PRIVATE -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -pie -Wl,-export-dynamic -z max-page-size=0x1000 ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o -Wl,--no-dynamic-linker)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/std/include)
