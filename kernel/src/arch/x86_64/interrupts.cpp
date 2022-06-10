@@ -136,6 +136,46 @@ void trace_stack(void* base_pointer) {
     }
 }
 
+void cpu_state_dump(CPUState* state) {
+    u64_t cr0, cr2, cr3;
+    asm volatile("mov %%cr0, %0" : "=a"(cr0));
+    asm volatile("mov %%cr2, %0" : "=a"(cr2));
+    asm volatile("mov %%cr3, %0" : "=a"(cr3));
+
+    kprintf("+-------- CPU State -------+\n"
+            "| rax = 0x%x16 |\n"
+            "| rbx = 0x%x16 |\n"
+            "| rcx = 0x%x16 |\n"
+            "| rdx = 0x%x16 |\n"
+            "| rsi = 0x%x16 |\n"
+            "| rdi = 0x%x16 |\n"
+            "| rbp = 0x%x16 |\n"
+            "+--------------------------+\n"
+            "| r8  = 0x%x16 |\n"
+            "| r9  = 0x%x16 |\n"
+            "| r10 = 0x%x16 |\n"
+            "| r11 = 0x%x16 |\n"
+            "| r12 = 0x%x16 |\n"
+            "| r13 = 0x%x16 |\n"
+            "| r14 = 0x%x16 |\n"
+            "| r15 = 0x%x16 |\n"
+            "+--------------------------+\n"
+            "| rip = 0x%x16 |\n"
+            "| cs  = 0x%x16 |\n"
+            "| flg = 0x%x16 |\n"
+            "| rsp = 0x%x16 |\n"
+            "| ss  = 0x%x16 |\n"
+            "+--------------------------+\n"
+            "| cr0 = 0x%x16 |\n"
+            "| cr2 = 0x%x16 |\n"
+            "| cr3 = 0x%x16 |\n"
+            "+--------------------------+\n"
+            "state = 0x%x16\n",
+            state->rax, state->rbx, state->rcx, state->rdx, state->rsi, state->rdi, state->rbp, state->r8, state->r9, state->r10,
+            state->r11, state->r12, state->r13, state->r14, state->r15, state->rip, state->cs, state->rflags, state->rsp, state->ss,
+            cr0, cr2, cr3, state);
+}
+
 extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
     CPUState* state = (CPUState*)rsp;
     u8_t intVec = state->int_num;
@@ -159,17 +199,11 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
             state->rbp);
         asm volatile("cli");
     } else if(state->int_num < 0x20) {
+        kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
+        cpu_state_dump(state);
         file_line_pair p = addr_to_line(state->rip);
-        kprintf("Exception 0x%x2 on core %d\nRip: 0x%x16 %s:%d\n", state->int_num, current_core(), state->rip, p.name, p.line);
-        switch(state->int_num) {
-            case 0x0e: {
-                u64_t cr2;
-                asm volatile("mov %%cr2, %0"
-                             : "=a"(cr2));
-                kprintf("cr2: 0x%x16 code: 0x%x16\n", cr2, state->err_code);
-                break;
-            }
-        }
+        kprintf("Line: %s:%d\n", p.name, p.line);
+
         if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
         trace_stack((void*)state->rbp);
         while(true) asm volatile("hlt");
