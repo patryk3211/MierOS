@@ -35,6 +35,8 @@ namespace kernel {
         // Kernel Stack Pointer
         CPUState* f_ksp;
 
+        CPUState* f_syscall_state;
+
         SpinLock f_lock;
 
         std::List<std::Function<bool()>> f_blockers;

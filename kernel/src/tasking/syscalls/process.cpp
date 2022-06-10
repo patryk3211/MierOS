@@ -1,4 +1,5 @@
 #include <tasking/syscall.h>
+#include <tasking/scheduler.hpp>
 
 using namespace kernel;
 
@@ -10,6 +11,8 @@ syscall_arg_t syscall_exit(Process& proc, syscall_arg_t exitCode) {
 syscall_arg_t syscall_fork(Process& proc) {
     Process* child = proc.fork();
 
+    Scheduler::schedule_process(*child);
+
     return child->main_thread()->pid();
 }
 
@@ -18,8 +21,8 @@ Process* Process::fork() {
     Thread* caller = Thread::current();
 
     // Create a child process and clone the CPU state
-    Process* child = new Process(CPUSTATE_IP(caller->f_ksp));
-    memcpy(child->main_thread()->f_ksp, main_thread()->f_ksp, sizeof(CPUState));
+    Process* child = new Process(CPUSTATE_IP(caller->f_syscall_state));
+    memcpy(child->main_thread()->f_ksp, caller->f_syscall_state, sizeof(CPUState));
     CPUSTATE_RET(child->main_thread()->f_ksp) = 0;
 
     // Copy the memory space

@@ -31,8 +31,7 @@ Scheduler::~Scheduler() {
 }
 
 void Scheduler::pre_syscall(CPUState* current_state) {
-    auto* thread = Thread::current();
-    thread->f_ksp = current_state;
+    Thread::current()->f_syscall_state = current_state;
 }
 
 CPUState* Scheduler::schedule(CPUState* current_state) {

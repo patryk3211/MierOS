@@ -24,7 +24,8 @@ pid_t Thread::generate_pid() {
 
 Thread::Thread(u64_t ip, bool isKernel, Process& process)
     : f_kernel_stack(KERNEL_STACK_SIZE)
-    , f_parent(process) {
+    , f_parent(process)
+    , f_pid(generate_pid()) {
     f_preferred_core = -1;
     f_ksp = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 

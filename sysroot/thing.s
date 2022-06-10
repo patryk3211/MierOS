@@ -8,6 +8,24 @@ _start:
     mov edx, [msg_len]
     int 0x8F
 
+    ; Fork
+    mov eax, 6
+    int 0x8F
+
+    cmp eax, 0
+    jne .child
+.parent:
+    mov ecx, msg_parent
+    mov edx, [msg_parent_len]
+    jmp .child.post
+.child:
+    mov ecx, msg_child
+    mov edx, [msg_child_len]
+.child.post:
+    mov eax, 5
+    mov ebx, 1
+    int 0x8F
+
     ; Exit
     mov eax, 1
     mov ebx, 0
@@ -15,3 +33,7 @@ _start:
 
 msg: db "Hello, World!", 10
 msg_len: dd $ - msg
+msg_parent: db "Hello, Parent Process!", 10
+msg_parent_len: dd $ - msg_parent
+msg_child: db "Hello, Child Process!", 10
+msg_child_len: dd $ - msg_child
