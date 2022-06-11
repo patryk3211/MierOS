@@ -15,6 +15,7 @@
 #include <tasking/syscall.h>
 #include <tests/test.hpp>
 #include <trace.h>
+#include <debug.h>
 
 #include <fs/modulefs.hpp>
 #include <fs/modulefs_functions.hpp>
@@ -141,6 +142,8 @@ public:
 
 TEXT_FREE_AFTER_INIT void stage2_init() {
     kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
+
+    init_debug();
 
     init_syscalls();
 

@@ -10,6 +10,7 @@ set(KERNEL_SOURCES src/init.cpp
                    src/trace.c
                    src/stdlib.c
                    src/initrd.cpp
+                   src/debug.cpp
                    src/memory/physical.cpp
                    src/memory/liballoc.c
                    src/memory/liballoc_plugs.cpp

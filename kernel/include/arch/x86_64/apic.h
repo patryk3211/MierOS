@@ -10,6 +10,7 @@ extern "C" {
 extern void init_pic();
 
 extern void add_ioapic(u8_t id, u32_t address, u32_t globalSystemInterrupBase);
+extern u64_t get_ioapic_intentry(u8_t globalSystemInterrupt);
 extern void add_ioapic_intentry(u8_t interruptVector, u32_t globalSystemInterrupt, u8_t triggerMode, u8_t polarity, u8_t mask);
 
 extern void pic_eoi(u8_t vector);

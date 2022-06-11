@@ -52,6 +52,7 @@ namespace kernel {
 
         void lock();
         void unlock();
+        bool try_lock();
 
         void enable();
 

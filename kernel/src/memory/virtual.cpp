@@ -241,6 +241,16 @@ int Pager::getWorkpage(int index) {
     return work_pages[index];
 }
 
+bool Pager::try_lock() {
+    bool result = locker.try_lock();
+    if(result) {
+        current_pml4e = -1;
+        current_pdpte = -1;
+        current_pde = -1;
+    }
+    return result;
+}
+
 void Pager::lock() {
     locker.lock();
     current_pml4e = -1;

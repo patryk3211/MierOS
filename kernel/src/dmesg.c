@@ -7,8 +7,8 @@
 #define IO_PORT 0x3F8
 
 TEXT_FREE_AFTER_INIT void init_serial() {
-    // Disable Interrupts
-    outb(IO_PORT + 1, 0b00000000);
+    // Enable Data Available Interrupts
+    outb(IO_PORT + 1, 0b00000001);
     // Set DLAB
     outb(IO_PORT + 3, 0b10000000);
 
@@ -20,7 +20,7 @@ TEXT_FREE_AFTER_INIT void init_serial() {
     outb(IO_PORT + 3, 0b00000011);
 
     // Enable DTR and RTS
-    outb(IO_PORT + 4, 0b00000011);
+    outb(IO_PORT + 4, 0b00001011);
 }
 
 void write_serial(char c) {

@@ -152,6 +152,12 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
         }
     }
 
+    // Map some legacy entries
+    pager.unlock();
+    if(get_ioapic_intentry(0x01) == 0x10000) add_ioapic_intentry(0x21, 0x01, 0, 0, 0); // Keyboard
+    if(get_ioapic_intentry(0x04) == 0x10000) add_ioapic_intentry(0x24, 0x04, 0, 0, 0); // COM1
+    pager.lock();
+
     pager.unmap((virtaddr_t)madt, page_size);
 }
 
