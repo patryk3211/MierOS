@@ -46,6 +46,8 @@ struct CPUState {
 #define CPUSTATE_IP(state) state->rip
 #define CPUSTATE_RET(state) state->rax
 
+extern void cpu_state_dump(CPUState* state);
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

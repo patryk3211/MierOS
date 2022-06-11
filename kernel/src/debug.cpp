@@ -75,6 +75,7 @@ void serial_command(char* cmd) {
                 prevPage = addr & ~0xFFF;
                 if(!flags.present) {
                     kprintf("Address is not readable\n");
+                    pager.unlock();
                     return;
                 }
             }
@@ -106,7 +107,7 @@ void serial_command(char* cmd) {
             
             char textRepresentation[17];
             memset(textRepresentation, 0, 17);
-            memcpy(textRepresentation, (void*)(start_addr + i - 1 - readBytes), readBytes);
+            memcpy(textRepresentation, (void*)(start_addr + i - readBytes), readBytes);
             for(int j = 0; j < readBytes; ++j) {
                 char c = textRepresentation[j];
                 if(c < 0x20 || c >= 0x7F) c = '.';
@@ -121,7 +122,93 @@ void serial_command(char* cmd) {
         kprintf("Serial Debug Terminal\n"
                 "All numbers passed as arguments are hexadecimal\n"
                 "Commands:\n"
-                "x [address] [count] - Print [count] amount of bytes starting from [address] of virtual memory\n");
+                "x address [count] - Print count amount of bytes starting from address of virtual memory\n"
+                "b address value - Sets byte at address to a given value\n"
+                "map physical_address [virtual_address] - Map the given physical address (In kernel's pager)\n"
+                "unmap virtual_address - Unmap the given virtual address\n");
+    } else if(!strcmp(command, "B")) {
+        if(cmd == 0) {
+            kprintf("You have to specify the address\n");
+            return;
+        }
+        char* addr_str = cmd;
+        cmd = next_arg(cmd);
+        if(cmd == 0) {
+            kprintf("You have to specify the value\n");
+            return;
+        }
+        char* value_str = cmd;
+        cmd = next_arg(cmd);
+        
+        u64_t addr = hex_to_int(addr_str);
+        u8_t val = hex_to_int(value_str);
+
+        auto& pager = kernel::Pager::active();
+        if(!pager.try_lock()) {
+            kprintf("Failed to lock the pager!\n");
+            return;
+        }
+
+        if(!pager.getFlags(addr).present) {
+            kprintf("Address not mapped!\n");
+            pager.unlock();
+            return;
+        }
+
+        *((u8_t*)addr) = val;
+
+        pager.unlock();
+    } else if(!strcmp(command, "MAP")) {
+        if(cmd == 0) {
+            kprintf("You have to specify the physical address\n");
+            return;
+        }
+        char* phys_str = cmd;
+        cmd = next_arg(cmd);
+
+        physaddr_t phys = hex_to_int(phys_str);
+        virtaddr_t virt = 0xFFF;
+
+        if(cmd != 0) {
+            char* virt_str = cmd;
+            cmd = next_arg(cmd);
+
+            virt = hex_to_int(virt_str) & ~0xFFF;
+        }
+
+        auto& pager = kernel::Pager::kernel();
+        if(!pager.try_lock()) {
+            kprintf("Failed to lock the pager!\n");
+            return;
+        }
+
+        if(virt == 0xFFF)
+            virt = pager.kmap(phys, 1, { 1, 1, 0, 0, 1, 0 });
+        else
+            pager.map(phys, virt, 1, { 1, 1, 0, 0, 1, 0 });
+        
+        kprintf("Address 0x%x16 mapped at 0x%x16\n", phys, virt);
+
+        pager.unlock();
+    } else if(!strcmp(command, "UNMAP")) {
+        if(cmd == 0) {
+            kprintf("You have to specify the virtual address\n");
+            return;
+        }
+        char* virt_str = cmd;
+        cmd = next_arg(cmd);
+
+        virtaddr_t virt = hex_to_int(virt_str);
+
+        auto& pager = kernel::Pager::kernel();
+        if(!pager.try_lock()) {
+            kprintf("Failed to lock the pager!\n");
+            return;
+        }
+
+        pager.unmap(virt, 1);
+
+        pager.unlock();
     }
 }
 
@@ -141,10 +228,12 @@ void serial_handle() {
 
         kprintf("> ");
     } else if(c == 0x7F) {
-        --serial_buffer_index;
-        write_serial('\b');
-        write_serial(' ');
-        write_serial('\b');
+        if(serial_buffer_index > 0) {
+            --serial_buffer_index;
+            write_serial('\b');
+            write_serial(' ');
+            write_serial('\b');
+        }
     } else {
         serial_buffer[serial_buffer_index++] = c;
         write_serial(c);

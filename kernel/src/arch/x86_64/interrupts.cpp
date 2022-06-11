@@ -136,7 +136,7 @@ void trace_stack(void* base_pointer) {
     }
 }
 
-void cpu_state_dump(CPUState* state) {
+extern "C" void cpu_state_dump(CPUState* state) {
     u64_t cr0, cr2, cr3;
     asm volatile("mov %%cr0, %0" : "=a"(cr0));
     asm volatile("mov %%cr2, %0" : "=a"(cr2));

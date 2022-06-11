@@ -85,7 +85,6 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
     // Get the address override before anything else
     for(size_t offset = 0; offset < record_length; offset += *(madt->records + offset + 1)) {
         MADT_Record* record = (MADT_Record*)(madt->records + offset);
-        size_t size = *(madt->records + offset + 1);
         if(record->type == 0x05) {
             // Address override.
             lapic_addr = *((u64_t*)record->rest + 2);
