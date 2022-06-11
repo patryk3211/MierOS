@@ -81,17 +81,18 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
     madt = (ACPI_MADT*)pager.kmap(madt_addr, page_size, { 1, 0, 0, 0, 0, 0 });
     physaddr_t lapic_addr = madt->lapic_addr;
 
-    { // Get the address override before anything else
-        size_t record_length = madt->header.length - sizeof(madt->header);
-        for(size_t offset = 0; offset < record_length; offset += *(madt->records + offset + 1)) {
-            MADT_Record* record = (MADT_Record*)(madt->records + offset);
-            if(record->type == 0x05) {
-                // Address override.
-                lapic_addr = *((u64_t*)record->rest + 2);
-                break;
-            }
+    size_t record_length = madt->header.length - sizeof(*madt);
+    // Get the address override before anything else
+    for(size_t offset = 0; offset < record_length; offset += *(madt->records + offset + 1)) {
+        MADT_Record* record = (MADT_Record*)(madt->records + offset);
+        size_t size = *(madt->records + offset + 1);
+        if(record->type == 0x05) {
+            // Address override.
+            lapic_addr = *((u64_t*)record->rest + 2);
+            break;
         }
     }
+    
 
     // Map Local APIC to a constant address
     pager.map(lapic_addr, LAPIC_VIRTUAL_ADDRESS, 1, { 1, 1, 0, 0, 1, 0 });
@@ -102,7 +103,6 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
     core_map.insert({ bsp_apic_id, 0 });
 
     // Parse the rest of the records
-    size_t record_length = madt->header.length - sizeof(madt->header);
     for(size_t offset = 0; offset < record_length; offset += *(madt->records + offset + 1)) {
         MADT_Record* record = (MADT_Record*)(madt->records + offset);
         switch(record->type) {
@@ -341,6 +341,8 @@ TEXT_FREE_AFTER_INIT void measure_lapic_timer() {
 extern void init_time();
 
 extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
+    kprintf("[%T] (Kernel) Initializing CPU\n");
+
     parse_madt();
 
     init_gdt();
