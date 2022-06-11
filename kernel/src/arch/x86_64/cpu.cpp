@@ -152,7 +152,11 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
         }
     }
 
+    dmesg("Parsed MADT");
+
     pager.unmap((virtaddr_t)madt, page_size);
+
+    dmesg("Unmapped MADT");
 }
 
 struct gdt_entry {
