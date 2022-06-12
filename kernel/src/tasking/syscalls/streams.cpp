@@ -55,3 +55,10 @@ syscall_arg_t syscall_write(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, 
     size_t size = stream->write((const void*)ptr, length);
     return size;
 }
+
+syscall_arg_t syscall_seek(Process& proc, syscall_arg_t fd, syscall_arg_t pos, syscall_arg_t mode) {
+    auto* stream = proc.get_stream(fd);
+    if(stream == 0) return -ERR_INVALID_FD;
+
+    return stream->seek(pos, mode);
+}
