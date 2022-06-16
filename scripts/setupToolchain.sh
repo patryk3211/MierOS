@@ -86,12 +86,8 @@ make install-target-libgcc
 
 cd ..
 
-echo "Installing limine..."
-git clone https://github.com/limine-bootloader/limine.git --branch=v2.0-branch-binary --depth 1
-cd limine
-
-make all
-cd ..
+# Setup limine
+scripts/toolchain/limine.sh
 
 echo "Building debug table exporter..."
 git clone https://github.com/patryk3211/MierOSDebugExporter.git --depth 1
@@ -104,10 +100,6 @@ cp build/debug-exporter ../cross
 cd ..
 
 rm -rf MierOSDebugExporter
-
-mkdir -p sysroot/EFI/BOOT
-cp -v limine/limine.sys sysroot/
-cp -v limine/BOOTX64.EFI sysroot/EFI/BOOT/
 
 mkdir -p sysroot/dev
 

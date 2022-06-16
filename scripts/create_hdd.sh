@@ -6,7 +6,7 @@ if [ "$1" = "" ]; then
 fi
 
 DIR=$(dirname $1)
-if [ "$DIR" != "" ] then
+if [ "$DIR" != "" ]; then
     mkdir -p $DIR
 fi
 
@@ -23,7 +23,7 @@ sudo mkfs.ext2 /dev/loop100p1 -E root_owner=$UID:$GID
 sudo mount /dev/loop100p1 imgmnt
 
 #sudo grub-install --force --target=i386-pc --root-directory=imgmnt --boot-directory=imgmnt/boot --grub-mkdevicemap=sysroot/boot/grub/device.map --no-floppy --modules="biosdisk part_msdos ext2 configfile normal multiboot" /dev/loop100
-limine/limine-install $1
+limine/limine-deploy $1
 
 GROUP_NAME=$(id -gn)
 
