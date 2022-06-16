@@ -58,6 +58,7 @@ namespace kernel {
 
         void map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags);
         physaddr_t unmap(virtaddr_t virt, size_t length);
+        void flags(virtaddr_t virt, size_t length, PageFlags flags);
 
         virtaddr_t kmap(physaddr_t phys, size_t length, PageFlags flags);
 

@@ -170,10 +170,12 @@ extern "C" void cpu_state_dump(CPUState* state) {
             "| cr2 = 0x%x16 |\n"
             "| cr3 = 0x%x16 |\n"
             "+--------------------------+\n"
+            "| iec = 0x%x16 |\n"
+            "+--------------------------+\n"
             "state = 0x%x16\n",
             state->rax, state->rbx, state->rcx, state->rdx, state->rsi, state->rdi, state->rbp, state->r8, state->r9, state->r10,
             state->r11, state->r12, state->r13, state->r14, state->r15, state->rip, state->cs, state->rflags, state->rsp, state->ss,
-            cr0, cr2, cr3, state);
+            cr0, cr2, cr3, state->err_code, state);
 }
 
 extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
@@ -206,6 +208,10 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
 
         if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
         trace_stack((void*)state->rbp);
+
+        // Prepare resources for serial debugging
+        kernel::Pager::kernel().unlock();
+        asm volatile("sti");
         while(true) asm volatile("hlt");
     } else {
         for(handler_entry* handler = handlers[state->int_num]; handler != 0; handler = handler->next)

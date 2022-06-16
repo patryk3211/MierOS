@@ -20,7 +20,7 @@ _start:
 
     mov eax, cr0
     and eax, ~((1 << 30) | (1 << 29))
-    or eax, 0x80000001
+    or eax, 0x80010001
     mov cr0, eax
 
     jmp 0x08:start_64

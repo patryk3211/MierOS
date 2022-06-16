@@ -36,15 +36,24 @@ Module::Module(void* elf_file, u16_t major_num)
     Pager::kernel().lock();
     address_base = Pager::kernel().getFreeRange(KERNEL_START, (end_addr - start_addr) >> 12);
 
+    struct ReflagEntry {
+        virtaddr_t address;
+        size_t length;
+        PageFlags flags;
+    };
+    std::List<ReflagEntry> reflag_range;
+
     for(int i = 0; i < elf_header->phdr_entry_count; ++i) {
         if(program_headers[i].type == PT_LOAD) {
             size_t page_size = (program_headers[i].mem_size >> 12) + ((program_headers[i].mem_size & 0xFFF) == 0 ? 0 : 1);
             bool executable = program_headers[i].flags & 1;
             bool writable = program_headers[i].flags & 2;
             for(size_t j = 0; j < page_size; ++j)
-                Pager::kernel().map(palloc(1), address_base + program_headers[i].vaddr + (j << 12), 1, { .present = 1, .writable = writable, .user_accesible = 0, .executable = executable, .global = 1, .cache_disable = 0 });
+                Pager::kernel().map(palloc(1), address_base + program_headers[i].vaddr + (j << 12), 1, { 1, 1, 0, executable, 1, 0 });
             memcpy((void*)(address_base + program_headers[i].vaddr), elf_file_c + program_headers[i].offset, program_headers[i].file_size);
             allocated_ranges.add(program_headers[i].vaddr, program_headers[i].vaddr + (page_size << 12));
+        
+            if(!writable) reflag_range.push_back({ address_base + program_headers[i].vaddr, page_size, { 1, 0, 0, executable, 1, 0 } });
         }
     }
 
@@ -86,6 +95,14 @@ Module::Module(void* elf_file, u16_t major_num)
     }
 
     link();
+
+    for(auto& entry : reflag_range) {
+        Pager::kernel().lock();
+        Pager::kernel().flags(entry.address, entry.length, entry.flags);
+        Pager::kernel().unlock();
+    }
+
+    // Ready for execution
 
     module_header* header = (module_header*)header_sec->address;
     init_signals = (char*)header->init_on_ptr;
