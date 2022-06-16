@@ -24,6 +24,9 @@ TEXT_FREE_AFTER_INIT void init_serial() {
 }
 
 void write_serial(char c) {
+    // Do CRLF because serial
+    if(c == '\n') write_serial('\r');
+
     while(!(inb(IO_PORT + 5) & 0x20))
         ;
     outb(IO_PORT, c);

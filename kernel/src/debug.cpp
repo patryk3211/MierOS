@@ -209,6 +209,20 @@ void serial_command(char* cmd) {
         pager.unmap(virt, 1);
 
         pager.unlock();
+    } else if(!strcmp(command, "REBOOT")) {
+        // Cause a triple-fault
+        
+        struct IDTR {
+            u64_t offset;
+            u16_t size;
+        } idtr;
+        idtr.offset = 0;
+        idtr.size = 0;
+        asm volatile("lidt (%0)" : : "a"(&idtr));
+
+        *((char*)0) = 'F';
+
+        kprintf("HOW DID IT FAIL?\n");
     }
 }
 
