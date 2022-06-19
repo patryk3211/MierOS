@@ -96,7 +96,8 @@ void Process::map_page(virtaddr_t addr, PhysicalPage& page) {
     f_pager->map(page.addr(), addr, 1, page.flags());
 
     MemoryEntry entry {
-        .page = page
+        .type = MemoryEntry::MEMORY,
+        .page = new PhysicalPage(page)
     };
     f_memorymap[addr] = entry;
 
@@ -104,8 +105,10 @@ void Process::map_page(virtaddr_t addr, PhysicalPage& page) {
     f_lock.unlock();
 }
 
-PhysicalPage Process::get_page(virtaddr_t addr) {
-    auto val = f_memorymap.at(addr);
-    if(val) return val->page;
-    else return PhysicalPage(nullptr);
+void Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
+    f_lock.lock();
+
+    // Do the things...
+
+    f_lock.unlock();
 }

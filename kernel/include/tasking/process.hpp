@@ -22,7 +22,10 @@ namespace kernel {
         std::UnorderedMap<fd_t, Stream*> f_streams;
 
         struct MemoryEntry {
-            PhysicalPage page;
+            enum Type {
+                MEMORY, ANONYMOUS, FILE
+            } type;
+            void* page;
         };
 
         std::UnorderedMap<virtaddr_t, MemoryEntry> f_memorymap;
@@ -49,7 +52,9 @@ namespace kernel {
         Process* fork();
 
         void map_page(virtaddr_t addr, PhysicalPage& page);
-        PhysicalPage get_page(virtaddr_t addr);
+        void alloc_pages(virtaddr_t addr, size_t length, int flags);
+
+        void handle_page_fault(virtaddr_t fault_address, u32_t code);
 
         static Process* construct_kernel_process(virtaddr_t entry_point);
 

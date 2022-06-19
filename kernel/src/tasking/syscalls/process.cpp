@@ -28,16 +28,17 @@ Process* Process::fork() {
     // Copy the memory space
     f_pager->lock();
     for(auto entry : f_memorymap) {
-        if(entry.value.page.addr() != 0) { // Memory page
+        if(entry.value.type == MemoryEntry::MEMORY) { // Memory page
             // Set all writable pages as copy-on-write
-            if(entry.value.page.flags().writable) {
-                entry.value.page.flags().writable = false;
-                entry.value.page.copy_on_write() = true;
-                f_pager->map(entry.value.page.addr(), entry.key, 1, entry.value.page.flags());
+            PhysicalPage& page = *(PhysicalPage*)entry.value.page;
+            if(page.flags().writable) {
+                page.flags().writable = false;
+                page.copy_on_write() = true;
+                f_pager->map(page.addr(), entry.key, 1, page.flags());
             }
 
             // Map page to child
-            child->map_page(entry.key, entry.value.page);
+            child->map_page(entry.key, page);
         } else { // Unresolved page
             /// TODO: [04.06.2022] Handle cloning of file mappings
         }
