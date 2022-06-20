@@ -29,7 +29,9 @@ set(KERNEL_SOURCES src/init.cpp
                    src/fs/vfs.cpp
                    src/util/crc.c
                    src/streams/stream.cpp
-                   src/streams/filestream.cpp)
+                   src/streams/filestream.cpp
+                   src/memory/page/unresolvedpage.cpp
+                   src/memory/page/anonpage.cpp)
 
 set(TESTS_SOURCES src/tests/test.cpp
                   src/tests/memory.cpp

@@ -7,6 +7,7 @@
 #include <unordered_map.hpp>
 #include <memory/ppage.hpp>
 #include <tasking/syscall.h>
+#include <shared_pointer.hpp>
 
 namespace kernel {
     class Process {
@@ -26,9 +27,12 @@ namespace kernel {
                 MEMORY, ANONYMOUS, FILE
             } type;
             void* page;
+            bool shared;
+
+            ~MemoryEntry();
         };
 
-        std::UnorderedMap<virtaddr_t, MemoryEntry> f_memorymap;
+        std::UnorderedMap<virtaddr_t, std::SharedPtr<MemoryEntry>> f_memorymap;
 
         SpinLock f_lock;
 
@@ -52,7 +56,7 @@ namespace kernel {
         Process* fork();
 
         void map_page(virtaddr_t addr, PhysicalPage& page);
-        void alloc_pages(virtaddr_t addr, size_t length, int flags);
+        void alloc_pages(virtaddr_t addr, size_t length, int flags, int prot);
 
         void handle_page_fault(virtaddr_t fault_address, u32_t code);
 

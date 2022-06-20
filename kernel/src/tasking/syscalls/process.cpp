@@ -28,10 +28,10 @@ Process* Process::fork() {
     // Copy the memory space
     f_pager->lock();
     for(auto entry : f_memorymap) {
-        if(entry.value.type == MemoryEntry::MEMORY) { // Memory page
+        if(entry.value->type == MemoryEntry::MEMORY) { // Memory page
             // Set all writable pages as copy-on-write
-            PhysicalPage& page = *(PhysicalPage*)entry.value.page;
-            if(page.flags().writable) {
+            PhysicalPage& page = *(PhysicalPage*)entry.value->page;
+            if(page.flags().writable && !entry.value->shared) {
                 page.flags().writable = false;
                 page.copy_on_write() = true;
                 f_pager->map(page.addr(), entry.key, 1, page.flags());

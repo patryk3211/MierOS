@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
+#include <tasking/syscalls/map.hpp>
+#include <memory/page/anonpage.hpp>
 
 using namespace kernel;
 
@@ -97,11 +99,33 @@ void Process::map_page(virtaddr_t addr, PhysicalPage& page) {
 
     MemoryEntry entry {
         .type = MemoryEntry::MEMORY,
-        .page = new PhysicalPage(page)
+        .page = new PhysicalPage(page),
+        .shared = false
     };
     f_memorymap[addr] = entry;
 
     f_pager->unlock();
+    f_lock.unlock();
+}
+
+void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
+    f_lock.lock();
+
+    auto ptr = std::make_shared<MemoryEntry>();
+
+    ptr->type = MemoryEntry::ANONYMOUS;
+    ptr->shared = flags & MMAP_FLAG_SHARED;
+    if(prot == 0) {
+        // This page is not accessible
+        ptr->page = nullptr;
+    } else {
+        // Use prot values
+        ptr->page = new AnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
+    }
+
+    for(size_t i = 0; i < length; ++i)
+        f_memorymap[addr + (i << 12)] = ptr;
+
     f_lock.unlock();
 }
 
@@ -111,4 +135,17 @@ void Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
     // Do the things...
 
     f_lock.unlock();
+}
+
+Process::MemoryEntry::~MemoryEntry() {
+    if(page != 0) {
+        switch(type) {
+            case MemoryEntry::ANONYMOUS:
+                delete (AnonymousPage*)page;
+                break;
+            case MemoryEntry::MEMORY:
+                delete (PhysicalPage*)page;
+                break;
+        }
+    }
 }
