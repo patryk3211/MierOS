@@ -97,12 +97,11 @@ void Process::map_page(virtaddr_t addr, PhysicalPage& page) {
     page.ref();
     f_pager->map(page.addr(), addr, 1, page.flags());
 
-    MemoryEntry entry {
-        .type = MemoryEntry::MEMORY,
-        .page = new PhysicalPage(page),
-        .shared = false
-    };
-    f_memorymap[addr] = entry;
+    auto ptr = std::make_shared<MemoryEntry>();
+    ptr->type = MemoryEntry::MEMORY;
+    ptr->page = new PhysicalPage(page);
+    ptr->shared = false;
+    f_memorymap[addr] = ptr;
 
     f_pager->unlock();
     f_lock.unlock();

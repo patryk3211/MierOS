@@ -8,6 +8,16 @@ _start:
     mov edx, [msg_len]
     int 0x8F
 
+    ; mmap
+    mov rax, 8
+    mov rbx, 0
+    mov rcx, 4096
+    mov rdx, 3
+    mov rsi, 2
+    mov rdi, 0
+    mov r8, 0
+    int 0x8F
+
     ; Fork
     mov eax, 6
     int 0x8F
