@@ -88,3 +88,11 @@ bool& PhysicalPage::copy_on_write() {
 const bool& PhysicalPage::copy_on_write() const {
     return data->f_copy_on_write;
 }
+
+PhysicalPage::operator bool() const {
+    return !!*this;
+}
+
+bool PhysicalPage::operator!() const {
+    return !data || !data->f_addr;
+}

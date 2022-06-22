@@ -5,10 +5,19 @@
 
 namespace kernel {
     class AnonymousPage : public UnresolvedPage {
-        PageFlags flags;
+        PageFlags f_flags;
     public:
         AnonymousPage(const PageFlags& flags);
         ~AnonymousPage() = default;
+
+        virtual PhysicalPage resolve(virtaddr_t addr);
+    };
+
+    class SharedAnonymousPage : public AnonymousPage {
+        PhysicalPage f_page;
+    public:
+        SharedAnonymousPage(const PageFlags& flags);
+        ~SharedAnonymousPage() = default;
 
         virtual PhysicalPage resolve(virtaddr_t addr);
     };

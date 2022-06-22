@@ -37,6 +37,9 @@ namespace kernel {
 
         bool& copy_on_write();
         const bool& copy_on_write() const;
+
+        operator bool() const;
+        bool operator!() const;
     
     private:
         Data* leak_ptr();

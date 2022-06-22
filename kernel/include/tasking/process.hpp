@@ -55,7 +55,7 @@ namespace kernel {
 
         Process* fork();
 
-        void map_page(virtaddr_t addr, PhysicalPage& page);
+        void map_page(virtaddr_t addr, PhysicalPage& page, bool shared);
         void alloc_pages(virtaddr_t addr, size_t length, int flags, int prot);
 
         void handle_page_fault(virtaddr_t fault_address, u32_t code);

@@ -229,7 +229,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
             page.flags().executable = true;
             page.flags().user_accesible = true;
             page.flags().writable = true;
-            proc->map_page(0x1000000 + (i << 12), page);
+            proc->map_page(0x1000000 + (i << 12), page, false);
         }
 
         auto& pager = proc->pager();

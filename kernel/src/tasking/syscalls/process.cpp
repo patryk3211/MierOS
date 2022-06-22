@@ -38,9 +38,10 @@ Process* Process::fork() {
             }
 
             // Map page to child
-            child->map_page(entry.key, page);
-        } else { // Unresolved page
-            /// TODO: [04.06.2022] Handle cloning of file mappings
+            child->map_page(entry.key, page, entry.value->shared);
+        } else if(entry.value->type == MemoryEntry::ANONYMOUS) { // Anonymous page
+            // Copy the memory entries
+            child->f_memorymap[entry.key] = entry.value;
         }
     }
     f_pager->unlock();

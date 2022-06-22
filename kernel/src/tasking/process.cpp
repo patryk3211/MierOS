@@ -90,7 +90,7 @@ Stream* Process::get_stream(fd_t fd) {
     return *val;
 }
 
-void Process::map_page(virtaddr_t addr, PhysicalPage& page) {
+void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared) {
     f_lock.lock();
     f_pager->lock();
 
@@ -100,7 +100,7 @@ void Process::map_page(virtaddr_t addr, PhysicalPage& page) {
     auto ptr = std::make_shared<MemoryEntry>();
     ptr->type = MemoryEntry::MEMORY;
     ptr->page = new PhysicalPage(page);
-    ptr->shared = false;
+    ptr->shared = shared;
     f_memorymap[addr] = ptr;
 
     f_pager->unlock();
@@ -110,20 +110,34 @@ void Process::map_page(virtaddr_t addr, PhysicalPage& page) {
 void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
     f_lock.lock();
 
-    auto ptr = std::make_shared<MemoryEntry>();
+    if((flags & MMAP_FLAG_SHARED) && prot != 0) {
+        // Shared mapping
+        for(size_t i = 0; i < length; ++i) {
+            auto ptr = std::make_shared<MemoryEntry>();
 
-    ptr->type = MemoryEntry::ANONYMOUS;
-    ptr->shared = flags & MMAP_FLAG_SHARED;
-    if(prot == 0) {
-        // This page is not accessible
-        ptr->page = nullptr;
+            ptr->type = MemoryEntry::ANONYMOUS;
+            ptr->shared = true;
+            ptr->page = new SharedAnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
+
+            f_memorymap[addr + (i << 12)] = ptr;
+        }
     } else {
-        // Use prot values
-        ptr->page = new AnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
-    }
+        auto ptr = std::make_shared<MemoryEntry>();
 
-    for(size_t i = 0; i < length; ++i)
-        f_memorymap[addr + (i << 12)] = ptr;
+        ptr->type = MemoryEntry::ANONYMOUS;
+        ptr->shared = false;
+
+        if(prot == 0) {
+            // This page is not accessible
+            ptr->page = nullptr;
+        } else {
+            // Use prot values
+            ptr->page = new AnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
+        }
+
+        for(size_t i = 0; i < length; ++i)
+            f_memorymap[addr + (i << 12)] = ptr;
+    }
 
     f_lock.unlock();
 }
