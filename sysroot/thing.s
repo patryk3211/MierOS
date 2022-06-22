@@ -18,6 +18,17 @@ _start:
     mov r8, 0
     int 0x8F
 
+    mov r15, rax
+
+    mov rbx, [moved_msg]
+    mov [r15], rbx
+
+    mov rax, 5
+    mov ebx, 1
+    mov rcx, r15
+    mov edx, 8
+    int 0x8F
+
     ; Fork
     mov eax, 6
     int 0x8F
@@ -47,3 +58,5 @@ msg_parent: db "Hello, Parent Process!", 10
 msg_parent_len: dd $ - msg_parent
 msg_child: db "Hello, Child Process!", 10
 msg_child_len: dd $ - msg_child
+
+moved_msg: db "beef", 10, 0, 0, 0

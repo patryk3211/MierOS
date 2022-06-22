@@ -24,7 +24,7 @@ namespace kernel {
 
         struct MemoryEntry {
             enum Type {
-                MEMORY, ANONYMOUS, FILE
+                MEMORY, ANONYMOUS, FILE, EMPTY
             } type;
             void* page;
             bool shared;
@@ -59,8 +59,9 @@ namespace kernel {
         virtaddr_t get_free_addr(virtaddr_t hint, size_t length);
         void map_page(virtaddr_t addr, PhysicalPage& page, bool shared);
         void alloc_pages(virtaddr_t addr, size_t length, int flags, int prot);
+        void null_pages(virtaddr_t addr, size_t length);
 
-        void handle_page_fault(virtaddr_t fault_address, u32_t code);
+        bool handle_page_fault(virtaddr_t fault_address, u32_t code);
 
         static Process* construct_kernel_process(virtaddr_t entry_point);
 

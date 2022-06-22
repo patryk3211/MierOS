@@ -201,6 +201,22 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
             state->r8);
         asm volatile("cli");
     } else if(state->int_num < 0x20) {
+        if(state->int_num == 0x0e) {
+            // Page fault, try to handle
+            auto* thread = kernel::Thread::current();
+            if(thread != 0) {
+                u64_t cr2;
+                asm volatile("mov %%cr2, %0" : "=a"(cr2));
+
+                auto& proc = thread->parent();
+
+                asm volatile("sti");
+                bool status = proc.handle_page_fault(cr2, state->err_code);
+                asm volatile("cli");
+                if(status) return (u64_t)state;
+            }
+        }
+
         kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
         cpu_state_dump(state);
         file_line_pair p = addr_to_line(state->rip);

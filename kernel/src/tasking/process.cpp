@@ -129,14 +129,7 @@ void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
 
         ptr->type = MemoryEntry::ANONYMOUS;
         ptr->shared = false;
-
-        if(prot == 0) {
-            // This page is not accessible
-            ptr->page = nullptr;
-        } else {
-            // Use prot values
-            ptr->page = new AnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
-        }
+        ptr->page = new AnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
 
         for(size_t i = 0; i < length; ++i)
             f_memorymap[addr + (i << 12)] = ptr;
@@ -145,12 +138,101 @@ void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
     f_lock.unlock();
 }
 
-void Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
+void Process::null_pages(virtaddr_t addr, size_t length) {
     f_lock.lock();
 
-    // Do the things...
+    auto ptr = std::make_shared<MemoryEntry>();
+
+    ptr->type = MemoryEntry::EMPTY;
+    ptr->shared = false;
+    ptr->page = nullptr;
+
+    for(size_t i = 0; i < length; ++i)
+        f_memorymap[addr + (i << 12)] = ptr;
 
     f_lock.unlock();
+}
+
+bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
+    // We are accessing restricted memory
+    if(fault_address >= KERNEL_START || fault_address == 0) return false;
+
+    Locker locker(f_lock);
+
+    // Get our mapping
+    auto mappingOpt = f_memorymap.at(fault_address & ~0xFFF);
+
+    // This is not mapped to anything
+    if(!mappingOpt) return false;
+    auto& mapping = *mappingOpt;
+
+    switch(mapping->type) {
+        case MemoryEntry::MEMORY: {
+            auto* page = (PhysicalPage*)mapping->page;
+
+            // Did we write a Copy-on-write page?
+            if((code & 0x02) && page->copy_on_write()) {
+                if(page->ref_count() > 1) {
+                    // Copy the page
+                    PhysicalPage new_page;
+                    f_pager->lock();
+                    auto vaddr = f_pager->kmap(new_page.addr(), 1, PageFlags(1, 1, 0, 0, 1, 0));
+
+                    memcpy((void*)vaddr, (void*)(fault_address & !0xFFF), 4096);
+
+                    // Remap our new page
+                    new_page.ref();
+                    new_page.flags() = page->flags();
+                    new_page.flags().writable = true;
+                    f_pager->map(new_page.addr(), fault_address & ~0xFFF, 1, new_page.flags());
+
+                    // Unmap the temp mapping
+                    f_pager->unmap(vaddr, 1);
+                    f_pager->unlock();
+
+                    // Change the page in mappings
+                    page->unref();
+                    delete page;
+                    mapping->page = new PhysicalPage(new_page);
+                } else {
+                    // We can just set the page as writable since it's the last reference
+                    f_pager->lock();
+                    page->copy_on_write() = false;
+                    page->flags().writable = true;
+                    f_pager->map(page->addr(), fault_address & ~0xFFF, 1, page->flags());
+                    f_pager->unlock();
+                }
+                return true;
+            }
+
+            if(code & 0x01) {
+                // This page was not present when the fault happened but it is now.
+                // Most likely another thread has caused a fault for this address
+                // and it has been handled succesfully, so we don't have to
+                // handle it again.
+                return true;
+            }
+
+            // We did some bad stuff
+            return false;
+        }
+        case MemoryEntry::EMPTY:
+            // You don't mess with the null pages
+            return false;
+        case MemoryEntry::ANONYMOUS: {
+            // Resolve the entry
+            auto page = ((UnresolvedPage*)mapping->page)->resolve(fault_address);
+            if(!page) return false;
+
+            /// TODO: IMPLEMENT A RECURSIVE LOCK
+            f_lock.unlock();
+            map_page(fault_address & ~0xFFF, page, mapping->shared);
+            f_lock.lock();
+            return true;
+        }
+    }
+
+    return false;
 }
 
 Process::MemoryEntry::~MemoryEntry() {
@@ -161,6 +243,8 @@ Process::MemoryEntry::~MemoryEntry() {
                 break;
             case MemoryEntry::MEMORY:
                 delete (PhysicalPage*)page;
+                break;
+            case MemoryEntry::EMPTY:
                 break;
         }
     }

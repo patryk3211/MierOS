@@ -28,20 +28,25 @@ Process* Process::fork() {
     // Copy the memory space
     f_pager->lock();
     for(auto entry : f_memorymap) {
-        if(entry.value->type == MemoryEntry::MEMORY) { // Memory page
-            // Set all writable pages as copy-on-write
-            PhysicalPage& page = *(PhysicalPage*)entry.value->page;
-            if(page.flags().writable && !entry.value->shared) {
-                page.flags().writable = false;
-                page.copy_on_write() = true;
-                f_pager->map(page.addr(), entry.key, 1, page.flags());
-            }
+        switch(entry.value->type) {
+            case MemoryEntry::MEMORY: {
+                // Set all writable pages as copy-on-write
+                PhysicalPage& page = *(PhysicalPage*)entry.value->page;
+                if(page.flags().writable && !entry.value->shared) {
+                    page.flags().writable = false;
+                    page.copy_on_write() = true;
+                    f_pager->map(page.addr(), entry.key, 1, page.flags());
+                }
 
-            // Map page to child
-            child->map_page(entry.key, page, entry.value->shared);
-        } else if(entry.value->type == MemoryEntry::ANONYMOUS) { // Anonymous page
-            // Copy the memory entries
-            child->f_memorymap[entry.key] = entry.value;
+                // Map page to child
+                child->map_page(entry.key, page, entry.value->shared);
+                break;
+            }
+            case MemoryEntry::EMPTY:
+            case MemoryEntry::ANONYMOUS:
+                // Copy the memory entries
+                child->f_memorymap[entry.key] = entry.value;
+                break;
         }
     }
     f_pager->unlock();
