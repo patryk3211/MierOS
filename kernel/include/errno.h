@@ -17,7 +17,7 @@ typedef int err_t;
 #define ERR_DEVICE_DOES_NOT_EXIST (err_t)6
 #define ERR_MOUNT_FAILED (err_t)7
 #define ERR_NOT_LINK (err_t)8
-#define ERR_INVALID_FD (err_t)9
+#define ERR_INVALID (err_t)9
 #define ERR_NO_MEMORY (err_t)10
 
 #if defined(__cplusplus)

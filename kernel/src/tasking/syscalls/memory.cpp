@@ -5,17 +5,14 @@
 using namespace kernel;
 
 syscall_arg_t syscall_mmap(Process& proc, syscall_arg_t ptr, syscall_arg_t length, syscall_arg_t prot, syscall_arg_t flags, syscall_arg_t fd, syscall_arg_t offset) {
-    virtaddr_t addr = 0;
     size_t page_len = (length >> 12) + ((length & 0xFFF) == 0 ? 0 : 1);
-    if(ptr != 0) {
-        /// TODO: Validate the ptr and select the address based on it.
-        return -ERR_UNIMPLEMENTED;
-    } else {
-        proc.pager().lock();
-        addr = proc.pager().getFreeRange(MMAP_MIN_ADDR, page_len);
-        proc.pager().unlock();
-        if(addr == 0 || addr >= KERNEL_START) return -ERR_NO_MEMORY;
-    }
+
+    /// TODO: This can only happen if FIXED flag is not specified, otherwise if the address is not aligned, this syscall should fail
+    ptr = ptr & ~0xFFF;
+    if(ptr < MMAP_MIN_ADDR || ptr >= KERNEL_START ||
+        ptr + (page_len << 12) > KERNEL_START || ptr + (page_len) < ptr) return -ERR_INVALID;
+
+    virtaddr_t addr = proc.get_free_addr(ptr, page_len);
 
     if(flags & MMAP_FLAG_ANONYMOUS) {
         // No file backing this mapping

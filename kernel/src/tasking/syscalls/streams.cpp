@@ -38,7 +38,7 @@ syscall_arg_t syscall_close(Process& proc, syscall_arg_t fd) {
 
 syscall_arg_t syscall_read(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -ERR_INVALID_FD;
+    if(stream == 0) return -ERR_INVALID;
 
     /// TODO: [16.04.2022] Check if ptr isn't outside of the program memory
 
@@ -48,7 +48,7 @@ syscall_arg_t syscall_read(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, s
 
 syscall_arg_t syscall_write(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -ERR_INVALID_FD;
+    if(stream == 0) return -ERR_INVALID;
 
     /// TODO: [16.04.2022] Check if ptr isn't outside of the program memory
 
@@ -58,7 +58,7 @@ syscall_arg_t syscall_write(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, 
 
 syscall_arg_t syscall_seek(Process& proc, syscall_arg_t fd, syscall_arg_t pos, syscall_arg_t mode) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -ERR_INVALID_FD;
+    if(stream == 0) return -ERR_INVALID;
 
     return stream->seek(pos, mode);
 }

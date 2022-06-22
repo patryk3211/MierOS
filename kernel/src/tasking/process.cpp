@@ -4,6 +4,7 @@
 #include <tasking/scheduler.hpp>
 #include <tasking/syscalls/map.hpp>
 #include <memory/page/anonpage.hpp>
+#include <locking/locker.hpp>
 
 using namespace kernel;
 
@@ -12,6 +13,7 @@ Process::Process(virtaddr_t entry_point, Pager* pager)
     , f_workingDirectory("/") {
     f_threads.push_back(new Thread(entry_point, true, *this));
     f_next_fd = 0;
+    f_first_free = MMAP_MIN_ADDR;
 }
 
 Process::Process(virtaddr_t entry_point)
@@ -19,6 +21,7 @@ Process::Process(virtaddr_t entry_point)
     , f_workingDirectory("/") {
     f_threads.push_back(new Thread(entry_point, false, *this));
     f_next_fd = 0;
+    f_first_free = MMAP_MIN_ADDR;
 }
 
 Process* Process::construct_kernel_process(virtaddr_t entry_point) {
@@ -161,4 +164,24 @@ Process::MemoryEntry::~MemoryEntry() {
                 break;
         }
     }
+}
+
+virtaddr_t Process::get_free_addr(virtaddr_t hint, size_t length) {
+    Locker locker(f_lock);
+
+    virtaddr_t addr = hint != 0 ? hint : f_first_free;
+
+    while(addr < KERNEL_START) {
+        for(size_t i = 0; i < length; ++i) {
+            auto val = f_memorymap.at(addr + (i << 12));
+            if(val) {
+                addr += 4096 * (i + 1);
+                goto again;
+            }
+        }
+        return addr;
+    again:;
+    }
+
+    return 0;
 }

@@ -8,7 +8,7 @@ namespace kernel {
         PageFlags f_flags;
     public:
         AnonymousPage(const PageFlags& flags);
-        ~AnonymousPage() = default;
+        virtual ~AnonymousPage() = default;
 
         virtual PhysicalPage resolve(virtaddr_t addr);
     };
@@ -17,7 +17,7 @@ namespace kernel {
         PhysicalPage f_page;
     public:
         SharedAnonymousPage(const PageFlags& flags);
-        ~SharedAnonymousPage() = default;
+        virtual ~SharedAnonymousPage() = default;
 
         virtual PhysicalPage resolve(virtaddr_t addr);
     };

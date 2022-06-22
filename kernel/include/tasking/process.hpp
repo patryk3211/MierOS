@@ -32,6 +32,7 @@ namespace kernel {
             ~MemoryEntry();
         };
 
+        virtaddr_t f_first_free;
         std::UnorderedMap<virtaddr_t, std::SharedPtr<MemoryEntry>> f_memorymap;
 
         SpinLock f_lock;
@@ -55,6 +56,7 @@ namespace kernel {
 
         Process* fork();
 
+        virtaddr_t get_free_addr(virtaddr_t hint, size_t length);
         void map_page(virtaddr_t addr, PhysicalPage& page, bool shared);
         void alloc_pages(virtaddr_t addr, size_t length, int flags, int prot);
 
