@@ -39,6 +39,8 @@ namespace kernel {
 
         Process(virtaddr_t entry_point, Pager* kern_pager);
 
+        void set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry);
+
     public:
         Process(virtaddr_t entry_point);
         ~Process();
@@ -60,6 +62,7 @@ namespace kernel {
         void map_page(virtaddr_t addr, PhysicalPage& page, bool shared);
         void alloc_pages(virtaddr_t addr, size_t length, int flags, int prot);
         void null_pages(virtaddr_t addr, size_t length);
+        void unmap_pages(virtaddr_t addr, size_t length);
 
         bool handle_page_fault(virtaddr_t fault_address, u32_t code);
 

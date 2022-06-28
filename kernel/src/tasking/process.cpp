@@ -93,6 +93,19 @@ Stream* Process::get_stream(fd_t fd) {
     return *val;
 }
 
+void Process::set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry) {
+    auto currentEntryOpt = f_memorymap.at(addr);
+    if(currentEntryOpt) {
+        auto currentEntry = *currentEntryOpt;
+        if(currentEntry->type == MemoryEntry::MEMORY) {
+            f_pager->lock();
+            f_pager->unmap(addr, 1);
+            f_pager->unlock();
+        }
+    }
+    f_memorymap[addr] = entry;
+}
+
 void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared) {
     f_lock.lock();
     f_pager->lock();
@@ -104,9 +117,10 @@ void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared) {
     ptr->type = MemoryEntry::MEMORY;
     ptr->page = new PhysicalPage(page);
     ptr->shared = shared;
-    f_memorymap[addr] = ptr;
 
     f_pager->unlock();
+    set_page_mapping(addr, ptr);
+
     f_lock.unlock();
 }
 
@@ -122,7 +136,7 @@ void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
             ptr->shared = true;
             ptr->page = new SharedAnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
 
-            f_memorymap[addr + (i << 12)] = ptr;
+            set_page_mapping(addr + (i << 12), ptr);
         }
     } else {
         auto ptr = std::make_shared<MemoryEntry>();
@@ -132,7 +146,7 @@ void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
         ptr->page = new AnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
 
         for(size_t i = 0; i < length; ++i)
-            f_memorymap[addr + (i << 12)] = ptr;
+            set_page_mapping(addr + (i << 12), ptr);
     }
 
     f_lock.unlock();
@@ -148,7 +162,7 @@ void Process::null_pages(virtaddr_t addr, size_t length) {
     ptr->page = nullptr;
 
     for(size_t i = 0; i < length; ++i)
-        f_memorymap[addr + (i << 12)] = ptr;
+        set_page_mapping(addr + (i << 12), ptr);
 
     f_lock.unlock();
 }
@@ -268,4 +282,25 @@ virtaddr_t Process::get_free_addr(virtaddr_t hint, size_t length) {
     }
 
     return 0;
+}
+
+void Process::unmap_pages(virtaddr_t addr, size_t length) {
+    f_lock.lock();
+    f_pager->lock();
+
+    for(size_t i = 0; i < length; ++i) {
+        virtaddr_t key = addr + (i << 12);
+        auto entryOpt = f_memorymap.at(key);
+        if(entryOpt) {
+            auto& entry = *entryOpt;
+            if(entry->type == MemoryEntry::MEMORY) {
+                // Only memory mappings exist in the pager
+                f_pager->unmap(key, 1);
+            }
+            f_memorymap.erase(key);
+        }
+    }
+
+    f_pager->unlock();
+    f_lock.unlock();
 }

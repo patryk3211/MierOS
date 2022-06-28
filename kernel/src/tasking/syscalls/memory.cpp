@@ -26,3 +26,14 @@ syscall_arg_t syscall_mmap(Process& proc, syscall_arg_t ptr, syscall_arg_t lengt
 
     return addr;
 }
+
+syscall_arg_t syscall_munmap(Process& proc, syscall_arg_t ptr, syscall_arg_t length) {
+    size_t page_len = (length >> 12) + ((length & 0xFFF) == 0 ? 0 : 1);
+
+    // Validate the pointer
+    ptr = ptr & ~0xFFF;
+    if(ptr < MMAP_MIN_ADDR || ptr >= KERNEL_START || ptr + (page_len << 12) > KERNEL_START || ptr + (page_len << 12) < ptr) return -ERR_INVALID;
+
+    proc.unmap_pages(ptr, page_len);
+    return 0;
+}
