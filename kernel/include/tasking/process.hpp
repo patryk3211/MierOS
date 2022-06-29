@@ -8,6 +8,7 @@
 #include <memory/ppage.hpp>
 #include <tasking/syscall.h>
 #include <shared_pointer.hpp>
+#include <memory/page/filepage.hpp>
 
 namespace kernel {
     class Process {
@@ -24,7 +25,7 @@ namespace kernel {
 
         struct MemoryEntry {
             enum Type {
-                MEMORY, ANONYMOUS, FILE, EMPTY
+                MEMORY, ANONYMOUS, FILE, FILE_MEMORY, EMPTY
             } type;
             void* page;
             bool shared;
@@ -62,6 +63,7 @@ namespace kernel {
         void map_page(virtaddr_t addr, PhysicalPage& page, bool shared);
         void alloc_pages(virtaddr_t addr, size_t length, int flags, int prot);
         void null_pages(virtaddr_t addr, size_t length);
+        void file_pages(virtaddr_t addr, size_t length, FilePage* page);
         void unmap_pages(virtaddr_t addr, size_t length);
 
         bool handle_page_fault(virtaddr_t fault_address, u32_t code);

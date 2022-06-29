@@ -38,3 +38,11 @@ ValueOrError<size_t> Filesystem::write(FileStream*, const void*, size_t) {
 ValueOrError<size_t> Filesystem::seek(FileStream*, size_t, int) {
     return ERR_UNIMPLEMENTED;
 }
+
+PhysicalPage Filesystem::resolve_mapping(const FilePage&, virtaddr_t) {
+    return nullptr;
+}
+
+void Filesystem::sync_mapping(const MemoryFilePage&) {
+
+}

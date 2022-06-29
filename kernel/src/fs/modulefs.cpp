@@ -96,3 +96,30 @@ ValueOrError<size_t> ModuleFilesystem::seek(FileStream* stream, size_t position,
     else
         return ERR_UNIMPLEMENTED;
 }
+
+PhysicalPage ModuleFilesystem::resolve_mapping(const FilePage& mapping, virtaddr_t addr) {
+    auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->resolve_mapping;
+    if(func != 0)
+        return func(minor, mapping, addr);
+    else
+        return nullptr;
+/*
+    auto vnode = mapping.file();
+
+    // Default mmap behaviour
+    size_t file_offset = addr - mapping.start_addr() + mapping.offset();
+
+    // Check if range is already mapped as shared somewhere
+    auto pageOpt = vnode->f_shared_pages.at(file_offset);
+    if(pageOpt) {
+        // We have a mapping (flags will be handled in process resolve function)
+        return *pageOpt;
+    }
+
+    // Read file range into a page*/
+}
+
+void ModuleFilesystem::sync_mapping(const MemoryFilePage& mapping) {
+    auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->sync_mapping;
+    if(func != 0) return func(minor, mapping);
+}

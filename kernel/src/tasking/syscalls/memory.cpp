@@ -1,5 +1,6 @@
 #include <tasking/syscall.h>
 #include <tasking/syscalls/map.hpp>
+#include <streams/filestream.hpp>
 #include <errno.h>
 
 using namespace kernel;
@@ -22,7 +23,24 @@ syscall_arg_t syscall_mmap(Process& proc, syscall_arg_t ptr, syscall_arg_t lengt
     if(flags & MMAP_FLAG_ANONYMOUS) {
         // No file backing this mapping
         proc.alloc_pages(addr, page_len, flags, prot);
+        return addr;
     }
+
+    auto* stream = proc.get_stream(fd);
+    if(stream->type() != STREAM_TYPE_FILE) {
+        // The file descriptor has to refer to a file
+        return -ERR_INVALID;
+    }
+
+    if((offset & 0xFFF) != 0) {
+        // Offset has to be page aligned
+        return -ERR_INVALID;
+    }
+
+    FileStream* fstream = (FileStream*)stream;
+    FilePage* page = new FilePage(fstream->node(), addr, offset, (flags & MMAP_FLAG_SHARED), (prot & MMAP_PROT_WRITE), (prot & MMAP_PROT_EXEC));
+
+    proc.file_pages(addr, page_len, page);
 
     return addr;
 }

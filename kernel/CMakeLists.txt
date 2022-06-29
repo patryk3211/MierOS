@@ -31,7 +31,9 @@ set(KERNEL_SOURCES src/init.cpp
                    src/streams/stream.cpp
                    src/streams/filestream.cpp
                    src/memory/page/unresolvedpage.cpp
-                   src/memory/page/anonpage.cpp)
+                   src/memory/page/anonpage.cpp
+                   src/memory/page/filepage.cpp
+                   src/memory/page/memoryfilepage.cpp)
 
 set(TESTS_SOURCES src/tests/test.cpp
                   src/tests/memory.cpp

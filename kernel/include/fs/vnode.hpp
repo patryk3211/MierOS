@@ -40,6 +40,8 @@ namespace kernel {
         std::SharedPtr<VNode> f_parent;
         std::UnorderedMap<std::String<>, std::SharedPtr<VNode>> f_children;
 
+        std::UnorderedMap<size_t, PhysicalPage> f_shared_pages;
+
         VNodeDataStorage* fs_data;
 
     private:
