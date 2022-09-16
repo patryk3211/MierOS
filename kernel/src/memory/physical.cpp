@@ -43,11 +43,15 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
     physaddr_t max_address = 0;
     for(u64_t i = 0; i < memory_map->entry_count; ++i) {
         kprintf("[%T] (Kernel) %x16 %x16 %x8\n", memory_map->entries[i].base, memory_map->entries[i].length, memory_map->entries[i].type);
-        if(max_address < memory_map->entries[i].base) max_address = memory_map->entries[i].base;
+        if(max_address < memory_map->entries[i].base && memory_map->entries[i].type != STIVALE2_MEMMAP_TYPE_RESERVED) max_address = memory_map->entries[i].base;
     }
     u32_t gb_page_count = (max_address >> 32) + ((max_address & 0xFFFFFFFF) == 0 ? 0 : 1);
 
     // Allocate the required status pages and set all memory as used.
+
+    /// TODO: [16.09.2022] Why would I ever think this was a good idea,
+    /// fix this cause if there is too much memory everything dies,
+    /// cause the initial heap is not big enough
     status_pages = new page_4gb_status_struct[gb_page_count];
     for(u32_t i = 0; i < gb_page_count; ++i) memset(status_pages[i].used_bitmap, 0xFF, sizeof(page_4gb_status_struct));
 

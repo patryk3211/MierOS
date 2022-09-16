@@ -36,7 +36,9 @@ fs_function_table fs_func_tab {
     .open = &open,
     .close = &close,
 
-    .read = &read
+    .read = &read,
+
+    .resolve_mapping = &resolve_mapping
 };
 
 u16_t mod_major;

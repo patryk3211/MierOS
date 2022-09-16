@@ -268,7 +268,6 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
             size_t offset = (fault_address - file_mapping->start_addr()) & ~0xFFF;
             MemoryFilePage* resolved_mapping = new MemoryFilePage(file_mapping->file(), page, offset);
 
-            page.flags() = file_mapping->flags();
             if(page.ref_count() != 0 && !file_mapping->shared() && file_mapping->writable()) {
                 // Make a copy-on-write file mapping
                 resolved_mapping->f_copy_on_write = true;
@@ -283,7 +282,7 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
             f_pager->lock();
             page.ref();
 
-            PageFlags flags = page.flags();
+            PageFlags flags = file_mapping->flags();
             if(resolved_mapping->f_copy_on_write) {
                 // Cannot be writable if copy-on-write
                 flags.writable = false;

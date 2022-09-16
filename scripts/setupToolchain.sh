@@ -13,7 +13,7 @@ GCC_NAME="gcc-10.2.0"
 GCC_PKG="$GCC_NAME.tar.gz"
 GCC_MD5="941a8674ea2eeb33f5c30ecf08124874"
 
-sudo apt-get install cmake nasm curl qemu-system binutils gcc g++ build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo hxtools autoconf automake-1.15 libtool
+#sudo apt-get install cmake nasm curl qemu-system binutils gcc g++ build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo hxtools autoconf automake-1.15 libtool
 
 mkdir -p cross
 cd cross
@@ -96,12 +96,12 @@ cd MierOSDebugExporter
 cmake -S . -B build
 cmake --build build --target all
 
-cp build/debug-exporter ../cross
+cp build/debug-exporter ..
 cd ..
 
 rm -rf MierOSDebugExporter
 
-mkdir -p sysroot/dev
+mkdir -p ../sysroot/dev
 
 #cp -r host-binutils-conf/* binutils-2.35/
 #cp -r host-gcc-conf/* gcc-10.2.0/

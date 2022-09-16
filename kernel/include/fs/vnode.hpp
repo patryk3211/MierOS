@@ -56,7 +56,10 @@ namespace kernel {
         ~VNode();
 
         u64_t size() { return f_size; }
+
         Filesystem* filesystem() { return f_filesystem; }
+        const Filesystem* filesystem() const { return f_filesystem; }
+
         Type type() { return f_type; }
 
         const std::String<>& name() const { return f_name; }

@@ -9,5 +9,5 @@ MemoryFilePage::MemoryFilePage(const VNodePtr& file, const PhysicalPage& page, s
 }
 
 MemoryFilePage::~MemoryFilePage() {
-
+    f_page.unref();
 }

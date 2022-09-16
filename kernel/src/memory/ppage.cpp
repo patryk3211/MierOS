@@ -15,11 +15,20 @@ PhysicalPage::PhysicalPage() {
 PhysicalPage::~PhysicalPage() {
     if(data == 0) return;
 
-    if(data->f_ref_count.load() == 0 && data->f_addr != 0) {
+    // Only free the page once all references to the object itself are gone
+    if(data->f_obj_ref_count.fetch_sub(1) == 1) {
+        if(data->f_ref_count.load() == 0 && data->f_addr != 0) {
+            pfree(data->f_addr, 1);
+            data->f_addr = 0;
+        }
+        delete data;
+    }
+
+    /*if(data->f_ref_count.load() == 0 && data->f_addr != 0) {
         pfree(data->f_addr, 1);
         data->f_addr = 0;
     }
-    if(data->f_obj_ref_count.fetch_sub(1) == 1) delete data;
+    if(data->f_obj_ref_count.fetch_sub(1) == 1) delete data;*/
 }
 
 PhysicalPage::PhysicalPage(std::nullptr_t) {
