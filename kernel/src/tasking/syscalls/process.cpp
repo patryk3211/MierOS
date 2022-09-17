@@ -3,6 +3,7 @@
 #include <arch/interrupts.h>
 #include <memory/page/memoryfilepage.hpp>
 #include <tasking/syscalls/map.hpp>
+#include <fs/vfs.hpp>
 
 using namespace kernel;
 
@@ -19,8 +20,21 @@ syscall_arg_t syscall_fork(Process& proc) {
     return child->main_thread()->pid();
 }
 
-syscall_arg_t syscall_execve(Process& proc) {
-    
+syscall_arg_t syscall_execve(Process& proc, syscall_arg_t filename, syscall_arg_t argv, syscall_arg_t envp) {
+    const char* path = (const char*)filename;
+
+    VNodePtr file;
+    if(path[0] == '/') {
+        auto ret = VFS::instance()->get_file(nullptr, path, {});
+        if(!ret) return -ret.errno();
+        file = *ret;
+    } else {
+        auto ret = VFS::instance()->get_file(nullptr, (proc.cwd() + path).c_str(), {});
+        if(!ret) return -ret.errno();
+        file = *ret;
+    }
+
+    return proc.execve(file, (char**)argv, (char**)envp);
 }
 
 Process* Process::fork() {
@@ -49,11 +63,28 @@ Process* Process::fork() {
                 child->map_page(entry.key, page, entry.value->shared);
                 break;
             }
+            case MemoryEntry::FILE:
             case MemoryEntry::EMPTY:
             case MemoryEntry::ANONYMOUS:
                 // Copy the memory entries
                 child->f_memorymap[entry.key] = entry.value;
                 break;
+            case MemoryEntry::FILE_MEMORY: {
+                MemoryFilePage& page = *(MemoryFilePage*)entry.value->page;
+                if(page.f_flags.writable && !entry.value->shared) {
+                    page.f_copy_on_write = true;
+                    page.f_flags.writable = false;
+                    f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
+                }
+
+                child->f_pager->lock();
+                auto memoryEntry = std::make_shared<MemoryEntry>(*entry.value);
+                memoryEntry->page = new MemoryFilePage(page);
+                child->f_memorymap[entry.key] = memoryEntry;
+                child->f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
+                child->f_pager->unlock();
+                break;
+            }
         }
     }
     f_pager->unlock();

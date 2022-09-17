@@ -268,9 +268,12 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
             size_t offset = (fault_address - file_mapping->start_addr()) & ~0xFFF;
             MemoryFilePage* resolved_mapping = new MemoryFilePage(file_mapping->file(), page, offset);
 
+            resolved_mapping->f_flags = file_mapping->flags();
+
             if(page.ref_count() != 0 && !file_mapping->shared() && file_mapping->writable()) {
                 // Make a copy-on-write file mapping
                 resolved_mapping->f_copy_on_write = true;
+                resolved_mapping->f_flags.writable = false;
             }
 
             // Map the page
@@ -282,13 +285,7 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
             f_pager->lock();
             page.ref();
 
-            PageFlags flags = file_mapping->flags();
-            if(resolved_mapping->f_copy_on_write) {
-                // Cannot be writable if copy-on-write
-                flags.writable = false;
-            }
-
-            f_pager->map(page.addr(), fault_address & ~0xFFF, 1, flags);
+            f_pager->map(page.addr(), fault_address & ~0xFFF, 1, resolved_mapping->f_flags);
             f_pager->unlock();
 
             set_page_mapping(fault_address & ~0xFFF, ptr);
@@ -309,9 +306,8 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
 
                     // Remap our new page
                     new_page.ref();
-                    new_page.flags() = page.flags();
-                    new_page.flags().writable = true;
-                    f_pager->map(new_page.addr(), fault_address & ~0xFFF, 1, new_page.flags());
+                    file_mapping->f_flags.writable = true;
+                    f_pager->map(new_page.addr(), fault_address & ~0xFFF, 1, file_mapping->f_flags);
 
                     // Unmap the temp mapping
                     f_pager->unmap(vaddr, 1);
@@ -329,9 +325,9 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
 
                     // Remap
                     f_pager->lock();
-                    page.flags().writable = true;
+                    file_mapping->f_flags.writable = true;
                     file_mapping->f_copy_on_write = false;
-                    f_pager->map(page.addr(), fault_address & ~0xFFF, 1, page.flags());
+                    f_pager->map(page.addr(), fault_address & ~0xFFF, 1, file_mapping->f_flags);
                     f_pager->unlock();
                 }
                 return true;

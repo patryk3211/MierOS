@@ -10,6 +10,7 @@ namespace kernel {
         size_t f_offset;
         bool f_copy_on_write;
         bool f_dirty;
+        PageFlags f_flags;
 
         MemoryFilePage(const VNodePtr& file, const PhysicalPage& page, size_t offset);
         ~MemoryFilePage();
