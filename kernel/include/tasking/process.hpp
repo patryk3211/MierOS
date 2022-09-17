@@ -58,6 +58,7 @@ namespace kernel {
         Stream* get_stream(fd_t fd);
 
         Process* fork();
+        ValueOrError<void> execve(const VNodePtr& file, char* argv[], char* envp[]);
 
         virtaddr_t get_free_addr(virtaddr_t hint, size_t length);
         void map_page(virtaddr_t addr, PhysicalPage& page, bool shared);

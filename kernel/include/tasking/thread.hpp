@@ -80,6 +80,8 @@ namespace kernel {
 
         Process& parent() { return f_parent; }
 
+        void make_ks(virtaddr_t ip);
+
         static Thread* current();
 
         friend class Scheduler;

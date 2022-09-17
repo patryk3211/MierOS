@@ -395,9 +395,22 @@ void Process::unmap_pages(virtaddr_t addr, size_t length) {
         auto entryOpt = f_memorymap.at(key);
         if(entryOpt) {
             auto& entry = *entryOpt;
-            if(entry->type == MemoryEntry::MEMORY) {
-                // Unmap a memory mapping
-                f_pager->unmap(key, 1);
+            switch(entry->type) {
+                case MemoryEntry::MEMORY: {
+                    // Unmap a memory mapping
+                    f_pager->unmap(key, 1);
+                    break;
+                } case MemoryEntry::FILE_MEMORY: {
+                    // Unmap a file memory mapping
+                    f_pager->unmap(key, 1);
+
+                    // Sync the mapping to disk (if shared)
+                    if(entry->shared) {
+                        auto resolved_mapping = (MemoryFilePage*)entry->page;
+                        resolved_mapping->f_file->filesystem()->sync_mapping(*resolved_mapping);
+                    }
+                    break;
+                } default: break;
             }
             f_memorymap.erase(key);
         }

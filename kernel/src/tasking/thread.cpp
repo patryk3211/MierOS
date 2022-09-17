@@ -79,3 +79,16 @@ void Thread::schedule_finalization() {
     f_state = DEAD;
     // At this point, if this thread is the current thread, it can get safely put out of the scheduler list.
 }
+
+void Thread::make_ks(virtaddr_t ip) {
+    f_ksp = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
+
+    memset(f_ksp, 0, sizeof(CPUState));
+
+    f_ksp->cr3 = f_parent.pager().cr3();
+    f_ksp->rip = ip;
+    f_ksp->rflags = 0x202;
+
+    f_ksp->cs = 0x1B;
+    f_ksp->ss = 0x23;
+}
