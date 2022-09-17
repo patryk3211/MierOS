@@ -73,7 +73,7 @@ u64_t get_ioapic_intentry(u8_t globalSystemInterrupt) {
 
             map_ioapic(apic);
             u64_t entry = read_ioapic(apic, 0x10 + entryOffset * 2);
-            entry |= read_ioapic(apic, 0x11 + entryOffset * 2) << 32;
+            entry |= (u64_t)read_ioapic(apic, 0x11 + entryOffset * 2) << 32;
             unmap_ioapic(apic);
 
             return entry;

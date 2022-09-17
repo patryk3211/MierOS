@@ -224,7 +224,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         size_t page_size = (procFile->f_size >> 12) + ((procFile->f_size & 0xFFF) == 0 ? 0 : 1);
         auto* proc = new kernel::Process(0x1000000);
 
-        for(int i = 0; i < page_size; ++i) {
+        for(size_t i = 0; i < page_size; ++i) {
             kernel::PhysicalPage page;
             page.flags().executable = true;
             page.flags().user_accesible = true;

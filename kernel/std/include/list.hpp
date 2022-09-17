@@ -281,7 +281,7 @@ namespace std {
         }
 
         bool contains(const T& value) {
-            for(Entry* e = static_cast<Entry*>(head.next); e != &tail; e = e->next) {
+            for(Entry* e = static_cast<Entry*>(head.next); e != &tail; e = static_cast<Entry*>(e->next)) {
                 if(e->value == value) return true;
             }
             return false;
