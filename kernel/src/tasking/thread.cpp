@@ -81,14 +81,14 @@ void Thread::schedule_finalization() {
 }
 
 void Thread::make_ks(virtaddr_t ip) {
-    f_ksp = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
+    f_syscall_state = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 
-    memset(f_ksp, 0, sizeof(CPUState));
+    memset(f_syscall_state, 0, sizeof(CPUState));
 
-    f_ksp->cr3 = f_parent.pager().cr3();
-    f_ksp->rip = ip;
-    f_ksp->rflags = 0x202;
+    f_syscall_state->cr3 = f_parent.pager().cr3();
+    f_syscall_state->rip = ip;
+    f_syscall_state->rflags = 0x202;
 
-    f_ksp->cs = 0x1B;
-    f_ksp->ss = 0x23;
+    f_syscall_state->cs = 0x1B;
+    f_syscall_state->ss = 0x23;
 }

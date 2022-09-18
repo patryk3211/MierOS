@@ -34,6 +34,10 @@ void Scheduler::pre_syscall(CPUState* current_state) {
     Thread::current()->f_syscall_state = current_state;
 }
 
+CPUState* Scheduler::post_syscall() {
+    return Thread::current()->f_syscall_state;
+}
+
 CPUState* Scheduler::schedule(CPUState* current_state) {
     // Try to obtain a lock on the thread queue.
     if(!queue_lock.try_lock()) {

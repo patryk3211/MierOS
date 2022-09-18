@@ -186,15 +186,15 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
             return count;
         };
 
-        size_t argCount = sizeCount(argv);
-        size_t envCount = sizeCount(envp);
+        size_t argCount = argv != 0 ? sizeCount(argv) : 0;
+        size_t envCount = envp != 0 ? sizeCount(envp) : 0;
 
         auto& pager = Pager::active();
         pager.lock();
 
         // Then allocate our pages and map them continuously
         size_t pageCount = (totalMoveSize >> 12) + ((totalMoveSize & 0xFFF) == 0 ? 0 : 1);
-        virtaddr_t startAddr = pager.getFreeRange(0, pageCount);
+        virtaddr_t startAddr = pager.getFreeRange(0x1000, pageCount);
 
         for(size_t i = 0; i < pageCount; ++i) {
             PhysicalPage page;
@@ -219,6 +219,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                 memcpy((void*)(startAddr + dataOffset), data[i], entryLen);
                 dataOffset += entryLen;
             }
+
+            ((uintptr_t*)(startAddr + start))[count] = 0;
 
             // Align the data offset for next move
             if(dataOffset & 7)
@@ -273,7 +275,9 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     // Map a file segment here
                     FilePage* page = new FilePage(file, header.vaddr, header.offset, !(header.flags & 2), header.flags & 2, header.flags & 1);
 
+                    f_lock.unlock();
                     file_pages(header.vaddr, filePages, page);
+                    f_lock.lock();
                 }
 
                 size_t pagesLeft = pageCount - filePages;
@@ -282,7 +286,9 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     int prot = 1;
                     prot |= (header.flags & 2) ? MMAP_PROT_WRITE : 0;
                     prot |= (header.flags & 1) ? MMAP_PROT_EXEC : 0;
+                    f_lock.unlock();
                     alloc_pages(header.vaddr + (filePages << 12), pagesLeft, 0, prot);
+                    f_lock.lock();
                 }
 
                 if(start > header.vaddr) start = header.vaddr;
@@ -300,7 +306,11 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     {
         virtaddr_t address = argumentStart;
         for(auto& page : argumentPages) {
+            f_pager->unlock();
+            f_lock.unlock();
             map_page(address, page, false);
+            f_lock.lock();
+            f_pager->lock();
             address += (1 << 12);
         }
 
@@ -320,6 +330,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     thisThread->make_ks(header.entry_point);
     thisThread->f_ksp->rsi = argumentStart;
     thisThread->f_ksp->rdi = argumentStart + envpOffset;
+
+    f_lock.unlock();
 
     // We will now return into our new state
     return 0;

@@ -192,7 +192,7 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
         kernel::Scheduler::pre_syscall(state);
 
         asm volatile("sti");
-        state->rax = _sh(state->rax,
+        syscall_arg_t rax = _sh(state->rax,
             state->rbx,
             state->rcx,
             state->rdx,
@@ -200,6 +200,9 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
             state->rdi,
             state->r8);
         asm volatile("cli");
+
+        state = kernel::Scheduler::post_syscall();
+        state->rax = rax;
     } else if(state->int_num < 0x20) {
         if(state->int_num == 0x0e) {
             // Page fault, try to handle

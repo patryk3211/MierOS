@@ -38,6 +38,13 @@ _start:
     mov rdx, 8
     int 0x8F
 
+    ; Execute 'thing3'
+    mov rax, 10
+    mov rbx, execfile
+    mov rcx, 0
+    mov rdx, 0
+    int 0x8F
+
     ; Exit
     mov rax, 1
     mov rbx, 0
@@ -45,6 +52,7 @@ _start:
 
 section .data
 filename: db "/thing2.s", 0
+execfile: db "/thing3", 0
 
 section .bss
 buffer: resb 8

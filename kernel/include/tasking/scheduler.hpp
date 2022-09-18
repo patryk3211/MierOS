@@ -36,6 +36,7 @@ namespace kernel {
         static void remove_thread(Thread* thread);
 
         static void pre_syscall(CPUState* current_state);
+        static CPUState* post_syscall();
 
         bool is_idle() { return _is_idle; }
 

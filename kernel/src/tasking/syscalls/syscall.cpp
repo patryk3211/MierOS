@@ -20,6 +20,7 @@ extern syscall_arg_t syscall_fork(Process& proc);
 extern syscall_arg_t syscall_seek(Process& proc, syscall_arg_t fd, syscall_arg_t pos, syscall_arg_t mode);
 extern syscall_arg_t syscall_mmap(Process& proc, syscall_arg_t ptr, syscall_arg_t length, syscall_arg_t prot, syscall_arg_t flags, syscall_arg_t fd, syscall_arg_t offset);
 extern syscall_arg_t syscall_munmap(Process& proc, syscall_arg_t ptr, syscall_arg_t length);
+extern syscall_arg_t syscall_execve(Process& proc, syscall_arg_t filename, syscall_arg_t argv, syscall_arg_t envp);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
@@ -33,6 +34,7 @@ extern "C" void init_syscalls() {
     syscall_table[7] = (syscall_func_t*)&syscall_seek;
     syscall_table[8] = (syscall_func_t*)&syscall_mmap;
     syscall_table[9] = (syscall_func_t*)&syscall_munmap;
+    syscall_table[10] = (syscall_func_t*)&syscall_execve;
 
     register_syscall_handler(&run_syscall);
 }
