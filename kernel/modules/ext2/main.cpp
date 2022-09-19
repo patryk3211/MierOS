@@ -36,7 +36,9 @@ fs_function_table fs_func_tab {
     .open = &open,
     .close = &close,
 
-    .read = &read
+    .read = &read,
+
+    .resolve_mapping = &resolve_mapping
 };
 
 u16_t mod_major;
@@ -44,7 +46,7 @@ u16_t minor_num;
 std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
 extern "C" int init() {
-    mod_major = kernel::Thread::current()->current_module->major();
+    mod_major = kernel::Thread::current()->f_current_module->major();
     minor_num = 0;
     return 0;
 }

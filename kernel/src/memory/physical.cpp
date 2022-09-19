@@ -7,7 +7,7 @@
 
 #include <locking/locker.hpp>
 #include <locking/spinlock.hpp>
-#include <range_map.hpp>
+#include <range_list.hpp>
 
 using namespace kernel;
 
@@ -34,7 +34,7 @@ int is_page_used(u64_t address) {
 
 NO_EXPORT SpinLock pmm_lock;
 
-NO_EXPORT std::RangeMap<physaddr_t>* freeable_mem;
+NO_EXPORT std::RangeList<physaddr_t>* freeable_mem;
 
 extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) {
     ASSERT_F(memory_map != 0, "\033[1;37mmemory_map\033[0m is null");
@@ -43,15 +43,19 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
     physaddr_t max_address = 0;
     for(u64_t i = 0; i < memory_map->entry_count; ++i) {
         kprintf("[%T] (Kernel) %x16 %x16 %x8\n", memory_map->entries[i].base, memory_map->entries[i].length, memory_map->entries[i].type);
-        if(max_address < memory_map->entries[i].base) max_address = memory_map->entries[i].base;
+        if(max_address < memory_map->entries[i].base && memory_map->entries[i].type != STIVALE2_MEMMAP_TYPE_RESERVED) max_address = memory_map->entries[i].base;
     }
     u32_t gb_page_count = (max_address >> 32) + ((max_address & 0xFFFFFFFF) == 0 ? 0 : 1);
 
     // Allocate the required status pages and set all memory as used.
+
+    /// TODO: [16.09.2022] Why would I ever think this was a good idea,
+    /// fix this cause if there is too much memory everything dies,
+    /// cause the initial heap is not big enough
     status_pages = new page_4gb_status_struct[gb_page_count];
     for(u32_t i = 0; i < gb_page_count; ++i) memset(status_pages[i].used_bitmap, 0xFF, sizeof(page_4gb_status_struct));
 
-    freeable_mem = new std::RangeMap<physaddr_t>();
+    freeable_mem = new std::RangeList<physaddr_t>();
 
     u64_t free_mem = 0;
     // Look for usable memory regions and mark them as free.
@@ -79,10 +83,14 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
     pmm_lock = SpinLock();
 }
 
+size_t allocated_ppages = 0;
+
 extern "C" void pmm_release_bootloader_resources() {
     u64_t freed_mem = 0;
     for(auto iter = freeable_mem->begin(); iter != freeable_mem->end(); ++iter) {
         freed_mem += iter->end - iter->start;
+
+        allocated_ppages += (iter->end - iter->start) >> 12;
         pfree(iter->start, (iter->end - iter->start) >> 12);
     }
     delete freeable_mem;
@@ -111,6 +119,8 @@ extern "C" physaddr_t palloc(size_t page_count) {
             // Bump address past this allocation.
             pmm_first_potential_page += page_count << 12;
         }
+
+        allocated_ppages += page_count;
         return addr;
     }
 }
@@ -131,4 +141,10 @@ extern "C" void pfree(physaddr_t addr, size_t page_count) {
     Locker lock(pmm_lock);
     for(size_t i = 0; i < page_count; ++i) set_page_status(addr + (i << 12), 0);
     if(addr < pmm_first_potential_page) pmm_first_potential_page = addr;
+
+    allocated_ppages -= page_count;
+}
+
+extern "C" size_t allocated_ppage_count() {
+    return allocated_ppages;
 }

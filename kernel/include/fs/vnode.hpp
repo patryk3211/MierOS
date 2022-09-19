@@ -40,6 +40,8 @@ namespace kernel {
         std::SharedPtr<VNode> f_parent;
         std::UnorderedMap<std::String<>, std::SharedPtr<VNode>> f_children;
 
+        std::UnorderedMap<size_t, PhysicalPage> f_shared_pages;
+
         VNodeDataStorage* fs_data;
 
     private:
@@ -54,7 +56,10 @@ namespace kernel {
         ~VNode();
 
         u64_t size() { return f_size; }
+
         Filesystem* filesystem() { return f_filesystem; }
+        const Filesystem* filesystem() const { return f_filesystem; }
+
         Type type() { return f_type; }
 
         const std::String<>& name() const { return f_name; }

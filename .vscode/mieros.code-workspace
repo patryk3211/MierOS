@@ -9,6 +9,7 @@
 			"**/build/**": true,
 			"**/cross/**": true,
 			"**/limine/**": true
-		}
+		},
+		"cmake.generator": "Unix Makefiles"
 	}
 }

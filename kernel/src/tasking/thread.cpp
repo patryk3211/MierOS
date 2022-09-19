@@ -9,58 +9,62 @@ using namespace kernel;
 
 #define KERNEL_STACK_SIZE 1024 * 16 // 16 KiB stack
 
-NO_EXPORT pid_t Thread::next_pid = 1;
-NO_EXPORT std::UnorderedMap<pid_t, Thread*> Thread::threads;
-NO_EXPORT SpinLock Thread::pid_lock;
+NO_EXPORT pid_t Thread::s_next_pid = 1;
+NO_EXPORT std::UnorderedMap<pid_t, Thread*> Thread::s_threads;
+NO_EXPORT std::List<pid_t> Thread::s_finalizable_threads;
+NO_EXPORT SpinLock Thread::s_pid_lock;
 
 pid_t Thread::generate_pid() {
-    Locker locker(pid_lock);
+    Locker locker(s_pid_lock);
     while(true) {
-        if(threads.find(next_pid) == threads.end()) return next_pid++;
-        ++next_pid;
+        if(s_threads.find(s_next_pid) == s_threads.end()) return s_next_pid++;
+        ++s_next_pid;
     }
 }
 
 Thread::Thread(u64_t ip, bool isKernel, Process& process)
-    : kernel_stack(KERNEL_STACK_SIZE)
-    , parent(process) {
-    preferred_core = -1;
-    ksp = (CPUState*)((virtaddr_t)kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
+    : f_kernel_stack(KERNEL_STACK_SIZE)
+    , f_parent(process)
+    , f_pid(generate_pid()) {
+    f_preferred_core = -1;
+    f_ksp = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 
-    memset(ksp, 0, sizeof(CPUState));
-    ksp->cr3 = process.pager().cr3();
-    ksp->rip = ip;
-    ksp->rflags = 0x202;
+    memset(f_ksp, 0, sizeof(CPUState));
+    f_ksp->cr3 = process.pager().cr3();
+    f_ksp->rip = ip;
+    f_ksp->rflags = 0x202;
 
-    ksp->cs = isKernel ? 0x08 : 0x1B;
-    ksp->ss = isKernel ? 0x10 : 0x23;
+    f_ksp->cs = isKernel ? 0x08 : 0x1B;
+    f_ksp->ss = isKernel ? 0x10 : 0x23;
 
-    if(isKernel) ksp->rsp = (virtaddr_t)kernel_stack.ptr() + KERNEL_STACK_SIZE;
+    if(isKernel) f_ksp->rsp = (virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE;
 
-    current_module = 0;
+    f_current_module = 0;
 
-    next = 0;
-    state = RUNNABLE;
+    f_watched = false;
+
+    f_next = 0;
+    f_state = RUNNABLE;
 }
 
 void Thread::sleep(std::Function<bool()>& until) {
-    blockers.push_back(until);
-    state = SLEEPING;
+    f_blockers.push_back(until);
+    f_state = SLEEPING;
     if(Thread::current() == this) {
         force_task_switch();
     }
 }
 
 bool Thread::try_wakeup() {
-    auto iter = blockers.begin();
-    while(iter != blockers.end()) {
+    auto iter = f_blockers.begin();
+    while(iter != f_blockers.end()) {
         if((*iter)()) {
-            iter = blockers.erase(iter);
+            iter = f_blockers.erase(iter);
         } else
             ++iter;
     }
-    if(blockers.empty()) {
-        state = RUNNABLE;
+    if(f_blockers.empty()) {
+        f_state = RUNNABLE;
         return true;
     } else
         return false;
@@ -68,4 +72,23 @@ bool Thread::try_wakeup() {
 
 Thread* Thread::current() {
     return Scheduler::scheduler(current_core()).thread();
+}
+
+void Thread::schedule_finalization() {
+    s_finalizable_threads.push_back(f_pid);
+    f_state = DEAD;
+    // At this point, if this thread is the current thread, it can get safely put out of the scheduler list.
+}
+
+void Thread::make_ks(virtaddr_t ip) {
+    f_syscall_state = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
+
+    memset(f_syscall_state, 0, sizeof(CPUState));
+
+    f_syscall_state->cr3 = f_parent.pager().cr3();
+    f_syscall_state->rip = ip;
+    f_syscall_state->rflags = 0x202;
+
+    f_syscall_state->cs = 0x1B;
+    f_syscall_state->ss = 0x23;
 }

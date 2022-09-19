@@ -30,18 +30,29 @@ TEXT_FREE_AFTER_INIT Scheduler::Scheduler()
 Scheduler::~Scheduler() {
 }
 
+void Scheduler::pre_syscall(CPUState* current_state) {
+    Thread::current()->f_syscall_state = current_state;
+}
+
+CPUState* Scheduler::post_syscall() {
+    return Thread::current()->f_syscall_state;
+}
+
 CPUState* Scheduler::schedule(CPUState* current_state) {
     // Try to obtain a lock on the thread queue.
-    if(!queue_lock.try_lock()) return current_state;
+    if(!queue_lock.try_lock()) {
+        current_state->next_switch_time = 1; // 1 us
+        return current_state;
+    }
 
     if(!first_switch) {
         if(current_thread == 0) {
             // We were in the idle task.
             idle_ksp = current_state;
         } else {
-            current_thread->ksp = current_state;
-            if(current_thread->state == RUNNING) {
-                current_thread->state = RUNNABLE;
+            current_thread->f_ksp = current_state;
+            if(current_thread->f_state == RUNNING) {
+                current_thread->f_state = RUNNABLE;
                 runnable_queue.push_back(current_thread);
             } else {
                 wait_queue.push_back(current_thread);
@@ -60,10 +71,10 @@ CPUState* Scheduler::schedule(CPUState* current_state) {
         return idle_ksp;
     } else {
         _is_idle = false;
-        new_thread->state = RUNNING;
+        new_thread->f_state = RUNNING;
         current_thread = new_thread;
-        current_thread->ksp->next_switch_time = 1000; // 1000 us -> 1 ms
-        return current_thread->ksp;
+        current_thread->f_ksp->next_switch_time = 1000; // 1000 us -> 1 ms
+        return current_thread->f_ksp;
     }
 }
 
@@ -89,11 +100,18 @@ Scheduler& Scheduler::scheduler(int core) {
 
 void Scheduler::schedule_process(Process& proc) {
     queue_lock.lock();
-    for(auto& thread : proc.threads) {
-        if(thread->state == RUNNABLE)
+    for(auto& thread : proc.f_threads) {
+        if(thread->f_state == RUNNABLE)
             runnable_queue.push_back(thread);
         else
             wait_queue.push_back(thread);
     }
+    queue_lock.unlock();
+}
+
+void Scheduler::remove_thread(Thread* thread) {
+    queue_lock.lock();
+    if(!runnable_queue.erase(thread))
+        wait_queue.erase(thread);
     queue_lock.unlock();
 }

@@ -18,6 +18,7 @@ extern int strncmp(const char* a, const char* b, size_t len);
 extern size_t strlen(const char* str);
 extern int strmatch(const char* wildcard, const char* str);
 extern char* strchr(const char* str, char c);
+extern void strupper(char* str);
 
 #if defined(__cplusplus)
 } // extern "C"

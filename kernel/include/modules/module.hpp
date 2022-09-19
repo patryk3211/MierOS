@@ -3,7 +3,7 @@
 #include <elf.h>
 #include <locking/spinlock.hpp>
 #include <optional.hpp>
-#include <range_map.hpp>
+#include <range_list.hpp>
 #include <string.hpp>
 #include <vector.hpp>
 
@@ -29,7 +29,7 @@ namespace kernel {
         u16_t major_num;
 
         std::Vector<Section> sections;
-        std::RangeMap<virtaddr_t> allocated_ranges;
+        std::RangeList<virtaddr_t> allocated_ranges;
 
         virtaddr_t address_base;
 

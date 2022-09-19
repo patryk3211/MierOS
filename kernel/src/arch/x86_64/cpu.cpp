@@ -51,7 +51,7 @@ void send_init_deassert(u8_t destination) {
         ;
 }
 
-void send_ipi(u8_t vector, u8_t mode, u8_t destination) {
+extern "C" void send_ipi(u8_t vector, u8_t mode, u8_t destination) {
     write_lapic(0x310, destination << 24);
     write_lapic(0x300, vector | ((mode & 7) << 8) | (1 << 14));
     while(read_lapic(0x300) & (1 << 12)) {
@@ -81,17 +81,17 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
     madt = (ACPI_MADT*)pager.kmap(madt_addr, page_size, { 1, 0, 0, 0, 0, 0 });
     physaddr_t lapic_addr = madt->lapic_addr;
 
-    { // Get the address override before anything else
-        size_t record_length = madt->header.length - sizeof(madt->header);
-        for(size_t offset = 0; offset < record_length; offset += *(madt->records + offset + 1)) {
-            MADT_Record* record = (MADT_Record*)(madt->records + offset);
-            if(record->type == 0x05) {
-                // Address override.
-                lapic_addr = *((u64_t*)record->rest + 2);
-                break;
-            }
+    size_t record_length = madt->header.length - sizeof(*madt);
+    // Get the address override before anything else
+    for(size_t offset = 0; offset < record_length; offset += *(madt->records + offset + 1)) {
+        MADT_Record* record = (MADT_Record*)(madt->records + offset);
+        if(record->type == 0x05) {
+            // Address override.
+            lapic_addr = *((u64_t*)record->rest + 2);
+            break;
         }
     }
+    
 
     // Map Local APIC to a constant address
     pager.map(lapic_addr, LAPIC_VIRTUAL_ADDRESS, 1, { 1, 1, 0, 0, 1, 0 });
@@ -102,7 +102,6 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
     core_map.insert({ bsp_apic_id, 0 });
 
     // Parse the rest of the records
-    size_t record_length = madt->header.length - sizeof(madt->header);
     for(size_t offset = 0; offset < record_length; offset += *(madt->records + offset + 1)) {
         MADT_Record* record = (MADT_Record*)(madt->records + offset);
         switch(record->type) {
@@ -151,6 +150,12 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
             }
         }
     }
+
+    // Map some legacy entries
+    pager.unlock();
+    if(get_ioapic_intentry(0x01) == 0x10000) add_ioapic_intentry(0x21, 0x01, 0, 0, 0); // Keyboard
+    if(get_ioapic_intentry(0x04) == 0x10000) add_ioapic_intentry(0x24, 0x04, 0, 0, 0); // COM1
+    pager.lock();
 
     pager.unmap((virtaddr_t)madt, page_size);
 }
@@ -292,6 +297,7 @@ extern "C" u8_t _binary_ap_starter_end[];
 extern "C" u64_t idtr;
 
 inline void init_lapic_timer() {
+    write_lapic(0x3E0, 0b1011);
     write_lapic(0x320, 0x000000FE);
 }
 
@@ -301,6 +307,7 @@ TEXT_FREE_AFTER_INIT void core_init() {
                  : "m"(idtr));
     int core_id = current_core();
 
+    enable_lapic();
     init_lapic_timer();
 
     asm volatile(
@@ -339,6 +346,8 @@ TEXT_FREE_AFTER_INIT void measure_lapic_timer() {
 extern void init_time();
 
 extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
+    kprintf("[%T] (Kernel) Initializing CPU\n");
+
     parse_madt();
 
     init_gdt();
@@ -391,4 +400,9 @@ extern "C" int current_core() {
         ASSERT_NOT_REACHED("Running on core outside of our known core map");
         return -1;
     }
+}
+
+extern "C" void send_task_switch_irq(int core) {
+    auto value = core_map.at(core);
+    if(value) send_ipi(0xFE, 0x00, *value);
 }

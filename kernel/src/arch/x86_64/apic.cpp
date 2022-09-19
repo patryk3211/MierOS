@@ -66,6 +66,24 @@ void add_ioapic(u8_t id, u32_t address, u32_t globalSystemInterrupBase) {
 
 extern u32_t bsp_apic_id;
 
+u64_t get_ioapic_intentry(u8_t globalSystemInterrupt) {
+    for(auto& apic : ioApics) {
+        if(globalSystemInterrupt >= apic.gsiBase && globalSystemInterrupt < apic.gsiBase + apic.maxEntries) {
+            u32_t entryOffset = (globalSystemInterrupt - apic.gsiBase);
+
+            map_ioapic(apic);
+            u64_t entry = read_ioapic(apic, 0x10 + entryOffset * 2);
+            entry |= (u64_t)read_ioapic(apic, 0x11 + entryOffset * 2) << 32;
+            unmap_ioapic(apic);
+
+            return entry;
+        }
+    }
+
+    // Masked entry (doesn't exist)
+    return 1 << 16;
+}
+
 void add_ioapic_intentry(u8_t interruptVector, u32_t globalSystemInterrupt, u8_t triggerMode, u8_t polarity, u8_t mask) {
     for(auto& apic : ioApics) {
         if(globalSystemInterrupt >= apic.gsiBase && globalSystemInterrupt < apic.gsiBase + apic.maxEntries) {

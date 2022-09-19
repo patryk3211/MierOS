@@ -241,6 +241,16 @@ int Pager::getWorkpage(int index) {
     return work_pages[index];
 }
 
+bool Pager::try_lock() {
+    bool result = locker.try_lock();
+    if(result) {
+        current_pml4e = -1;
+        current_pdpte = -1;
+        current_pde = -1;
+    }
+    return result;
+}
+
 void Pager::lock() {
     locker.lock();
     current_pml4e = -1;
@@ -296,6 +306,36 @@ void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags
     if(kernel) kernel_locker.unlock();
 }
 
+void Pager::flags(virtaddr_t virt, size_t length, PageFlags flags) {
+    ASSERT_F(locker.is_locked(), "Using an unlocked pager");
+    ASSERT_F(virt != 0, "Mapping to address 0");
+
+    bool kernel = (virt >= KERNEL_START || virt + (length << 12) > KERNEL_START) && !has_kernel_lock;
+    if(kernel) kernel_locker.lock();
+
+    virt >>= 12;
+    int pt_work = getWorkpage(3);
+    for(size_t i = 0; i < length; ++i) {
+        int pml4e = ((virt + i) >> 27) & 0x1FF;
+        int pdpte = ((virt + i) >> 18) & 0x1FF;
+        int pde = ((virt + i) >> 9) & 0x1FF;
+        int pte = ((virt + i) >> 0) & 0x1FF;
+
+        mapStructures(pml4e, pdpte, pde);
+
+        PageStructuresEntry& entry = WORKPAGE(pt_work)[pte];
+        entry.structured.present = 1;
+        entry.structured.write = flags.writable;
+        entry.structured.user = flags.user_accesible;
+        entry.structured.execute_disable = !flags.executable;
+        entry.structured.global = flags.global;
+        entry.structured.cache_disabled = flags.cache_disable;
+    }
+    REFRESH_TLB;
+
+    if(kernel) kernel_locker.unlock();
+}
+
 virtaddr_t Pager::kmap(physaddr_t phys, size_t length, PageFlags flags) {
     ASSERT_F(locker.is_locked(), "Using an unlocked pager");
 
@@ -330,7 +370,7 @@ physaddr_t Pager::unmap(virtaddr_t virt, size_t length) {
 
         PageStructuresEntry& entry = WORKPAGE(pt_work)[pte];
         if(addr == 0) addr = entry.structured.address << 12;
-        entry.structured.present = 0;
+        entry.raw = 0;
     }
 
     if(virt < first_potential_kernel_page && virt >= KERNEL_START) first_potential_kernel_page = virt;
@@ -385,7 +425,7 @@ virtaddr_t Pager::kalloc(size_t length) {
         return 0;
     }
 
-    for(size_t i = 0; i < length; ++i) map(palloc(1), start + (i << 12), 1, PageFlags { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
+    for(size_t i = 0; i < length; ++i) map(palloc(1), start + (i << 12), 1, PageFlags { 1, 1, 0, 0, 1, 0 });
 
     has_kernel_lock = false;
     kernel_locker.unlock();

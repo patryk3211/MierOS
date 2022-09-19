@@ -23,14 +23,14 @@ namespace kernel {
 
             iterator& operator++() {
                 prev = thread;
-                thread = thread->next;
+                thread = thread->f_next;
                 return *this;
             }
 
             iterator operator++(int) {
                 iterator copy(thread, prev);
                 prev = thread;
-                thread = thread->next;
+                thread = thread->f_next;
                 return copy;
             }
 
@@ -55,15 +55,15 @@ namespace kernel {
         iterator end() { return iterator(0, last); }
 
         void push_front(Thread* thread) {
-            thread->next = first;
+            thread->f_next = first;
             first = thread;
             if(last == 0) last = first;
         }
 
         void push_back(Thread* thread) {
-            thread->next = 0;
+            thread->f_next = 0;
             if(last != 0) {
-                last->next = thread;
+                last->f_next = thread;
                 last = thread;
             } else {
                 first = thread;
@@ -77,51 +77,72 @@ namespace kernel {
                 first = 0;
                 last = 0;
             } else
-                first = first->next;
+                first = first->f_next;
             --length;
+        }
+
+        bool erase(Thread* thread) {
+            Thread* prev = 0;
+            for(Thread* t = first; t != 0; ++t) {
+                if(t == thread) {
+                    if(prev == 0)
+                        first = t->f_next;
+                    else
+                        prev = t->f_next;
+
+                    if(last == t) last = prev;
+                    --length;
+                    return true;
+                }
+                prev = t;
+            }
+            return false;
         }
 
         iterator erase(const iterator& pos) {
             if(pos.prev == 0) {
-                first = pos.thread->next;
-                pos.thread->next = 0;
+                first = pos.thread->f_next;
+                pos.thread->f_next = 0;
                 return iterator(first, 0);
             }
-            if(pos.thread->next == 0) last = pos.prev;
-            pos.prev->next = pos.thread->next;
-            pos.thread->next = 0;
-            return iterator(pos.prev->next, pos.prev);
+            if(pos.thread->f_next == 0) last = pos.prev;
+            pos.prev->f_next = pos.thread->f_next;
+            pos.thread->f_next = 0;
+            return iterator(pos.prev->f_next, pos.prev);
         }
 
         Thread* get_optimal_thread(int core) {
             Thread* best_thread = first;
             Thread* prev = 0;
-            for(Thread* thread = first; thread != 0; thread = thread->next) {
-                if(best_thread->preferred_core != core && thread->preferred_core == core) {
+            for(Thread* thread = first; thread != 0; thread = thread->f_next) {
+                if(best_thread->f_preferred_core != core && thread->f_preferred_core == core) {
+                    best_thread = thread;
+
                     if(prev != 0)
-                        prev->next = best_thread->next;
+                        prev->f_next = best_thread->f_next;
                     else
-                        first = best_thread->next;
+                        first = best_thread->f_next;
 
                     if(best_thread == last) last = prev;
-                    best_thread->next = 0;
+                    best_thread->f_next = 0;
 
                     return thread;
                 }
-                if(best_thread->preferred_core != core && best_thread->preferred_core != -1 && thread->preferred_core == -1) {
+                if(best_thread->f_preferred_core != core && best_thread->f_preferred_core != -1 && thread->f_preferred_core == -1) {
                     best_thread = thread;
                 }
                 prev = thread;
             }
             if(best_thread != 0) {
                 if(best_thread == first) {
-                    first = best_thread->next;
+                    first = best_thread->f_next;
                     prev = 0;
                 } else
-                    prev->next = best_thread->next;
+                    prev->f_next = best_thread->f_next;
 
                 if(best_thread == last) last = prev;
-                best_thread->next = 0;
+                best_thread->f_next = 0;
+                best_thread->f_preferred_core = core;
             }
 
             return best_thread;

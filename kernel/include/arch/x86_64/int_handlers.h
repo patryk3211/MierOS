@@ -56,6 +56,8 @@ extern void interrupt0x2D();
 extern void interrupt0x2E();
 extern void interrupt0x2F();
 
+extern void interrupt0x8F();
+
 extern void interrupt0xFE();
 
 #if defined(__cplusplus)

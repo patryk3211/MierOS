@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <tasking/thread.hpp>
 #include <trace.h>
+#include <tasking/scheduler.hpp>
 
 struct interrupt_descriptor {
     u16_t offset_015;
@@ -47,7 +48,7 @@ struct handler_entry {
 
 NO_EXPORT handler_entry* handlers[256];
 NO_EXPORT CPUState* (*_tsh)(CPUState* current_state);
-NO_EXPORT u32_t (*_sh)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t);
+NO_EXPORT syscall_arg_t (*_sh)(syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t);
 
 extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     memset(handlers, 0, sizeof(handlers));
@@ -105,6 +106,8 @@ extern "C" TEXT_FREE_AFTER_INIT void init_interrupts() {
     create_descriptor(idt[0x2E], &interrupt0x2E, 0xE, 0);
     create_descriptor(idt[0x2F], &interrupt0x2F, 0xE, 0);
 
+    create_descriptor(idt[0x8F], &interrupt0x8F, 0xE, 3);
+
     create_descriptor(idt[0xFE], &interrupt0xFE, 0xE, 0);
 
     idtr.length = sizeof(idt);
@@ -125,10 +128,54 @@ void trace_stack(void* base_pointer) {
 
     frame* f = (frame*)base_pointer;
     while(f != 0) {
+        if(!kernel::Pager::active().getFlags((virtaddr_t)f).present) return;
+
         file_line_pair p = addr_to_line(f->ret_ip);
         kprintf("Stack frame 0x%x16 Ret: 0x%x16 %s:%d\n", f, f->ret_ip, p.name, p.line);
         f = f->next_frame;
     }
+}
+
+extern "C" void cpu_state_dump(CPUState* state) {
+    u64_t cr0, cr2, cr3;
+    asm volatile("mov %%cr0, %0" : "=a"(cr0));
+    asm volatile("mov %%cr2, %0" : "=a"(cr2));
+    asm volatile("mov %%cr3, %0" : "=a"(cr3));
+
+    kprintf("+-------- CPU State -------+\n"
+            "| rax = 0x%x16 |\n"
+            "| rbx = 0x%x16 |\n"
+            "| rcx = 0x%x16 |\n"
+            "| rdx = 0x%x16 |\n"
+            "| rsi = 0x%x16 |\n"
+            "| rdi = 0x%x16 |\n"
+            "| rbp = 0x%x16 |\n"
+            "+--------------------------+\n"
+            "| r8  = 0x%x16 |\n"
+            "| r9  = 0x%x16 |\n"
+            "| r10 = 0x%x16 |\n"
+            "| r11 = 0x%x16 |\n"
+            "| r12 = 0x%x16 |\n"
+            "| r13 = 0x%x16 |\n"
+            "| r14 = 0x%x16 |\n"
+            "| r15 = 0x%x16 |\n"
+            "+--------------------------+\n"
+            "| rip = 0x%x16 |\n"
+            "| cs  = 0x%x16 |\n"
+            "| flg = 0x%x16 |\n"
+            "| rsp = 0x%x16 |\n"
+            "| ss  = 0x%x16 |\n"
+            "+--------------------------+\n"
+            "| cr0 = 0x%x16 |\n"
+            "| cr2 = 0x%x16 |\n"
+            "| cr3 = 0x%x16 |\n"
+            "+--------------------------+\n"
+            "| iec = 0x%x16 |\n"
+            "+--------------------------+\n"
+            "state = 0x%x16\n",
+            state->rax, state->rbx, state->rcx, state->rdx, state->rsi, state->rdi, state->rbp, state->r8, state->r9, state->r10,
+            state->r11, state->r12, state->r13, state->r14, state->r15, state->rip, state->cs, state->rflags, state->rsp, state->ss,
+            cr0, cr2, cr3, state->err_code, state);
 }
 
 extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
@@ -137,31 +184,53 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
 
     if(state->int_num == 0xFE) {
         state = _tsh(state);
-        set_kernel_stack(current_core(), rsp + sizeof(CPUState));
+        set_kernel_stack(current_core(), (u64_t)state + sizeof(CPUState));
 
         u64_t timer_value = state->next_switch_time * lapic_timer_ticks / 1000;
         write_lapic(0x380, timer_value);
     } else if(state->int_num == 0x8F) {
-        state->rax = _sh(state->rbx,
+        kernel::Scheduler::pre_syscall(state);
+
+        asm volatile("sti");
+        syscall_arg_t rax = _sh(state->rax,
+            state->rbx,
             state->rcx,
             state->rdx,
             state->rsi,
             state->rdi,
-            state->rbp);
+            state->r8);
+        asm volatile("cli");
+
+        state = kernel::Scheduler::post_syscall();
+        state->rax = rax;
     } else if(state->int_num < 0x20) {
-        file_line_pair p = addr_to_line(state->rip);
-        kprintf("Exception 0x%x2 on core %d\nRip: 0x%x16 %s:%d\n", state->int_num, current_core(), state->rip, p.name, p.line);
-        switch(state->int_num) {
-            case 0x0e: {
+        if(state->int_num == 0x0e) {
+            // Page fault, try to handle
+            auto* thread = kernel::Thread::current();
+            if(thread != 0) {
                 u64_t cr2;
-                asm volatile("mov %%cr2, %0"
-                             : "=a"(cr2));
-                kprintf("cr2: 0x%x16 code: 0x%x16\n", cr2, state->err_code);
-                break;
+                asm volatile("mov %%cr2, %0" : "=a"(cr2));
+
+                auto& proc = thread->parent();
+
+                asm volatile("sti");
+                bool status = proc.handle_page_fault(cr2, state->err_code);
+                asm volatile("cli");
+                if(status) return (u64_t)state;
             }
         }
-        if(kernel::Thread::current()->current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->current_module->base());
+
+        kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
+        cpu_state_dump(state);
+        file_line_pair p = addr_to_line(state->rip);
+        kprintf("Line: %s:%d\n", p.name, p.line);
+
+        if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
         trace_stack((void*)state->rbp);
+
+        // Prepare resources for serial debugging
+        kernel::Pager::kernel().unlock();
+        asm volatile("sti");
         while(true) asm volatile("hlt");
     } else {
         for(handler_entry* handler = handlers[state->int_num]; handler != 0; handler = handler->next)
@@ -190,7 +259,7 @@ extern "C" void register_task_switch_handler(CPUState* (*handler)(CPUState* curr
     _tsh = handler;
 }
 
-extern "C" void register_syscall_handler(u32_t (*handler)(u32_t, u32_t, u32_t, u32_t, u32_t, u32_t)) {
+extern "C" void register_syscall_handler(syscall_arg_t (*handler)(syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t)) {
     _sh = handler;
 }
 

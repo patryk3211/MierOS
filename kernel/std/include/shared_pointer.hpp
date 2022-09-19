@@ -88,8 +88,8 @@ namespace std {
         T& operator*() { return data->value(); }
         const T& operator*() const { return data->value(); }
 
-        operator bool() { return data != 0; }
-        bool operator!() { return data == 0; }
+        operator bool() const { return data != 0; }
+        bool operator!() const { return data == 0; }
 
         template<typename C, typename... Args> friend SharedPtr<C> make_shared(Args...);
     };

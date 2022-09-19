@@ -12,37 +12,49 @@
 
 namespace kernel {
     enum ThreadState {
+        // This thread is running
         RUNNING,
+        // This thread is waiting to be run
         RUNNABLE,
-        SLEEPING
+        // This thread is waiting for something to happen
+        SLEEPING,
+        // This thread is in the process of being deleted, a different task may be scheduled to check it's state
+        DYING,
+        // This thread has been deleted but not finalized yet
+        DEAD
     };
 
     class Process;
     class Thread {
-        static pid_t next_pid;
-        static std::UnorderedMap<pid_t, Thread*> threads;
-        static SpinLock pid_lock;
+        static pid_t s_next_pid;
+        static std::UnorderedMap<pid_t, Thread*> s_threads;
+        static std::List<pid_t> s_finalizable_threads;
+        static SpinLock s_pid_lock;
 
-        KBuffer kernel_stack;
+        KBuffer f_kernel_stack;
         // Kernel Stack Pointer
-        CPUState* ksp;
+        CPUState* f_ksp;
 
-        SpinLock lock;
+        CPUState* f_syscall_state;
 
-        std::List<std::Function<bool()>> blockers;
+        SpinLock f_lock;
 
-        ThreadState state;
+        std::List<std::Function<bool()>> f_blockers;
 
-        Process& parent;
+        ThreadState f_state;
 
-        pid_t _pid;
+        Process& f_parent;
+
+        pid_t f_pid;
 
     public:
-        Module* current_module;
+        Module* f_current_module;
 
-        Thread* next;
+        Thread* f_next;
 
-        int preferred_core;
+        int f_preferred_core;
+
+        bool f_watched;
 
         Thread(u64_t ip, bool isKernel, Process& process);
         ~Thread();
@@ -62,7 +74,13 @@ namespace kernel {
          */
         bool try_wakeup();
 
-        pid_t pid() { return _pid; }
+        void schedule_finalization();
+
+        pid_t pid() { return f_pid; }
+
+        Process& parent() { return f_parent; }
+
+        void make_ks(virtaddr_t ip);
 
         static Thread* current();
 

@@ -15,7 +15,7 @@ ValueOrError<std::List<std::SharedPtr<VNode>>> Filesystem::get_files(std::Shared
     return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<VNodePtr> Filesystem::resolve_link(VNodePtr link) {
+ValueOrError<VNodePtr> Filesystem::resolve_link(VNodePtr) {
     return ERR_UNIMPLEMENTED;
 }
 
@@ -37,4 +37,12 @@ ValueOrError<size_t> Filesystem::write(FileStream*, const void*, size_t) {
 
 ValueOrError<size_t> Filesystem::seek(FileStream*, size_t, int) {
     return ERR_UNIMPLEMENTED;
+}
+
+PhysicalPage Filesystem::resolve_mapping(const FilePage&, virtaddr_t) {
+    return nullptr;
+}
+
+void Filesystem::sync_mapping(const MemoryFilePage&) {
+
 }

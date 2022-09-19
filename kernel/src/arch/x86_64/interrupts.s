@@ -4,15 +4,15 @@
 .macro int_c num
 .global interrupt\num
 interrupt\num\():
-    pushq $\num
+    pushq \num
     jmp handle_int
 .endm
 
 .macro int_nc num
 .global interrupt\num
 interrupt\num\():
-    pushq $0
-    pushq $\num
+    pushq 0
+    pushq \num
     jmp handle_int
 .endm
 
@@ -66,63 +66,80 @@ int_nc 0x2D
 int_nc 0x2E
 int_nc 0x2F
 
+int_nc 0x8F
+
 int_nc 0xFE
 
 handle_int:
-    pushq %rbp
+    push rbp
     
-    pushq %r15
-    pushq %r14
-    pushq %r13
-    pushq %r12
-    pushq %r11
-    pushq %r10
-    pushq %r9
-    pushq %r8
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
 
-    pushq %rdi
-    pushq %rsi
+    push rdi
+    push rsi
     
-    pushq %rdx
-    pushq %rcx
-    pushq %rbx
-    pushq %rax
+    push rdx
+    push rcx
+    push rbx
+    push rax
 
-    mov %cr3, %rax
-    pushq %rax
+    mov rax, cr3
+    push rax
 
-    sub $8, %rsp
+    sub rsp, 8
 
-    mov %rsp, %rdi
+    mov ax, 0x10
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    mov rdi, rsp
     call interrupt_handle
-    mov %rax, %rsp
+    mov rsp, rax
 
 int_ret:
-    add $8, %rsp
+    mov ax, [rsp + 160]
+    add ax, 8 # 0x08 -> 0x10, 0x1B -> 0x23
 
-    popq %rax
-    mov %rax, %cr3
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
 
-    popq %rax
-    popq %rbx
-    popq %rcx
-    popq %rdx
+    add rsp, 8
 
-    popq %rsi
-    popq %rdi
+    pop rax
+    mov cr3, rax
 
-    popq %r8
-    popq %r9
-    popq %r10
-    popq %r11
-    popq %r12
-    popq %r13
-    popq %r14
-    popq %r15
+    pop rax
+    pop rbx
+    pop rcx
+    pop rdx
 
-    popq %rbp
+    pop rsi
+    pop rdi
 
-    add $16, %rsp
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+    pop r12
+    pop r13
+    pop r14
+    pop r15
+
+    pop rbp
+
+    add rsp, 16
 
 int_ignore:
     iretq

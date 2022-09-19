@@ -12,8 +12,10 @@
 #include <stivale.h>
 #include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
+#include <tasking/syscall.h>
 #include <tests/test.hpp>
 #include <trace.h>
+#include <debug.h>
 
 #include <fs/modulefs.hpp>
 #include <fs/modulefs_functions.hpp>
@@ -113,10 +115,8 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
 
     kernel::Process* kern_proc = kernel::Process::construct_kernel_process((virtaddr_t)&stage2_init);
     kernel::Scheduler::schedule_process(*kern_proc);
-    asm volatile("int $0xFE");
 
-    ASSERT_NOT_REACHED("You should be in stage2 right now");
-    while(true) asm volatile("hlt");
+    while(true) asm volatile("int $0xFE");
 }
 
 extern "C" void __cxa_pure_virtual() {
@@ -124,27 +124,50 @@ extern "C" void __cxa_pure_virtual() {
     asm("int3");
 }
 
+class SimpleStream : public kernel::Stream {
+public:
+    SimpleStream() : kernel::Stream(0xFF) {
+
+    }
+
+    virtual size_t read(void* buffer, size_t length) {
+        return 0;
+    }
+
+    virtual size_t write(const void* buffer, size_t length) {
+        dmesgl((char*)buffer, length);
+        return length;
+    }
+};
+
 TEXT_FREE_AFTER_INIT void stage2_init() {
     kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
+
+    init_debug();
+
+    init_syscalls();
+
     kernel::tests::do_tests();
 
-    physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;
-    physaddr_t mod_phys_end = mod.end & 0x7FFFFFFFFFFF;
-    size_t length = mod_phys_end - mod_phys_start;
-    size_t page_size = (length >> 12) + ((length & 0xFFF) == 0 ? 0 : 1);
+    {
+        physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;
+        physaddr_t mod_phys_end = mod.end & 0x7FFFFFFFFFFF;
+        size_t length = mod_phys_end - mod_phys_start;
+        size_t page_size = (length >> 12) + ((length & 0xFFF) == 0 ? 0 : 1);
 
-    physaddr_t map_phys_start = sym_map.start & 0x7FFFFFFFFFFF;
-    physaddr_t map_phys_end = sym_map.end & 0x7FFFFFFFFFFF;
-    size_t length2 = map_phys_end - map_phys_start;
-    size_t page_size2 = (length2 >> 12) + ((length2 & 0xFFF) == 0 ? 0 : 1);
+        physaddr_t map_phys_start = sym_map.start & 0x7FFFFFFFFFFF;
+        physaddr_t map_phys_end = sym_map.end & 0x7FFFFFFFFFFF;
+        size_t length2 = map_phys_end - map_phys_start;
+        size_t page_size2 = (length2 >> 12) + ((length2 & 0xFFF) == 0 ? 0 : 1);
 
-    kernel::Pager::kernel().lock();
-    virtaddr_t mod_start = kernel::Pager::kernel().kmap(mod_phys_start, page_size, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
-    virtaddr_t map_start = kernel::Pager::kernel().kmap(map_phys_start, page_size2, { .present = 1, .writable = 0, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 0 });
-    kernel::Pager::kernel().unlock();
+        kernel::Pager::kernel().lock();
+        virtaddr_t mod_start = kernel::Pager::kernel().kmap(mod_phys_start, page_size, { 1, 0, 0, 0, 1, 0 });
+        virtaddr_t map_start = kernel::Pager::kernel().kmap(map_phys_start, page_size2, { 1, 0, 0, 0, 1, 0 });
+        kernel::Pager::kernel().unlock();
 
-    set_line_map((void*)map_start);
-    set_initrd((void*)mod_start);
+        set_line_map((void*)map_start);
+        set_initrd((void*)mod_start);
+    }
 
     void** files = get_files("*.mod");
     for(size_t i = 0; files[i] != 0; ++i) {
@@ -173,7 +196,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     kernel::VFS* vfs = new kernel::VFS();
 
     u16_t fs_mod = kernel::init_modules("FS-ext2", 0);
-    kernel::Thread::current()->current_module = kernel::get_module(fs_mod);
+    kernel::Thread::current()->f_current_module = kernel::get_module(fs_mod);
     auto* fs_mount = kernel::get_module_symbol<kernel::fs_function_table>(fs_mod, "fs_func_tab")->mount;
     u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(nullptr, "ahci0p1", {}));
     kernel::ModuleFilesystem mfs(fs_mod, minor);
@@ -188,22 +211,41 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         }
         kprintf("\n");
     }
+    kernel::Thread::current()->f_current_module = 0;
 
-    auto file = vfs->get_file(nullptr, "/limine.cfg", {});
-    if(file) {
-        auto& node = *file;
-        auto* fstream = new kernel::FileStream(node);
-        fstream->open(0);
+    TRACE("Test\n");
 
-        u8_t buffer[node->f_size];
-        fstream->read(buffer, node->f_size);
-        kprintf((const char*)buffer);
+    auto procFileRes = vfs->get_file(nullptr, "thing2", {});
+    if(procFileRes) {
+        auto procFile = *procFileRes;
+        auto stream = kernel::FileStream(procFile);
+        stream.open(FILE_OPEN_MODE_READ);
 
-        delete fstream;
-    }
-    kernel::Thread::current()->current_module = 0;
+        size_t page_size = (procFile->f_size >> 12) + ((procFile->f_size & 0xFFF) == 0 ? 0 : 1);
+        auto* proc = new kernel::Process(0x1000000);
 
-    TRACE("Test");
+        for(size_t i = 0; i < page_size; ++i) {
+            kernel::PhysicalPage page;
+            page.flags().executable = true;
+            page.flags().user_accesible = true;
+            page.flags().writable = true;
+            proc->map_page(0x1000000 + (i << 12), page, false);
+        }
+
+        auto& pager = proc->pager();
+        auto& current = kernel::Pager::active();
+
+        pager.enable();
+        stream.read((void*)0x1000000, procFile->f_size);
+        current.enable();
+
+        auto* sstream = new SimpleStream();
+        proc->add_stream(sstream);
+        proc->add_stream(sstream);
+        proc->add_stream(sstream);
+
+        kernel::Scheduler::schedule_process(*proc);
+    } else kprintf("[%T] (Kernel) Failed to find executable file\n");
 
     while(true) asm volatile("hlt");
 }

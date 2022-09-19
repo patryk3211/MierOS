@@ -196,8 +196,8 @@ namespace std {
             }
         }
 
-        T& front() { return head.next->value; }
-        T& back() { return tail.prev->value; }
+        T& front() { return static_cast<Entry*>(head.next)->value; }
+        T& back() { return static_cast<Entry*>(tail.prev)->value; }
 
         bool empty() { return length == 0; }
         unsigned int size() { return length; }
@@ -278,6 +278,13 @@ namespace std {
             inserted:
                 current = next;
             }
+        }
+
+        bool contains(const T& value) {
+            for(Entry* e = static_cast<Entry*>(head.next); e != &tail; e = static_cast<Entry*>(e->next)) {
+                if(e->value == value) return true;
+            }
+            return false;
         }
 
     private:

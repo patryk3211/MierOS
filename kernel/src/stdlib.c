@@ -72,3 +72,10 @@ int strncmp(const char* a, const char* b, size_t len) {
         if(a[i] != b[i]) return a[i] - b[i];
     return 0;
 }
+
+void strupper(char* str) {
+    while(*str != 0) {
+        if(*str >= 'a' && *str <= 'z') *str &= ~0x20;
+        ++str;
+    }
+}

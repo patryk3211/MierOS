@@ -34,5 +34,8 @@ namespace kernel {
         virtual ValueOrError<size_t> write(FileStream* stream, const void* buffer, size_t length);
 
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
+
+        virtual PhysicalPage resolve_mapping(const FilePage& mapping, virtaddr_t addr);
+        virtual void sync_mapping(const MemoryFilePage& mapping);
     };
 }
