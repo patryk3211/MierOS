@@ -256,6 +256,7 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
             /// TODO: IMPLEMENT A RECURSIVE LOCK
             f_lock.unlock();
             map_page(fault_address & ~0xFFF, page, mapping->shared);
+            memset((void*)(fault_address & ~0xFFF), 0, 4096);
             f_lock.lock();
             return true;
         }
