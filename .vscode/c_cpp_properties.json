@@ -33,7 +33,8 @@
                 "${workspaceFolder}/userspace/libs/mlibc/options/ansi/include",
                 "${workspaceFolder}/userspace/libs/mlibc/options/elf/include",
                 "${workspaceFolder}/userspace/libs/mlibc/options/posix/include",
-                "${workspaceFolder}/userspace/libs/mlibc/options/glibc/include"
+                "${workspaceFolder}/userspace/libs/mlibc/options/glibc/include",
+                "${workspaceFolder}/userspace/libs/mlibc/build"
             ],
             "defines": [],
             "compilerPath": "${workspaceFolder}/cross/kern/bin/x86_64-elf-gcc",

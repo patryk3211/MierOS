@@ -10,4 +10,6 @@ limine
 *.img
 *.map
 
+sysroot/usr/local
+
 pass.txt
