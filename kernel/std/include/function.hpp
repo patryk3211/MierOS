@@ -51,11 +51,11 @@ namespace std {
 
             ~Callable() override = default;
 
-            virtual Ret invoke(Args... args) {
+            virtual Ret invoke(Args... args) override {
                 return func(forward<Args>(args)...);
             }
 
-            virtual UniquePtr<CallableBase> copy() const {
+            virtual UniquePtr<CallableBase> copy() const override {
                 return make_unique<Callable<Func>>(move(func));
             }
         };

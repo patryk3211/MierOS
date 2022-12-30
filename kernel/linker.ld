@@ -27,6 +27,10 @@ SECTIONS {
 		KEEP(*(.stivale2hdr))
 	} :rodata
 
+	.note.gnu.build-id : {
+		*(.note.gnu.build-id)
+	} :rodata
+
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)

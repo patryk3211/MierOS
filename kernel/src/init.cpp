@@ -130,7 +130,7 @@ public:
 
     }
 
-    virtual size_t read(void* buffer, size_t length) {
+    virtual size_t read(void*, size_t) {
         return 0;
     }
 
