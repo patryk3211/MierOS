@@ -22,7 +22,7 @@ Currently there are not many features implemented, but some of the bigger ones a
 
 3. Building the kernel
 
-    To build the kernel you first need to run `cmake -S . -B build` to generate the cmake directory. After that run `cmake --build build --target kernel.bin` to build the kernel, this is only required when you first start developing, later cmake should automatically handle the dependencies correctly. After building the kernel you can run `cmake --build build` to build all the modules and other things.
+    To build the kernel you first need to run `cmake -S . -B build` to generate the cmake directory. After that you can run `cmake --build build` to build the kernel, modules and all the other things.
 
 4. Running the OS
 
