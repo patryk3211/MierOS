@@ -173,7 +173,7 @@ else
     mkdir -p build-binutils-hosted
     cd build-binutils-hosted
 
-    ../$BINUTILS_NAME/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot=$SYSROOT_PATH --disable-werror
+    ../$BINUTILS_NAME/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot=$SYSROOT_PATH --disable-werror --disable-nls
     make
     make install
 
@@ -192,7 +192,7 @@ else
 
     mkdir -p build-gcc-hosted
     cd build-gcc-hosted
-    ../$GCC_NAME/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot=$SYSROOT_PATH --enable-languages=c,c++
+    ../$GCC_NAME/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot=$SYSROOT_PATH --enable-languages=c,c++ --disable-werror --disable-nls
     make all-gcc
     make all-target-libgcc
     make install-gcc

@@ -23,6 +23,8 @@ typedef int err_t;
 #define ERR_INVALID (err_t)9
 #define ERR_NO_MEMORY (err_t)10
 #define ERR_NO_EXEC (err_t)11
+#define ERR_AGAIN (err_t)12
+#define ERR_ACCESS (err_t)13
 
 #if defined(__cplusplus)
 } // extern "C"
