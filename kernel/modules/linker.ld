@@ -17,6 +17,11 @@ SECTIONS {
 	} :text
 
     . = ALIGN(4096);
+
+	.note.gnu.build-id : {
+		*(.note.gnu.build-id)
+	} :rodata
+
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)

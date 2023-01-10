@@ -199,6 +199,18 @@ void Module::run_ctors() {
         }
         Thread::current()->f_current_module = old;
     }
+
+    auto section2 = get_section(".init_array");
+    if(section2) {
+        Module* old = Thread::current()->f_current_module;
+        Thread::current()->f_current_module = this;
+        for(size_t i = 0; i < section2->size; i += 8) {
+            u64_t constructor_addr = *(u64_t*)(section2->address + i);
+            if(constructor_addr == 0 || constructor_addr == 0xFFFFFFFFFFFFFFFF) continue;
+            ((void (*)())(constructor_addr))();
+        }
+        Thread::current()->f_current_module = old;
+    }
 }
 
 void Module::run_dtors() {

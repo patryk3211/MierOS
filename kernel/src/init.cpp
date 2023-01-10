@@ -39,6 +39,9 @@ __attribute__((section(".stivale2hdr"), used)) static stivale2_header stivalehdr
 extern "C" void (*_global_constructor_start)();
 extern "C" void (*_global_constructor_end)();
 
+extern "C" void (*_init_array_start)();
+extern "C" void (*_init_array_end)();
+
 FREE_AFTER_INIT stivale2_module mod;
 FREE_AFTER_INIT stivale2_module sym_map;
 
@@ -96,6 +99,11 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
     // Call global constructors
     for(void (**contructor)() = &_global_constructor_start; contructor < &_global_constructor_end; ++contructor) {
         (*contructor)();
+    }
+    for(void (**constructor)() = &_init_array_start; constructor < &_init_array_end; ++constructor) {
+        if(*constructor == 0 || *constructor == (void (*)())-1)
+            continue;
+        (*constructor)();
     }
 
     init_pmm(mem_map);
@@ -215,37 +223,47 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     TRACE("Test\n");
 
-    auto procFileRes = vfs->get_file(nullptr, "thing2", {});
-    if(procFileRes) {
-        auto procFile = *procFileRes;
-        auto stream = kernel::FileStream(procFile);
-        stream.open(FILE_OPEN_MODE_READ);
+    const char* execFile = "/test_user";
 
-        size_t page_size = (procFile->f_size >> 12) + ((procFile->f_size & 0xFFF) == 0 ? 0 : 1);
-        auto* proc = new kernel::Process(0x1000000);
+    auto& thisProc = kernel::Thread::current()->parent();
 
-        for(size_t i = 0; i < page_size; ++i) {
-            kernel::PhysicalPage page;
-            page.flags().executable = true;
-            page.flags().user_accesible = true;
-            page.flags().writable = true;
-            proc->map_page(0x1000000 + (i << 12), page, false);
-        }
+    auto* sstream = new SimpleStream();
+    thisProc.add_stream(sstream);
+    thisProc.add_stream(sstream);
+    thisProc.add_stream(sstream);
 
-        auto& pager = proc->pager();
-        auto& current = kernel::Pager::active();
-
-        pager.enable();
-        stream.read((void*)0x1000000, procFile->f_size);
-        current.enable();
-
-        auto* sstream = new SimpleStream();
-        proc->add_stream(sstream);
-        proc->add_stream(sstream);
-        proc->add_stream(sstream);
-
-        kernel::Scheduler::schedule_process(*proc);
-    } else kprintf("[%T] (Kernel) Failed to find executable file\n");
+    asm volatile("mov $10, %%rax; mov $0, %%rcx; mov $0, %%rdx; int $0x8F" :: "b"(execFile));
+//    auto procFileRes = vfs->get_file(nullptr, "thing2", {});
+//    if(procFileRes) {
+//        auto procFile = *procFileRes;
+//        auto stream = kernel::FileStream(procFile);
+//        stream.open(FILE_OPEN_MODE_READ);
+//
+//        size_t page_size = (procFile->f_size >> 12) + ((procFile->f_size & 0xFFF) == 0 ? 0 : 1);
+//        auto* proc = new kernel::Process(0x1000000);
+//
+//        for(size_t i = 0; i < page_size; ++i) {
+//            kernel::PhysicalPage page;
+//            page.flags().executable = true;
+//            page.flags().user_accesible = true;
+//            page.flags().writable = true;
+//            proc->map_page(0x1000000 + (i << 12), page, false);
+//        }
+//
+//        auto& pager = proc->pager();
+//        auto& current = kernel::Pager::active();
+//
+//        pager.enable();
+//        stream.read((void*)0x1000000, procFile->f_size);
+//        current.enable();
+//
+//        auto* sstream = new SimpleStream();
+//        proc->add_stream(sstream);
+//        proc->add_stream(sstream);
+//        proc->add_stream(sstream);
+//
+//        kernel::Scheduler::schedule_process(*proc);
+//    } else kprintf("[%T] (Kernel) Failed to find executable file\n");
 
     while(true) asm volatile("hlt");
 }

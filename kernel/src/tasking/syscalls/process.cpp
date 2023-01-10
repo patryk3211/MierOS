@@ -103,6 +103,8 @@ Process* Process::fork() {
     return child;
 }
 
+#define PROCESS_STACK_SIZE 1024 * 1024
+
 const u8_t validElf[] = { 0x7F, 'E', 'L', 'F', 2, 1, 1, 0 };
 ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* envp[]) {
     auto stream = FileStream(file);
@@ -161,85 +163,31 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     thisThread->f_pid = mainPid;
     Thread::s_threads.insert({ mainPid, thisThread });
 
-    // Transfer argv and envp to a new page
-    std::List<PhysicalPage> argumentPages;
-    // We only need the envp offset since argv is always first
-    size_t envpOffset = 0;
+    std::List<std::String<>> argStore;
+    std::List<std::String<>> envStore;
 
     {
-        // Add 2 nullptrs
-        size_t totalMoveSize = sizeof(char*) * 2;
-
-        // First calculate the total required size for our arguments
-        auto sizeCount = [&totalMoveSize](char** data) {
-            size_t count = 0;
-            for(char** ptr = data; *ptr != 0; ++ptr) {
-                totalMoveSize += sizeof(char*);
-                totalMoveSize += strlen(*ptr) + 1;
-                ++count;
+        if(argv) {
+            char** argPtr = argv;
+            while(*argPtr) {
+                argStore.push_back(std::String<>(*argPtr++));
             }
-
-            // Align to 8 bytes
-            if(totalMoveSize & 7)
-                totalMoveSize = (totalMoveSize | 7) + 1;
-
-            return count;
-        };
-
-        size_t argCount = argv != 0 ? sizeCount(argv) : 0;
-        size_t envCount = envp != 0 ? sizeCount(envp) : 0;
-
-        auto& pager = Pager::active();
-        pager.lock();
-
-        // Then allocate our pages and map them continuously
-        size_t pageCount = (totalMoveSize >> 12) + ((totalMoveSize & 0xFFF) == 0 ? 0 : 1);
-        virtaddr_t startAddr = pager.getFreeRange(0x1000, pageCount);
-
-        for(size_t i = 0; i < pageCount; ++i) {
-            PhysicalPage page;
-            page.flags() = PageFlags(1, 1, 0, 0, 0, 0);
-
-            argumentPages.push_back(page);
-            pager.map(page.addr(), startAddr + (i << 12), 1, page.flags());
         }
 
-        // Now move all the data to it's new location
-        size_t currentOffset = 0;
-        auto moveData = [&currentOffset, &startAddr](char** data, size_t count) {
-            size_t start = currentOffset;
-            size_t dataOffset = start + (count + 1) * sizeof(char*);
-
-            for(size_t i = 0; i < count; ++i) {
-                // Set offset of the argument in the pages
-                ((uintptr_t*)(startAddr + start))[i] = dataOffset;
-
-                // Copy the argument value
-                size_t entryLen = strlen(data[i]) + 1;
-                memcpy((void*)(startAddr + dataOffset), data[i], entryLen);
-                dataOffset += entryLen;
+        if(envp) {
+            char** envPtr = envp;
+            while(*envPtr) {
+                envStore.push_back(std::String<>(*envPtr++));
             }
-
-            ((uintptr_t*)(startAddr + start))[count] = 0;
-
-            // Align the data offset for next move
-            if(dataOffset & 7)
-                dataOffset = (dataOffset | 7) + 1;
-
-            currentOffset = dataOffset;
-            return start;
-        };
-
-        moveData(argv, argCount);
-        envpOffset = moveData(envp, envCount);
-
-        // Unmap the pages (They will be remapped when memory map of the process is established)
-        pager.unmap(startAddr, pageCount);
-
-        pager.unlock();
+        }
     }
 
     ASSERT_F(f_pager == &Pager::active(), "This thread is using a different pager than it's parent process");
+    if(f_pager == &Pager::kernel()) {
+        // We are transforming a kernel task into a userspace task
+        f_pager = new Pager();
+        f_pager->enable();
+    }
 
     f_pager->lock();
     // Unmap all pages
@@ -300,37 +248,47 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
         }
     }
 
-    // Map argv and envp and offset the addresses in them
-    virtaddr_t argumentStart = f_pager->getFreeRange(end, argumentPages.size());
+    virtaddr_t stackStart = f_pager->getFreeRange(0x7FFF00000000 - PROCESS_STACK_SIZE, PROCESS_STACK_SIZE >> 12);
 
-    {
-        virtaddr_t address = argumentStart;
-        for(auto& page : argumentPages) {
-            f_pager->unlock();
-            f_lock.unlock();
-            map_page(address, page, false);
-            f_lock.lock();
-            f_pager->lock();
-            address += (1 << 12);
-        }
+    f_lock.unlock();
+    f_pager->unlock();
+    alloc_pages(stackStart, PROCESS_STACK_SIZE >> 12, MMAP_FLAG_PRIVATE, MMAP_PROT_READ | MMAP_PROT_WRITE);
+    f_pager->lock();
+    f_lock.lock();
 
-        auto offsetAddress = [](char** data, virtaddr_t offset) {
-            for(char** ptr = data; *ptr != 0; ++ptr) {
-                *((uintptr_t*)ptr) += offset;
-            }
-        };
+    void* stackEnd = (void*)(stackStart + PROCESS_STACK_SIZE);
 
-        offsetAddress((char**)argumentStart, argumentStart);
-        offsetAddress((char**)(argumentStart + envpOffset), argumentStart);
+    // Exec stack setup
+    u64_t* stackValues = (u64_t*)stackStart;
+
+    // argc
+    size_t stackOffset = 0;
+    stackValues[stackOffset++] = argStore.size();
+
+    virtaddr_t infoBlock = (argStore.size() + envStore.size() + 2) * sizeof(u64_t) + 128;
+
+    // argv
+    for(auto& arg : argStore) {
+        stackValues[stackOffset++] = infoBlock;
+        memcpy((void*)infoBlock, arg.c_str(), arg.length() + 1);
+        infoBlock += arg.length() + 1;
     }
+    stackValues[stackOffset++] = 0;
+
+    // envp
+    for(auto& env : envStore) {
+        stackValues[stackOffset++] = infoBlock;
+        memcpy((void*)infoBlock, env.c_str(), env.length() + 1);
+        infoBlock += env.length() + 1;
+    }
+    stackValues[stackOffset++] = 0;
+
+    // null aux vector
+    stackValues[stackOffset++] = 0;
+
+    thisThread->make_ks(header.entry_point, stackStart + PROCESS_STACK_SIZE);
 
     f_pager->unlock();
-
-    // Make a new thread kernel stack
-    thisThread->make_ks(header.entry_point);
-    thisThread->f_ksp->rsi = argumentStart;
-    thisThread->f_ksp->rdi = argumentStart + envpOffset;
-
     f_lock.unlock();
 
     // We will now return into our new state

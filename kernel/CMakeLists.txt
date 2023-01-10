@@ -1,14 +1,16 @@
 set(CMAKE_ASM_FLAGS "-Wa,-msyntax=intel -Wa,-mnaked-reg")
 
-set(KERNEL_C_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -fno-builtin -Wall -Wextra -mcmodel=large -fPIC -mno-red-zone")
+set(KERNEL_C_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -fno-builtin -Wall -Wextra -mcmodel=kernel -fPIC -mno-red-zone -mno-sse")
 set(KERNEL_CXX_FLAGS "-fno-exceptions -fno-rtti -fno-use-cxa-atexit")
-set(CMAKE_CXX_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-g++")
-set(CMAKE_C_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-gcc")
+#set(CMAKE_CXX_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-g++")
+#set(CMAKE_C_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-gcc")
 
 #set(KERNEL_C_FLAGS "-g --target=x86_64-pc-none-elf -fvisibility=default -fPIC -mcmodel=large -ffreestanding -Wall -Wextra -fno-plt -fno-builtin -nostdlib -mno-red-zone -mno-sse -mno-avx")
 #set(KERNEL_CXX_FLAGS "-fno-exceptions -fno-rtti -fno-use-cxa-atexit")
-#set(CMAKE_C_COMPILER "/usr/bin/clang")
-#set(CMAKE_CXX_COMPILER "/usr/bin/clang")
+set(CMAKE_C_COMPILER "/usr/bin/clang")
+set(CMAKE_CXX_COMPILER "/usr/bin/clang")
+set(KERNEL_C_FLAGS "${KERNEL_C_FLAGS} --target=x86_64-pc-none-elf -fno-plt")
+set(KERNEL_CXX_FLAGS "${KERNEL_CXX_FLAGS}")
 
 set(CMAKE_C_FLAGS "${KERNEL_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${KERNEL_CXX_FLAGS} -fvisibility-inlines-hidden")
@@ -28,6 +30,8 @@ set(KERNEL_SOURCES src/init.cpp
                    src/tasking/thread.cpp
                    src/tasking/scheduler.cpp
                    src/tasking/process.cpp
+                   src/locking/recursive_mutex.cpp
+                   src/locking/semaphore.cpp
                    src/modules/module_manager.cpp
                    src/modules/module.cpp
                    src/fs/filesystem.cpp

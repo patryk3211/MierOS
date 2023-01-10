@@ -1,7 +1,7 @@
 #pragma once
 
 #include <list.hpp>
-#include <locking/spinlock.hpp>
+#include <locking/recursive_mutex.hpp>
 #include <stivale.h>
 
 #define MAX_WORK_PAGES 4
@@ -28,7 +28,7 @@ namespace kernel {
     class Pager {
         static physaddr_t kernel_pd[2];
         static std::List<Pager*> pagers;
-        static SpinLock kernel_locker;
+        static RecursiveMutex kernel_locker;
         static virtaddr_t first_potential_kernel_page;
         static Pager* kernel_pager;
 
@@ -40,7 +40,7 @@ namespace kernel {
         int current_pdpte;
         int current_pde;
 
-        SpinLock locker;
+        RecursiveMutex locker;
 
         virtaddr_t first_potential_page;
 

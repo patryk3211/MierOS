@@ -80,7 +80,7 @@ namespace kernel {
 
         Process& parent() { return f_parent; }
 
-        void make_ks(virtaddr_t ip);
+        void make_ks(virtaddr_t ip, virtaddr_t sp);
 
         static Thread* current();
 

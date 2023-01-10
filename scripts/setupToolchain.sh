@@ -75,37 +75,72 @@ SYSROOT_PATH=$(realpath ../sysroot)
 export PREFIX="$CROSS_PATH/kern"
 export TARGET=x86_64-elf
 export PATH="$PREFIX/bin:$PATH"
+export LLVM_TARGET=x86_64-pc-none-elf
 
-if [ -e "$PREFIX/bin/$TARGET-ld" ]; then
-    echo "Kernel binutils already built, skipping..."
-else
-    get_binutils
+## We don't need to cross compile llvm for now since we are targeting x86_64
 
-    mkdir -p build-binutils-kernel
-    cd build-binutils-kernel
+#LLVM_VERSION="15.0.6"
+#LLVM_DOWNLOAD="https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVM_VERSION/llvm-project-$LLVM_VERSION.src.tar.xz"
+#$DOWNLOADER $LLVM_DOWNLOAD
+#tar -xJf llvm-project-$LLVM_VERSION.src.tar.xz
+#
+#cmake -S llvm-project-$LLVM_VERSION.src -B llvm-host-build \
+#    -DLLVM_ENABLE_PROJECTS='clang;compiler-rt;lld;clang-tools-extra' \
+#    -DCMAKE_INSTALL_PREFIX="$CROSS_PATH/tblgen"
+#    -DCMAKE_BUILD_TYPE=Release
+#    -G Ninja
+#cd llvm-host-build
+#ninja llvm-tblgen clang-tblgen
+#cd ..
+#
+#
+## Configure LLVM
+#cmake -S llvm-project-$LLVM_VERSION.src -B llvm-kernel-build \
+#    -DCMAKE_SYSTEM_NAME="$LLVM_TARGET" \
+#    -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+#    -DLLVM_TABLEGEN="$CROSS_PATH/llvm-host-build/bin/llvm-tblgen" \
+#    -DCLANG_TABLEGEN="$CROSS_PATH/llvm-host-build/bin/clang-tblgen" \
+#    -DLLVM_DEFAULT_TARGET_TRIPLE="$LLVM_TARGET" \
+#    -DLLVM_TARGET_ARCH=x86_64 \
+#    -DLLVM_TARGETS_TO_BUILD=x86_64 \
+#    -DLLVM_ENABLE_PROJECTS="clang" \
+#    -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
+#    -DCMAKE_BUILD_TYPE=Release \
+#    -G Ninja
+#
+#cd llvm-kernel-build
+#cmake --build llvm-kernel-build
 
-    ../$BINUTILS_NAME/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
-    make
-    make install
-
-    cd ..
-fi
-
-if [ -e "$PREFIX/bin/$TARGET-gcc" ]; then
-    echo "Kernel gcc already built, skipping..."
-else
-    get_gcc
-
-    mkdir -p build-gcc-kernel
-    cd build-gcc-kernel
-    ../$GCC_NAME/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
-    make all-gcc
-    make all-target-libgcc
-    make install-gcc
-    make install-target-libgcc
-
-    cd ..
-fi
+#if [ -e "$PREFIX/bin/$TARGET-ld" ]; then
+#    echo "Kernel binutils already built, skipping..."
+#else
+#    get_binutils
+#
+#    mkdir -p build-binutils-kernel
+#    cd build-binutils-kernel
+#
+#    ../$BINUTILS_NAME/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
+#    make -j4
+#    make install
+#
+#    cd ..
+#fi
+#
+#if [ -e "$PREFIX/bin/$TARGET-gcc" ]; then
+#    echo "Kernel gcc already built, skipping..."
+#else
+#    get_gcc
+#
+#    mkdir -p build-gcc-kernel
+#    cd build-gcc-kernel
+#    ../$GCC_NAME/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
+#    make all-gcc -j4
+#    make all-target-libgcc -j4
+#    make install-gcc
+#    make install-target-libgcc
+#
+#    cd ..
+#fi
 
 if [ ! -e "auto-things" ]; then
     # Get specific versions of AutoConf and AutoMake

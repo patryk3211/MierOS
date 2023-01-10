@@ -1,4 +1,5 @@
 #include <memory/page/unresolvedpage.hpp>
+#include <assert.h>
 
 using namespace kernel;
 

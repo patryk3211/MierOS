@@ -36,7 +36,7 @@ namespace kernel {
         virtaddr_t f_first_free;
         std::UnorderedMap<virtaddr_t, std::SharedPtr<MemoryEntry>> f_memorymap;
 
-        SpinLock f_lock;
+        RecursiveMutex f_lock;
 
         Process(virtaddr_t entry_point, Pager* kern_pager);
 

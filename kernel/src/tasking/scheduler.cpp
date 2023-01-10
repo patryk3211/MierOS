@@ -115,3 +115,7 @@ void Scheduler::remove_thread(Thread* thread) {
         wait_queue.erase(thread);
     queue_lock.unlock();
 }
+
+bool Scheduler::is_initialized() {
+    return schedulers != 0;
+}

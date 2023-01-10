@@ -17,7 +17,7 @@ set(CROSS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cross")
 set(SYSROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sysroot")
 
 add_subdirectory(kernel)
-add_subdirectory(userspace/libs)
+add_subdirectory(userspace)
 
 file(COPY ${CMAKE_SOURCE_DIR}/scripts/make_initrd.sh DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/scripts/copy_sysroot.sh DESTINATION ${CMAKE_BINARY_DIR})

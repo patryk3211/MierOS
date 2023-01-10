@@ -4,6 +4,7 @@
 #include <list.hpp>
 #include <locking/locker.hpp>
 #include <memory/virtual.hpp>
+#include <dmesg.h>
 
 using namespace kernel;
 

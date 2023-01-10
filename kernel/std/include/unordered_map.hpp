@@ -294,6 +294,7 @@ namespace std {
             allocator.free_array(bucket);
 
             bucket = allocator.template alloc<Entry*>(initial_bucket_size);
+            memset(bucket, 0, sizeof(Entry*) * initial_bucket_size);
             capacity = initial_bucket_size;
             _size = 0;
         }

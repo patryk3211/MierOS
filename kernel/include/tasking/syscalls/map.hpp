@@ -8,5 +8,6 @@
 #define MMAP_FLAG_PRIVATE   0
 #define MMAP_FLAG_SHARED    1
 #define MMAP_FLAG_ANONYMOUS 2
+#define MMAP_FLAG_FIXED     4
 
 #define MMAP_MIN_ADDR 0x100000

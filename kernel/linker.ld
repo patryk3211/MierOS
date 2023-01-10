@@ -39,6 +39,11 @@ SECTIONS {
 		_global_constructor_start = .;
 		*(.ctors)
 		_global_constructor_end = .;
+
+		. = ALIGN(8);
+		_init_array_start = .;
+		*(.init_array)
+		_init_array_end = .;
 	} :rodata
 
 	.dynsym : ALIGN(8) {

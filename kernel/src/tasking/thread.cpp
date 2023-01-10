@@ -71,7 +71,8 @@ bool Thread::try_wakeup() {
 }
 
 Thread* Thread::current() {
-    return Scheduler::scheduler(current_core()).thread();
+    if(!Scheduler::is_initialized()) return 0;
+    else return Scheduler::scheduler(current_core()).thread();
 }
 
 void Thread::schedule_finalization() {
@@ -80,7 +81,7 @@ void Thread::schedule_finalization() {
     // At this point, if this thread is the current thread, it can get safely put out of the scheduler list.
 }
 
-void Thread::make_ks(virtaddr_t ip) {
+void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
     f_syscall_state = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 
     memset(f_syscall_state, 0, sizeof(CPUState));
@@ -88,6 +89,7 @@ void Thread::make_ks(virtaddr_t ip) {
     f_syscall_state->cr3 = f_parent.pager().cr3();
     f_syscall_state->rip = ip;
     f_syscall_state->rflags = 0x202;
+    f_syscall_state->rsp = sp;
 
     f_syscall_state->cs = 0x1B;
     f_syscall_state->ss = 0x23;

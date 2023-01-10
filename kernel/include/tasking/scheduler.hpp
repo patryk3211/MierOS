@@ -38,6 +38,8 @@ namespace kernel {
         static void pre_syscall(CPUState* current_state);
         static CPUState* post_syscall();
 
+        static bool is_initialized();
+
         bool is_idle() { return _is_idle; }
 
     private:
