@@ -4,6 +4,7 @@
 #include <memory/page/memoryfilepage.hpp>
 #include <tasking/syscalls/map.hpp>
 #include <fs/vfs.hpp>
+#include <vector>
 
 using namespace kernel;
 
@@ -249,44 +250,56 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     }
 
     virtaddr_t stackStart = f_pager->getFreeRange(0x7FFF00000000 - PROCESS_STACK_SIZE, PROCESS_STACK_SIZE >> 12);
-
-    f_lock.unlock();
-    f_pager->unlock();
     alloc_pages(stackStart, PROCESS_STACK_SIZE >> 12, MMAP_FLAG_PRIVATE, MMAP_PROT_READ | MMAP_PROT_WRITE);
-    f_pager->lock();
-    f_lock.lock();
-
-    void* stackEnd = (void*)(stackStart + PROCESS_STACK_SIZE);
+    virtaddr_t stackEnd = stackStart + PROCESS_STACK_SIZE;
 
     // Exec stack setup
-    u64_t* stackValues = (u64_t*)stackStart;
+
+    /// TODO: [10.01.2023] Will also need to take aux vector size into account
+    size_t execStackSize = (4 + argStore.size() + envStore.size()) * sizeof(u64_t);
+
+    auto getArgStoreSize = [](std::List<std::String<>>& args) {
+        size_t size = 0;
+        for(auto& arg : args)
+            size += arg.length() + 1;
+        return size;
+    };
+
+    execStackSize += getArgStoreSize(argStore);
+    execStackSize += getArgStoreSize(envStore);
+
+    // Align up to 16 byte boundary
+    if(execStackSize & 0xF) execStackSize = (execStackSize | 0xF) + 1;
+
+    u64_t* execStack = (u64_t*)(stackEnd - execStackSize);
+    size_t stackOffset = 0;
 
     // argc
-    size_t stackOffset = 0;
-    stackValues[stackOffset++] = argStore.size();
+    execStack[stackOffset++] = argStore.size();
 
-    virtaddr_t infoBlock = (argStore.size() + envStore.size() + 2) * sizeof(u64_t) + 128;
+    /// TODO: [10.01.2023] Will also need to take aux vector size into account
+    virtaddr_t infoBlock = (4 + argStore.size() + envStore.size()) * sizeof(u64_t);
 
     // argv
     for(auto& arg : argStore) {
-        stackValues[stackOffset++] = infoBlock;
+        execStack[stackOffset++] = infoBlock;
         memcpy((void*)infoBlock, arg.c_str(), arg.length() + 1);
         infoBlock += arg.length() + 1;
     }
-    stackValues[stackOffset++] = 0;
+    execStack[stackOffset++] = 0;
 
     // envp
     for(auto& env : envStore) {
-        stackValues[stackOffset++] = infoBlock;
+        execStack[stackOffset++] = infoBlock;
         memcpy((void*)infoBlock, env.c_str(), env.length() + 1);
         infoBlock += env.length() + 1;
     }
-    stackValues[stackOffset++] = 0;
+    execStack[stackOffset++] = 0;
 
     // null aux vector
-    stackValues[stackOffset++] = 0;
+    execStack[stackOffset++] = 0;
 
-    thisThread->make_ks(header.entry_point, stackStart + PROCESS_STACK_SIZE);
+    thisThread->make_ks(header.entry_point, (virtaddr_t)execStack);
 
     f_pager->unlock();
     f_lock.unlock();
