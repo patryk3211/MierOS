@@ -7,6 +7,7 @@ using namespace kernel;
 
 extern std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
+/// FIX: Seems like we are loading the wrong page for the 0x32000 offset
 PhysicalPage resolve_mapping(u16_t minor, const FilePage& mapping, virtaddr_t addr) {
     auto mi_opt = mounted_filesystems.at(minor);
     ASSERT_F(mi_opt, "No filesystem is mapped to this minor number");
@@ -14,7 +15,8 @@ PhysicalPage resolve_mapping(u16_t minor, const FilePage& mapping, virtaddr_t ad
 
     ASSERT_F(mi.filesystem == mapping.file()->filesystem(), "Using a filestream from a different filesystem");
 
-    size_t offset = ((addr - mapping.start_addr()) & ~0xFFF) +  mapping.offset();
+    size_t offset = ((addr - mapping.start_addr()) & ~0xFFF) + mapping.offset();
+
     auto vnode = mapping.file();
 
     // Check if offset is in vnode shared pages
@@ -42,19 +44,23 @@ PhysicalPage resolve_mapping(u16_t minor, const FilePage& mapping, virtaddr_t ad
 
     // We need to read 8 sectors to fill up the page
     constexpr size_t sectorsToRead = (4096 >> 9);
+    kprintf("New Read\n");
     for(size_t i = 0; i < sectorsToRead; ++i) {
         size_t startI = i;
-        u32_t chunkStartBlockIndex = offset >> (mi.superblock->blocks_size + 10);
+        u32_t chunkStartBlockIndex = (offset + (i << 9)) >> (mi.superblock->blocks_size + 10);
         u32_t chunkStartBlock = get_inode_block(mi, vnode_data->inode, chunkStartBlockIndex);
-        while(get_inode_block(mi, vnode_data->inode, (offset + (i++ << 9)) >> (mi.superblock->blocks_size + 10)) == chunkStartBlock && i < sectorsToRead);
+        /// TODO: [11.01.2022] I think `chunkStartBlock` might have to be `chunkStartBlock + (i >> (mi.superblock->blocks_size + 10 - 9))`
+        while(get_inode_block(mi, vnode_data->inode, (offset + (i << 9)) >> (mi.superblock->blocks_size + 10)) == (chunkStartBlock + ((i - startI) >> (mi.superblock->blocks_size + 1))) && i < sectorsToRead) ++i;
 
-        size_t continousSectors = i - startI;
+        size_t continuousSectors = i - startI;
         u32_t blockByteOffset = offset & ((1 << (mi.superblock->blocks_size + 10)) - 1);
         u32_t sectorOffset = blockByteOffset >> 9;
 
         pager.unlock();
-        auto status = DeviceFilesystem::instance()->block_read(mi.fs_file, mi.get_lba(chunkStartBlock) + sectorOffset, continousSectors, (void*)(ptr + (startI << 9)));
+        auto status = DeviceFilesystem::instance()->block_read(mi.fs_file, mi.get_lba(chunkStartBlock) + sectorOffset, continuousSectors, (void*)(ptr + (startI << 9)));
         pager.lock();
+
+        --i;
     }
 
     pager.unmap(ptr, 1);

@@ -4,7 +4,7 @@
 #include <memory/page/memoryfilepage.hpp>
 #include <tasking/syscalls/map.hpp>
 #include <fs/vfs.hpp>
-#include <vector>
+#include <vector.hpp>
 
 using namespace kernel;
 
@@ -217,15 +217,18 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     ASSERT_NOT_REACHED("Alignment <4096 is currently not supported");
                 }
 
-                size_t pageCount = (header.mem_size >> 12) + ((header.mem_size & 0xFFF) == 0 ? 0 : 1);
-                size_t filePages = (header.file_size >> 12) + ((header.file_size & 0xFFF) == 0 ? 0 : 1);
+                size_t alignedMemSize = header.mem_size + (header.vaddr & 0xFFF);
+                size_t alignedFileSize = header.file_size + (header.offset & 0xFFF);
+
+                size_t pageCount = (alignedMemSize >> 12) + ((alignedMemSize & 0xFFF) == 0 ? 0 : 1);
+                size_t filePages = (alignedFileSize >> 12) + ((alignedFileSize & 0xFFF) == 0 ? 0 : 1);
 
                 if(filePages > 0) {
                     // Map a file segment here
-                    FilePage* page = new FilePage(file, header.vaddr, header.offset, !(header.flags & 2), header.flags & 2, header.flags & 1);
+                    FilePage* page = new FilePage(file, header.vaddr & ~0xFFF, header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
 
                     f_lock.unlock();
-                    file_pages(header.vaddr, filePages, page);
+                    file_pages(header.vaddr & ~0xFFF, filePages, page);
                     f_lock.lock();
                 }
 
