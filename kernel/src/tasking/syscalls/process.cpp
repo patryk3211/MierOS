@@ -239,7 +239,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     prot |= (header.flags & 2) ? MMAP_PROT_WRITE : 0;
                     prot |= (header.flags & 1) ? MMAP_PROT_EXEC : 0;
                     f_lock.unlock();
-                    alloc_pages(header.vaddr + (filePages << 12), pagesLeft, 0, prot);
+                    alloc_pages((header.vaddr + (filePages << 12)) & ~0xFFF, pagesLeft, 0, prot);
                     f_lock.lock();
                 }
 
