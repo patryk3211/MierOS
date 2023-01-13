@@ -27,3 +27,11 @@ size_t FileStream::read(void* buffer, size_t length) {
     else
         return -1;
 }
+
+size_t FileStream::seek(size_t position, int mode) {
+    auto val = f_file->filesystem()->seek(this, position, mode);
+    if(val)
+        return *val;
+    else
+        return -1;
+}

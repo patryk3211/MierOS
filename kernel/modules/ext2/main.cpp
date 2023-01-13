@@ -38,6 +38,8 @@ fs_function_table fs_func_tab {
 
     .read = &read,
 
+    .seek = &seek,
+
     .resolve_mapping = &resolve_mapping
 };
 

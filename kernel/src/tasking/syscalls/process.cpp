@@ -133,6 +133,14 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
         return ERR_NO_EXEC;
     }
 
+    Elf64_Section programSections[header.sect_entry_count];
+    stream.seek(header.sect_offset, SEEK_MODE_BEG);
+    readCount = header.sect_entry_count * sizeof(Elf64_Section);
+    if(stream.read(programSections, readCount) != readCount) {
+        // Unexpected EOF
+        return ERR_NO_EXEC;
+    }
+
     // No return part starts here
     f_lock.lock();
     auto* thisThread = Thread::current();
@@ -227,9 +235,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     // Map a file segment here
                     FilePage* page = new FilePage(file, header.vaddr & ~0xFFF, header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
 
-                    f_lock.unlock();
                     file_pages(header.vaddr & ~0xFFF, filePages, page);
-                    f_lock.lock();
+                    //memset((void*)(header.vaddr + header.file_size), 0, 4096 - (header.file_size & 0xFFF));
                 }
 
                 size_t pagesLeft = pageCount - filePages;
@@ -238,9 +245,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     int prot = 1;
                     prot |= (header.flags & 2) ? MMAP_PROT_WRITE : 0;
                     prot |= (header.flags & 1) ? MMAP_PROT_EXEC : 0;
-                    f_lock.unlock();
-                    alloc_pages((header.vaddr + (filePages << 12)) & ~0xFFF, pagesLeft, 0, prot);
-                    f_lock.lock();
+                    alloc_pages((header.vaddr + (filePages << 12)) & ~0xFFF, pagesLeft, MMAP_FLAG_ZERO, prot);
                 }
 
                 if(start > header.vaddr) start = header.vaddr;
@@ -249,6 +254,14 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                 break;
             }
             default: break;
+        }
+    }
+
+    // Process sections
+    for(size_t i = 0; i < header.sect_entry_count; ++i) {
+        auto& section = programSections[i];
+        if(section.type == ST_NOBITS) {
+            memset((void*)section.addr, 0, section.size);
         }
     }
 

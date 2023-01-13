@@ -7,7 +7,6 @@ using namespace kernel;
 
 extern std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
-/// FIX: Seems like we are loading the wrong page for the 0x32000 offset
 PhysicalPage resolve_mapping(u16_t minor, const FilePage& mapping, virtaddr_t addr) {
     auto mi_opt = mounted_filesystems.at(minor);
     ASSERT_F(mi_opt, "No filesystem is mapped to this minor number");
@@ -44,7 +43,6 @@ PhysicalPage resolve_mapping(u16_t minor, const FilePage& mapping, virtaddr_t ad
 
     // We need to read 8 sectors to fill up the page
     constexpr size_t sectorsToRead = (4096 >> 9);
-    kprintf("New Read\n");
     for(size_t i = 0; i < sectorsToRead; ++i) {
         size_t startI = i;
         u32_t chunkStartBlockIndex = (offset + (i << 9)) >> (mi.superblock->blocks_size + 10);
@@ -56,11 +54,17 @@ PhysicalPage resolve_mapping(u16_t minor, const FilePage& mapping, virtaddr_t ad
         u32_t blockByteOffset = offset & ((1 << (mi.superblock->blocks_size + 10)) - 1);
         u32_t sectorOffset = blockByteOffset >> 9;
 
-        pager.unlock();
         auto status = DeviceFilesystem::instance()->block_read(mi.fs_file, mi.get_lba(chunkStartBlock) + sectorOffset, continuousSectors, (void*)(ptr + (startI << 9)));
-        pager.lock();
 
         --i;
+    }
+
+    // We want to zero fill everything past the end of file
+
+    /// TODO: [13.01.2023] Make it so that we zero fill these pages at page fault
+    auto fileSize = mapping.file()->f_size;
+    if(offset + 4096 > fileSize) {
+        memset((void*)(ptr + (fileSize - offset)), 0, (offset + 4096 - fileSize));
     }
 
     pager.unmap(ptr, 1);

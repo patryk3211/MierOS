@@ -135,7 +135,7 @@ void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
 
             ptr->type = MemoryEntry::ANONYMOUS;
             ptr->shared = true;
-            ptr->page = new SharedAnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
+            ptr->page = new SharedAnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0), flags & MMAP_FLAG_ZERO);
 
             set_page_mapping(addr + (i << 12), ptr);
         }
@@ -144,7 +144,7 @@ void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
 
         ptr->type = MemoryEntry::ANONYMOUS;
         ptr->shared = false;
-        ptr->page = new AnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0));
+        ptr->page = new AnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0), flags & MMAP_FLAG_ZERO);
 
         for(size_t i = 0; i < length; ++i)
             set_page_mapping(addr + (i << 12), ptr);
