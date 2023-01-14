@@ -184,7 +184,6 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
 
     if(state->int_num == 0xFE) {
         state = _tsh(state);
-        set_kernel_stack(current_core(), (u64_t)state + sizeof(CPUState));
 
         u64_t timer_value = state->next_switch_time * lapic_timer_ticks / 1000;
         write_lapic(0x380, timer_value);
@@ -216,6 +215,8 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
                 asm volatile("sti");
                 bool status = proc.handle_page_fault(cr2, state->err_code);
                 asm volatile("cli");
+
+                set_kernel_stack(current_core(), (u64_t)state + sizeof(CPUState));
                 if(status) return (u64_t)state;
             }
         }
@@ -236,6 +237,8 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
         for(handler_entry* handler = handlers[state->int_num]; handler != 0; handler = handler->next)
             handler->handler();
     }
+
+    set_kernel_stack(current_core(), (u64_t)state + sizeof(CPUState));
 
     pic_eoi(intVec);
     return (u64_t)state;

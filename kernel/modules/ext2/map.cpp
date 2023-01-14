@@ -62,10 +62,10 @@ PhysicalPage resolve_mapping(u16_t minor, const FilePage& mapping, virtaddr_t ad
     // We want to zero fill everything past the end of file
 
     /// TODO: [13.01.2023] Make it so that we zero fill these pages at page fault
-    auto fileSize = mapping.file()->f_size;
-    if(offset + 4096 > fileSize) {
-        memset((void*)(ptr + (fileSize - offset)), 0, (offset + 4096 - fileSize));
-    }
+    //auto fileSize = mapping.file()->f_size;
+    //if(offset + 4096 > fileSize) {
+    //    memset((void*)(ptr + (fileSize - offset)), 0, (offset + 4096 - fileSize));
+    //}
 
     pager.unmap(ptr, 1);
     pager.unlock();

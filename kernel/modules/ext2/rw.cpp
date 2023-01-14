@@ -49,7 +49,7 @@ ValueOrError<size_t> read(u16_t minor, FileStream* filestream, void* buffer, siz
         u32_t block = get_inode_block(mi, vnode_data->inode, startBlock);
 
         size_t blkCount = 0;
-        while(get_inode_block(mi, vnode_data->inode, startBlock + blkCount) == block + blkCount) ++blkCount;
+        while(get_inode_block(mi, vnode_data->inode, startBlock + blkCount) == block + blkCount && blkCount < blocksToRead) ++blkCount;
 
         // Read data and return error value if something goes wrong
         auto ret = DeviceFilesystem::instance()->block_read(mi.fs_file, mi.get_lba(block), mi.block_size / 512 * blkCount, byteBuffer);
@@ -99,7 +99,7 @@ ValueOrError<size_t> seek(u16_t minor, FileStream* filestream, size_t position, 
             file_data->position = fileSize + position;
             break;
     }
-    
+
     // If the seek position left us at a position which is not a multiple of block size
     // we need to read the current block into the buffer to remain compatible
     // with our read interpretation. However we only need to do that if

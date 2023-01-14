@@ -133,14 +133,6 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
         return ERR_NO_EXEC;
     }
 
-    Elf64_Section programSections[header.sect_entry_count];
-    stream.seek(header.sect_offset, SEEK_MODE_BEG);
-    readCount = header.sect_entry_count * sizeof(Elf64_Section);
-    if(stream.read(programSections, readCount) != readCount) {
-        // Unexpected EOF
-        return ERR_NO_EXEC;
-    }
-
     // No return part starts here
     f_lock.lock();
     auto* thisThread = Thread::current();
@@ -258,6 +250,14 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     }
 
     // Process sections
+    Elf64_Section programSections[header.sect_entry_count];
+    stream.seek(header.sect_offset, SEEK_MODE_BEG);
+    readCount = header.sect_entry_count * sizeof(Elf64_Section);
+    if(stream.read(programSections, readCount) != readCount) {
+        // Unexpected EOF
+        return ERR_NO_EXEC;
+    }
+
     for(size_t i = 0; i < header.sect_entry_count; ++i) {
         auto& section = programSections[i];
         if(section.type == ST_NOBITS) {
