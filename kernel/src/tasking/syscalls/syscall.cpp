@@ -1,6 +1,6 @@
 #include <arch/interrupts.h>
 #include <stdlib.h>
-#include <tasking/syscall.h>
+#include <tasking/syscalls/syscall.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
@@ -11,30 +11,33 @@ typedef syscall_arg_t syscall_func_t(Process&, syscall_arg_t, syscall_arg_t, sys
 
 syscall_func_t* syscall_table[64];
 
-extern syscall_arg_t syscall_exit(Process& proc, syscall_arg_t exitCode);
-extern syscall_arg_t syscall_open(Process& proc, syscall_arg_t name, syscall_arg_t flags);
-extern syscall_arg_t syscall_close(Process& proc, syscall_arg_t fd);
-extern syscall_arg_t syscall_read(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length);
-extern syscall_arg_t syscall_write(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length);
-extern syscall_arg_t syscall_fork(Process& proc);
-extern syscall_arg_t syscall_seek(Process& proc, syscall_arg_t fd, syscall_arg_t pos, syscall_arg_t mode);
-extern syscall_arg_t syscall_mmap(Process& proc, syscall_arg_t ptr, syscall_arg_t length, syscall_arg_t prot, syscall_arg_t flags, syscall_arg_t fd, syscall_arg_t offset);
-extern syscall_arg_t syscall_munmap(Process& proc, syscall_arg_t ptr, syscall_arg_t length);
-extern syscall_arg_t syscall_execve(Process& proc, syscall_arg_t filename, syscall_arg_t argv, syscall_arg_t envp);
+// Syscall definitions
+DEF_SYSCALL(exit, exitCode);
+DEF_SYSCALL(open, name, flags);
+DEF_SYSCALL(close, fd);
+DEF_SYSCALL(read, fd, ptr, length);
+DEF_SYSCALL(write, fd, ptr, length);
+DEF_SYSCALL(fork);
+DEF_SYSCALL(seek, fd, position, mode);
+DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset);
+DEF_SYSCALL(munmap, ptr, length);
+DEF_SYSCALL(execve, filename, argv, envp);
+DEF_SYSCALL(arch_prctl, func, ptr);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
 
-    syscall_table[1] = (syscall_func_t*)&syscall_exit;
-    syscall_table[2] = (syscall_func_t*)&syscall_open;
-    syscall_table[3] = (syscall_func_t*)&syscall_close;
-    syscall_table[4] = (syscall_func_t*)&syscall_read;
-    syscall_table[5] = (syscall_func_t*)&syscall_write;
-    syscall_table[6] = (syscall_func_t*)&syscall_fork;
-    syscall_table[7] = (syscall_func_t*)&syscall_seek;
-    syscall_table[8] = (syscall_func_t*)&syscall_mmap;
-    syscall_table[9] = (syscall_func_t*)&syscall_munmap;
-    syscall_table[10] = (syscall_func_t*)&syscall_execve;
+    SYSCALL(1,  exit);
+    SYSCALL(2,  open);
+    SYSCALL(3,  close);
+    SYSCALL(4,  read);
+    SYSCALL(5,  write);
+    SYSCALL(6,  fork);
+    SYSCALL(7,  seek);
+    SYSCALL(8,  mmap);
+    SYSCALL(9,  munmap);
+    SYSCALL(10, execve);
+    SYSCALL(11, arch_prctl);
 
     register_syscall_handler(&run_syscall);
 }

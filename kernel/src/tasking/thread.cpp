@@ -86,6 +86,8 @@ void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
 
     memset(f_syscall_state, 0, sizeof(CPUState));
 
+    // Some of this stuff is architecture specific
+    // and should be moved to the appropriate place
     f_syscall_state->cr3 = f_parent.pager().cr3();
     f_syscall_state->rip = ip;
     f_syscall_state->rflags = 0x202;
@@ -93,4 +95,12 @@ void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
 
     f_syscall_state->cs = 0x1B;
     f_syscall_state->ss = 0x23;
+}
+
+void Thread::set_fs(virtaddr_t fs_base) {
+    f_syscall_state->fs = fs_base;
+}
+
+virtaddr_t Thread::get_fs() {
+    return f_syscall_state->fs;
 }

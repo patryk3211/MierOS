@@ -82,6 +82,9 @@ namespace kernel {
 
         void make_ks(virtaddr_t ip, virtaddr_t sp);
 
+        void set_fs(virtaddr_t fs_base);
+        virtaddr_t get_fs();
+
         static Thread* current();
 
         friend class Scheduler;

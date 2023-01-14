@@ -1,4 +1,4 @@
-#include <tasking/syscall.h>
+#include <tasking/syscalls/syscall.hpp>
 #include <tasking/scheduler.hpp>
 #include <arch/interrupts.h>
 #include <memory/page/memoryfilepage.hpp>
@@ -8,12 +8,12 @@
 
 using namespace kernel;
 
-syscall_arg_t syscall_exit(Process& proc, syscall_arg_t exitCode) {
+DEF_SYSCALL(exit, exitCode) {
     proc.die(exitCode);
     return 0;
 }
 
-syscall_arg_t syscall_fork(Process& proc) {
+DEF_SYSCALL(fork) {
     Process* child = proc.fork();
 
     Scheduler::schedule_process(*child);
@@ -21,7 +21,7 @@ syscall_arg_t syscall_fork(Process& proc) {
     return child->main_thread()->pid();
 }
 
-syscall_arg_t syscall_execve(Process& proc, syscall_arg_t filename, syscall_arg_t argv, syscall_arg_t envp) {
+DEF_SYSCALL(execve, filename, argv, envp) {
     const char* path = (const char*)filename;
 
     VNodePtr file;
@@ -228,7 +228,13 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     FilePage* page = new FilePage(file, header.vaddr & ~0xFFF, header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
 
                     file_pages(header.vaddr & ~0xFFF, filePages, page);
-                    //memset((void*)(header.vaddr + header.file_size), 0, 4096 - (header.file_size & 0xFFF));
+
+                    // We need this since the .bss section will likely intersect
+                    // with some data and we need to guarantee that it is cleared
+                    if(alignedMemSize > alignedFileSize) {
+                        // We need to zero out some memory
+                        memset((void*)(header.vaddr + header.file_size), 0, 4096 - ((header.vaddr + header.file_size) & 0xFFF));
+                    }
                 }
 
                 size_t pagesLeft = pageCount - filePages;
@@ -246,22 +252,6 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                 break;
             }
             default: break;
-        }
-    }
-
-    // Process sections
-    Elf64_Section programSections[header.sect_entry_count];
-    stream.seek(header.sect_offset, SEEK_MODE_BEG);
-    readCount = header.sect_entry_count * sizeof(Elf64_Section);
-    if(stream.read(programSections, readCount) != readCount) {
-        // Unexpected EOF
-        return ERR_NO_EXEC;
-    }
-
-    for(size_t i = 0; i < header.sect_entry_count; ++i) {
-        auto& section = programSections[i];
-        if(section.type == ST_NOBITS) {
-            memset((void*)section.addr, 0, section.size);
         }
     }
 

@@ -1,10 +1,10 @@
 #include <fs/vfs.hpp>
 #include <streams/filestream.hpp>
-#include <tasking/syscall.h>
+#include <tasking/syscalls/syscall.hpp>
 
 using namespace kernel;
 
-syscall_arg_t syscall_open(Process& proc, syscall_arg_t name, syscall_arg_t flags) {
+DEF_SYSCALL(open, name, flags) {
     const char* path = (const char*)name;
 
     VNodePtr file;
@@ -31,12 +31,12 @@ syscall_arg_t syscall_open(Process& proc, syscall_arg_t name, syscall_arg_t flag
     return fd;
 }
 
-syscall_arg_t syscall_close(Process& proc, syscall_arg_t fd) {
+DEF_SYSCALL(close, fd) {
     proc.close_stream(fd);
     return 0;
 }
 
-syscall_arg_t syscall_read(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length) {
+DEF_SYSCALL(read, fd, ptr, length) {
     auto* stream = proc.get_stream(fd);
     if(stream == 0) return -ERR_INVALID;
 
@@ -46,7 +46,7 @@ syscall_arg_t syscall_read(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, s
     return size;
 }
 
-syscall_arg_t syscall_write(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, syscall_arg_t length) {
+DEF_SYSCALL(write, fd, ptr, length) {
     auto* stream = proc.get_stream(fd);
     if(stream == 0) return -ERR_INVALID;
 
@@ -56,9 +56,9 @@ syscall_arg_t syscall_write(Process& proc, syscall_arg_t fd, syscall_arg_t ptr, 
     return size;
 }
 
-syscall_arg_t syscall_seek(Process& proc, syscall_arg_t fd, syscall_arg_t pos, syscall_arg_t mode) {
+DEF_SYSCALL(seek, fd, position, mode) {
     auto* stream = proc.get_stream(fd);
     if(stream == 0) return -ERR_INVALID;
 
-    return stream->seek(pos, mode);
+    return stream->seek(position, mode);
 }
