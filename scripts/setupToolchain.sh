@@ -111,37 +111,6 @@ export LLVM_TARGET=x86_64-pc-none-elf
 #cd llvm-kernel-build
 #cmake --build llvm-kernel-build
 
-#if [ -e "$PREFIX/bin/$TARGET-ld" ]; then
-#    echo "Kernel binutils already built, skipping..."
-#else
-#    get_binutils
-#
-#    mkdir -p build-binutils-kernel
-#    cd build-binutils-kernel
-#
-#    ../$BINUTILS_NAME/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
-#    make -j4
-#    make install
-#
-#    cd ..
-#fi
-#
-#if [ -e "$PREFIX/bin/$TARGET-gcc" ]; then
-#    echo "Kernel gcc already built, skipping..."
-#else
-#    get_gcc
-#
-#    mkdir -p build-gcc-kernel
-#    cd build-gcc-kernel
-#    ../$GCC_NAME/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
-#    make all-gcc -j4
-#    make all-target-libgcc -j4
-#    make install-gcc
-#    make install-target-libgcc
-#
-#    cd ..
-#fi
-
 if [ ! -e "auto-things" ]; then
     # Get specific versions of AutoConf and AutoMake
     AUTOCONF="autoconf-2.69"

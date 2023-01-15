@@ -10,9 +10,6 @@
 			"**/cross/**": true,
 			"**/limine/**": true
 		},
-		"cmake.generator": "Unix Makefiles",
-		"files.associations": {
-			"*.def": "cpp"
-		}
+		"cmake.generator": "Unix Makefiles"
 	}
 }
