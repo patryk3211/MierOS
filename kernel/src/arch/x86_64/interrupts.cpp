@@ -178,33 +178,49 @@ extern "C" void cpu_state_dump(CPUState* state) {
             cr0, cr2, cr3, state->err_code, state);
 }
 
+NO_EXPORT void handle_exception(CPUState* state) {
+    kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
+    cpu_state_dump(state);
+    file_line_pair p = addr_to_line(state->rip);
+    kprintf("Line: %s:%d\n", p.name, p.line);
+
+    if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
+    trace_stack((void*)state->rbp);
+
+    // Prepare resources for serial debugging
+    kernel::Pager::kernel().unlock();
+    asm volatile("sti");
+    while(true) asm volatile("hlt");
+}
+
 extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
     CPUState* state = (CPUState*)rsp;
     u8_t intVec = state->int_num;
 
-    if(state->int_num == 0xFE) {
-        state = _tsh(state);
+    switch(state->int_num) {
+        case 0xFE: { // Task switch interrupt
+            state = _tsh(state);
 
-        u64_t timer_value = state->next_switch_time * lapic_timer_ticks / 1000;
-        write_lapic(0x380, timer_value);
-    } else if(state->int_num == 0x8F) {
-        kernel::Scheduler::pre_syscall(state);
+            u64_t timer_value = state->next_switch_time * lapic_timer_ticks / 1000;
+            write_lapic(0x380, timer_value);
+            break;
+        } case 0x8F: { // Syscall interrupt
+            kernel::Scheduler::pre_syscall(state);
 
-        asm volatile("sti");
-        syscall_arg_t rax = _sh(state->rax,
-            state->rbx,
-            state->rcx,
-            state->rdx,
-            state->rsi,
-            state->rdi,
-            state->r8);
-        asm volatile("cli");
+            asm volatile("sti");
+            syscall_arg_t rax = _sh(state->rax,
+                state->rbx,
+                state->rcx,
+                state->rdx,
+                state->rsi,
+                state->rdi,
+                state->r8);
+            asm volatile("cli");
 
-        state = kernel::Scheduler::post_syscall();
-        state->rax = rax;
-    } else if(state->int_num < 0x20) {
-        if(state->int_num == 0x0e) {
-            // Page fault, try to handle
+            state = kernel::Scheduler::post_syscall();
+            state->rax = rax;
+            break;
+        } case 0x0E: { // Page Fault interrupt
             auto* thread = kernel::Thread::current();
             if(thread != 0) {
                 u64_t cr2;
@@ -218,24 +234,26 @@ extern "C" NO_EXPORT u64_t interrupt_handle(u64_t rsp) {
 
                 set_kernel_stack(current_core(), (u64_t)state + sizeof(CPUState));
                 if(status) return (u64_t)state;
+                else handle_exception(state);
             }
+            break;
+        } case 0x07: {
+            // Device not present (FPU), we need to restore the state
+            // Clear CR0.TS bit for the FPU to become available.
+            asm volatile("mov %%cr0, %%rax; and $0xFFFFFFFFFFFFFFF7, %%rax; mov %%rax, %%cr0" ::: "rax");
+            kernel::Thread::current()->load_fpu_state();
+            break;
+        } default: { // Other interrupts
+            if(state->int_num < 0x20) {
+                // This is an exception interrupt
+                handle_exception(state);
+            } else {
+                // Non exception interrupt, fire all registered handlers
+                for(handler_entry* handler = handlers[state->int_num]; handler != 0; handler = handler->next)
+                    handler->handler();
+            }
+            break;
         }
-
-        kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
-        cpu_state_dump(state);
-        file_line_pair p = addr_to_line(state->rip);
-        kprintf("Line: %s:%d\n", p.name, p.line);
-
-        if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
-        trace_stack((void*)state->rbp);
-
-        // Prepare resources for serial debugging
-        kernel::Pager::kernel().unlock();
-        asm volatile("sti");
-        while(true) asm volatile("hlt");
-    } else {
-        for(handler_entry* handler = handlers[state->int_num]; handler != 0; handler = handler->next)
-            handler->handler();
     }
 
     set_kernel_stack(current_core(), (u64_t)state + sizeof(CPUState));

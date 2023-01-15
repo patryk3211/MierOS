@@ -11,6 +11,8 @@ extern void init_cpu();
 extern int core_count();
 extern int current_core();
 
+extern void task_switched();
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

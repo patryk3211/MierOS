@@ -24,6 +24,7 @@ pid_t Thread::generate_pid() {
 
 Thread::Thread(u64_t ip, bool isKernel, Process& process)
     : f_kernel_stack(KERNEL_STACK_SIZE)
+    , f_fpu_state(512)
     , f_parent(process)
     , f_pid(generate_pid()) {
     f_preferred_core = -1;
@@ -103,4 +104,23 @@ void Thread::set_fs(virtaddr_t fs_base) {
 
 virtaddr_t Thread::get_fs() {
     return f_syscall_state->fs;
+}
+
+void Thread::save_fpu_state() {
+    auto* memory = f_fpu_state.ptr<uint8_t>();
+    // We only save the state if the FPU is enabled
+    asm volatile(
+        "mov %%cr0, %%rax\n"
+        "test $0x08, %%rax\n"
+        "jnz 0f\n"
+        "fxsave64 %0\n"
+        "0: nop"
+        :
+        : "m"(*memory)
+        : "rax");
+}
+
+void Thread::load_fpu_state() {
+    auto* memory = f_fpu_state.ptr<uint8_t>();
+    asm volatile("fxrstor64 %0" :: "m"(*memory));
 }

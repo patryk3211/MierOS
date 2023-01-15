@@ -32,6 +32,7 @@ namespace kernel {
         static SpinLock s_pid_lock;
 
         KBuffer f_kernel_stack;
+        KBuffer f_fpu_state;
         // Kernel Stack Pointer
         CPUState* f_ksp;
 
@@ -68,7 +69,7 @@ namespace kernel {
 
         /**
          * @brief Transitions the thread back into RUNNABLE state.
-         * 
+         *
          * @return true - The thread is now RUNNABLE,
          *         false - The thread is still SLEEPING
          */
@@ -84,6 +85,9 @@ namespace kernel {
 
         void set_fs(virtaddr_t fs_base);
         virtaddr_t get_fs();
+
+        void save_fpu_state();
+        void load_fpu_state();
 
         static Thread* current();
 

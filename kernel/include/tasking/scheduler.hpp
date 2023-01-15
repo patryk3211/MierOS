@@ -18,8 +18,8 @@ namespace kernel {
         KBuffer idle_stack;
         CPUState* idle_ksp;
 
-        bool _is_idle     : 1;
-        bool first_switch : 1;
+        bool f_is_idle      : 1;
+        bool f_first_switch : 1;
 
     public:
         Scheduler();
@@ -40,7 +40,7 @@ namespace kernel {
 
         static bool is_initialized();
 
-        bool is_idle() { return _is_idle; }
+        bool is_idle() { return f_is_idle; }
 
     private:
         static void idle();
