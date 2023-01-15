@@ -1,21 +1,27 @@
 #pragma once
 
 #include <modules/module.hpp>
+#include <locking/spinlock.hpp>
 #include <types.h>
 
 namespace kernel {
-    u16_t add_preloaded_module(void* file);
+    class ModuleManager {
+        static ModuleManager* s_instance;
 
-    u16_t init_modules(const char* init_signal, void* init_struct);
-    int init_module(u16_t major, void* init_struct);
+        u16_t f_next_major;
+        SpinLock f_lock;
 
-    Module* get_module(u16_t major);
+        std::UnorderedMap<u16_t, Module*> f_module_map;
 
-    template<typename Ret, typename... Args> Ret run_module_func(u16_t major, const char* func_name, Args... args) {
-        return get_module(major)->run_function(func_name, args...);
-    }
+    public:
+        ModuleManager();
+        ~ModuleManager();
 
-    template<typename T> T* get_module_symbol(u16_t major, const char* name) {
-        return (T*)get_module(major)->get_symbol_addr(name);
-    }
+        void preload_module(void* file);
+
+        static ModuleManager& get();
+
+    private:
+        u16_t generate_major();
+    };
 }
