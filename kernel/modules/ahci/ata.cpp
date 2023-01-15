@@ -15,7 +15,7 @@ int get_cmd_slot(drive_information* drive) {
 
                 kernel::Pager& pager = kernel::Pager::kernel();
                 pager.lock();
-                drive->tables[i] = (Port_Command_Table*)pager.kmap(addr, COMMAND_TABLE_PAGES, { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 1 });
+                drive->tables[i] = (Port_Command_Table*)pager.kmap(addr, COMMAND_TABLE_PAGES, kernel::PageFlags(true, true, false, false, true, true));
                 memset(drive->tables[i], 0, COMMAND_TABLE_PAGES * 4096);
                 pager.unlock();
             }

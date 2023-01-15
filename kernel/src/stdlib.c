@@ -79,3 +79,5 @@ void strupper(char* str) {
         ++str;
     }
 }
+
+void atexit(void (*exit_handler)()) { }

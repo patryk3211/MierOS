@@ -65,17 +65,17 @@ u32_t get_inode_block(MountInfo& mi, INodePtr& inode, u32_t inode_block_index) {
     } else if(inode_block_index < 12 + ptr_per_block) {
         // Singly
         auto* cb = mi.read_cache_block(inode->singly_indirect);
-        return ((u32_t*)cb->ptr())[ptr_per_block - 12];
+        return ((u32_t*)cb->ptr())[inode_block_index - 12];
     } else if(inode_block_index < 12 + ptr_per_block + ptr_per_block * ptr_per_block) {
         // Doubly
         auto* cb_singly = mi.read_cache_block(inode->doubly_indirect);
-        u32_t local_index = ptr_per_block - 12 - ptr_per_block;
+        u32_t local_index = inode_block_index - 12 - ptr_per_block;
         auto* cb = mi.read_cache_block(((u32_t*)cb_singly->ptr())[local_index / ptr_per_block]);
         return ((u32_t*)cb->ptr())[local_index % ptr_per_block];
     } else {
         // Triply
         auto* cb_doubly = mi.read_cache_block(inode->triply_indirect);
-        u32_t local_index = ptr_per_block - 12 - ptr_per_block - ptr_per_block * ptr_per_block;
+        u32_t local_index = inode_block_index - 12 - ptr_per_block - ptr_per_block * ptr_per_block;
         auto* cb_singly = mi.read_cache_block(((u32_t*)cb_doubly->ptr())[local_index / (ptr_per_block * ptr_per_block)]);
         auto* cb = mi.read_cache_block(((u32_t*)cb_singly->ptr())[local_index / ptr_per_block % ptr_per_block]);
         return ((u32_t*)cb->ptr())[local_index % ptr_per_block];

@@ -1,9 +1,15 @@
-set(CMAKE_C_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -Wall -Wextra -mcmodel=large -fPIC -Wl,-export-dynamic -mno-red-zone")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -fno-use-cxa-atexit")
 set(CMAKE_ASM_FLAGS "-Wa,-msyntax=intel -Wa,-mnaked-reg")
 
-set(CMAKE_CXX_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-g++")
-set(CMAKE_C_COMPILER "${CROSS_DIR}/kern/bin/${ARCH}-elf-gcc")
+set(KERNEL_C_FLAGS "-g -fvisibility=default -nostdlib -ffreestanding -fno-builtin -Wall -Wextra -mcmodel=kernel -fPIC -mno-red-zone -mno-sse")
+set(KERNEL_CXX_FLAGS "-fno-exceptions -fno-rtti -fno-use-cxa-atexit")
+
+set(CMAKE_C_COMPILER "/usr/bin/clang")
+set(CMAKE_CXX_COMPILER "/usr/bin/clang")
+set(KERNEL_C_FLAGS "${KERNEL_C_FLAGS} --target=x86_64-pc-none-elf -fno-plt")
+set(KERNEL_CXX_FLAGS "${KERNEL_CXX_FLAGS}")
+
+set(CMAKE_C_FLAGS "${KERNEL_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${KERNEL_CXX_FLAGS} -fvisibility-inlines-hidden")
 
 set(KERNEL_SOURCES src/init.cpp
                    src/dmesg.c
@@ -20,6 +26,8 @@ set(KERNEL_SOURCES src/init.cpp
                    src/tasking/thread.cpp
                    src/tasking/scheduler.cpp
                    src/tasking/process.cpp
+                   src/locking/recursive_mutex.cpp
+                   src/locking/semaphore.cpp
                    src/modules/module_manager.cpp
                    src/modules/module.cpp
                    src/fs/filesystem.cpp
@@ -55,7 +63,7 @@ set_target_properties(kernel.bin PROPERTIES
                       PREFIX ""
                       SUFFIX "")
 
-add_custom_command(TARGET kernel.bin PRE_BUILD 
+add_custom_command(TARGET kernel.bin PRE_BUILD
                     COMMAND nasm ARGS -o ap_starter ${CMAKE_CURRENT_SOURCE_DIR}/ap_starter.s -f bin
                     COMMAND ld ARGS -r -b binary -o ap_starter.o ap_starter
                     VERBATIM
@@ -64,9 +72,10 @@ add_custom_command(TARGET kernel.bin PRE_BUILD
                     COMMENT "Assembling Application Core starter...")
 
 add_custom_command(TARGET kernel.bin POST_BUILD
-                    COMMAND elfedit ARGS --output-type DYN kernel.bin
+                    COMMAND ${CMAKE_SOURCE_DIR}/scripts/transform_kernel.py ARGS kernel.bin
                     VERBATIM
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                    COMMENT "Changing ELF type of kernel.bin")
 
 add_custom_command(TARGET kernel.bin POST_BUILD
                     COMMAND ${CROSS_DIR}/debug-exporter kernel.bin kernel.map
@@ -81,7 +90,7 @@ if(${DEBUG})
     add_compile_definitions(DEBUG=true)
 endif()
 
-target_link_options(kernel.bin PRIVATE -T ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -pie -Wl,-export-dynamic -z max-page-size=0x1000 ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o -Wl,--no-dynamic-linker)
+target_link_options(kernel.bin PRIVATE -T${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -z max-page-size=0x1000 -pie -Wl,-export-dynamic ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o -Wl,--no-dynamic-linker)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/std/include)
 
 install(TARGETS kernel.bin DESTINATION ${SYSROOT_DIR}/)

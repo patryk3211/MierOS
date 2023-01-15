@@ -2,6 +2,7 @@
 #include <locking/locker.hpp>
 #include <memory/physical.h>
 #include <memory/virtual.hpp>
+#include <assert.h>
 #include <stdlib.h>
 
 using namespace kernel;
@@ -28,16 +29,16 @@ union PageStructuresEntry {
 
 // 0xFFFFFFFFFFFFF000 - Control the page table for page structure mappings.
 // 0xFFFFFFFFFFE00000 - 0xFFFFFFFFFFFFE000 - Pages for mapping page structures.
-#define CONTROL_PAGE ((PageStructuresEntry*)0xFFFFFFFFFFFFF000)
+#define CONTROL_PAGE ((volatile PageStructuresEntry*)0xFFFFFFFFFFFFF000)
 #define WORKPAGE(i) ((PageStructuresEntry*)(0xFFFFFFFFFFE00000 | ((i) << 12)))
 
 #define BASE_MAPPING_ADDRESS 0x1000
 
-#define REFRESH_TLB asm volatile("mov %cr3, %rax; mov %rax, %cr3");
+#define REFRESH_TLB asm volatile("mov %%cr3, %%rax; mov %%rax, %%cr3" ::: "rax");
 
 NO_EXPORT physaddr_t Pager::kernel_pd[2] = { 0, 0 };
 NO_EXPORT std::List<Pager*> Pager::pagers;
-NO_EXPORT SpinLock Pager::kernel_locker;
+NO_EXPORT RecursiveMutex Pager::kernel_locker;
 NO_EXPORT virtaddr_t Pager::first_potential_kernel_page;
 NO_EXPORT Pager* Pager::kernel_pager = 0;
 
@@ -131,7 +132,7 @@ TEXT_FREE_AFTER_INIT void Pager::init(physaddr_t kernel_base_p, virtaddr_t kerne
     ((PageStructuresEntry*)kernel_pd[1])[511].raw = control_page | 0x03;
     ((PageStructuresEntry*)control_page)[511].raw = control_page | 0x8000000000000103;
 
-    kernel_locker = SpinLock();
+    kernel_locker = RecursiveMutex();
 
     asm volatile("mov %0, %%cr3"
                  :

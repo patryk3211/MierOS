@@ -91,7 +91,6 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
             break;
         }
     }
-    
 
     // Map Local APIC to a constant address
     pager.map(lapic_addr, LAPIC_VIRTUAL_ADDRESS, 1, { 1, 1, 0, 0, 1, 0 });
@@ -301,6 +300,21 @@ inline void init_lapic_timer() {
     write_lapic(0x320, 0x000000FE);
 }
 
+inline void set_control_registers() {
+    // Enable Global Pages and SSE extensions
+    asm volatile(
+        "mov %%cr0, %%rax\n"
+        "and $0xFFFFFFFFFFFFFFFB, %%rax\n" // Clear CR0.EM bit
+        "or $0x02, %%rax\n" // Set CR0.MP bit
+        "mov %%rax, %%cr0\n"
+        "mov %%cr4, %%rax\n"
+        "or $0x0680, %%rax\n" // Set CR4.PGE, CR4.OSFXSR and CR4.OSXMMEXCPT bits
+        "mov %%rax, %%cr4\n"
+        :
+        :
+        : "rax");
+}
+
 TEXT_FREE_AFTER_INIT void core_init() {
     asm volatile("lidt %0"
                  :
@@ -309,6 +323,8 @@ TEXT_FREE_AFTER_INIT void core_init() {
 
     enable_lapic();
     init_lapic_timer();
+
+    set_control_registers();
 
     asm volatile(
         "lgdt %0\n"
@@ -354,6 +370,17 @@ extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
     init_interrupts();
 
     init_pic();
+
+    // Make sure that this cpu supports SSE
+    // (Technically we don't have to since x86_64 requires atleast SSE to be present)
+    u32_t cpuidResult;
+    asm volatile("mov $1, %%eax; cpuid; mov %%edx, %0" : "=g"(cpuidResult) :: "eax", "edx");
+    if(!(cpuidResult & (1 << 25))) {
+        // This CPU does not support SSE and we require it
+        panic("SSE is not supported on this processor");
+    }
+
+    set_control_registers();
 
     // Measure Local APIC timer ticks for 1 millisecond
     measure_lapic_timer();

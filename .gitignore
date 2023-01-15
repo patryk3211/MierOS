@@ -10,4 +10,8 @@ limine
 *.img
 *.map
 
+sysroot/usr/include
+sysroot/usr/bin
+sysroot/usr/lib
+
 pass.txt

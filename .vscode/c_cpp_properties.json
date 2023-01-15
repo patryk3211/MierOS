@@ -16,14 +16,31 @@
                 "-fno-rtti",
                 "-mcmodel=kernel"
             ],
-            "compilerPath": "${workspaceFolder}/cross/kern/bin/x86_64-elf-gcc",
+            "compilerPath": "/usr/bin/clang",
             "cStandard": "gnu11",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x64",
+            "intelliSenseMode": "linux-clang-x64",
             "compileCommands": "${workspaceFolder}/build/compile_commands.json",
             "defines": [
                 "X86_64=1"
             ]
+        },
+        {
+            "name": "mlibc",
+            "includePath": [
+                "${workspaceFolder}/userspace/libs/mlibc/sysdeps/mieros/include",
+                "${workspaceFolder}/userspace/libs/mlibc/options/internal/include",
+                "${workspaceFolder}/userspace/libs/mlibc/options/ansi/include",
+                "${workspaceFolder}/userspace/libs/mlibc/options/elf/include",
+                "${workspaceFolder}/userspace/libs/mlibc/options/posix/include",
+                "${workspaceFolder}/userspace/libs/mlibc/options/glibc/include",
+                "${workspaceFolder}/userspace/libs/mlibc/build"
+            ],
+            "defines": [],
+            "compilerPath": "${workspaceFolder}/cross/kern/bin/x86_64-elf-gcc",
+            "cStandard": "c17",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-gcc-x64"
         }
     ],
     "version": 4

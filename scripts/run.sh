@@ -18,7 +18,6 @@ qemu-system-x86_64 -s -m 128M \
 			-device ide-hd,drive=hddisk,bus=ahci.0 \
 			-usb \
 			-audiodev alsa,id=1 \
-			-device sb16 \
 			-serial stdio \
 			-no-reboot \
 			-no-shutdown \

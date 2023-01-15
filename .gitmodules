@@ -1,0 +1,4 @@
+[submodule "userspace/libs/mlibc"]
+	path = userspace/libs/mlibc
+	url = https://github.com/patryk3211/mlibc.git
+	shallow = true

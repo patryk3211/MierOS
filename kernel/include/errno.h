@@ -9,17 +9,22 @@ extern "C" {
 
 typedef int err_t;
 
+// Internal OS Errors
+#define ERR_LINK (err_t)5
+#define ERR_NOT_LINK (err_t)8
+#define ERR_MOUNT_FAILED (err_t)7
+
+// Errors defined in libc errno.h
 #define ERR_UNIMPLEMENTED (err_t)1
 #define ERR_FILE_NOT_FOUND (err_t)2
 #define ERR_NOT_A_DIRECTORY (err_t)3
 #define ERR_FILE_EXISTS (err_t)4
-#define ERR_LINK (err_t)5
 #define ERR_DEVICE_DOES_NOT_EXIST (err_t)6
-#define ERR_MOUNT_FAILED (err_t)7
-#define ERR_NOT_LINK (err_t)8
 #define ERR_INVALID (err_t)9
 #define ERR_NO_MEMORY (err_t)10
 #define ERR_NO_EXEC (err_t)11
+#define ERR_AGAIN (err_t)12
+#define ERR_ACCESS (err_t)13
 
 #if defined(__cplusplus)
 } // extern "C"

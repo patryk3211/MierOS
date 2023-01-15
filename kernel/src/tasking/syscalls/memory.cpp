@@ -1,11 +1,11 @@
-#include <tasking/syscall.h>
+#include <tasking/syscalls/syscall.hpp>
 #include <tasking/syscalls/map.hpp>
 #include <streams/filestream.hpp>
 #include <errno.h>
 
 using namespace kernel;
 
-syscall_arg_t syscall_mmap(Process& proc, syscall_arg_t ptr, syscall_arg_t length, syscall_arg_t prot, syscall_arg_t flags, syscall_arg_t fd, syscall_arg_t offset) {
+DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
     size_t page_len = (length >> 12) + ((length & 0xFFF) == 0 ? 0 : 1);
 
     /// TODO: This can only happen if FIXED flag is not specified, otherwise if the address is not aligned, this syscall should fail
@@ -45,7 +45,7 @@ syscall_arg_t syscall_mmap(Process& proc, syscall_arg_t ptr, syscall_arg_t lengt
     return addr;
 }
 
-syscall_arg_t syscall_munmap(Process& proc, syscall_arg_t ptr, syscall_arg_t length) {
+DEF_SYSCALL(munmap, ptr, length) {
     size_t page_len = (length >> 12) + ((length & 0xFFF) == 0 ? 0 : 1);
 
     // Validate the pointer

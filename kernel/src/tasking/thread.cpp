@@ -24,6 +24,7 @@ pid_t Thread::generate_pid() {
 
 Thread::Thread(u64_t ip, bool isKernel, Process& process)
     : f_kernel_stack(KERNEL_STACK_SIZE)
+    , f_fpu_state(512)
     , f_parent(process)
     , f_pid(generate_pid()) {
     f_preferred_core = -1;
@@ -71,7 +72,8 @@ bool Thread::try_wakeup() {
 }
 
 Thread* Thread::current() {
-    return Scheduler::scheduler(current_core()).thread();
+    if(!Scheduler::is_initialized()) return 0;
+    else return Scheduler::scheduler(current_core()).thread();
 }
 
 void Thread::schedule_finalization() {
@@ -80,15 +82,45 @@ void Thread::schedule_finalization() {
     // At this point, if this thread is the current thread, it can get safely put out of the scheduler list.
 }
 
-void Thread::make_ks(virtaddr_t ip) {
+void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
     f_syscall_state = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 
     memset(f_syscall_state, 0, sizeof(CPUState));
 
+    // Some of this stuff is architecture specific
+    // and should be moved to the appropriate place
     f_syscall_state->cr3 = f_parent.pager().cr3();
     f_syscall_state->rip = ip;
     f_syscall_state->rflags = 0x202;
+    f_syscall_state->rsp = sp;
 
     f_syscall_state->cs = 0x1B;
     f_syscall_state->ss = 0x23;
+}
+
+void Thread::set_fs(virtaddr_t fs_base) {
+    f_syscall_state->fs = fs_base;
+}
+
+virtaddr_t Thread::get_fs() {
+    return f_syscall_state->fs;
+}
+
+void Thread::save_fpu_state() {
+    auto* memory = f_fpu_state.ptr<uint8_t>();
+    // We only save the state if the FPU is enabled
+    asm volatile(
+        "mov %%cr0, %%rax\n"
+        "test $0x08, %%rax\n"
+        "jnz 0f\n"
+        "fxsave64 %0\n"
+        "0: nop"
+        :
+        : "m"(*memory)
+        : "rax");
+}
+
+void Thread::load_fpu_state() {
+    auto* memory = f_fpu_state.ptr<uint8_t>();
+    asm volatile("fxrstor64 %0" :: "m"(*memory));
 }

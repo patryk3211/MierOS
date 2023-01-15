@@ -6,8 +6,9 @@
 namespace kernel {
     class AnonymousPage : public UnresolvedPage {
         PageFlags f_flags;
+        bool f_zero;
     public:
-        AnonymousPage(const PageFlags& flags);
+        AnonymousPage(const PageFlags& flags, bool zero);
         virtual ~AnonymousPage() = default;
 
         virtual PhysicalPage resolve(virtaddr_t addr);
@@ -16,7 +17,7 @@ namespace kernel {
     class SharedAnonymousPage : public AnonymousPage {
         PhysicalPage f_page;
     public:
-        SharedAnonymousPage(const PageFlags& flags);
+        SharedAnonymousPage(const PageFlags& flags, bool zero);
         virtual ~SharedAnonymousPage() = default;
 
         virtual PhysicalPage resolve(virtaddr_t addr);

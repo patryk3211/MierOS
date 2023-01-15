@@ -18,4 +18,6 @@ kernel::ValueOrError<void> close(u16_t minor, kernel::FileStream* filestream);
 kernel::ValueOrError<size_t> read(u16_t minor, kernel::FileStream* filestream, void* buffer, size_t length);
 kernel::ValueOrError<size_t> write(u16_t minor, kernel::FileStream* filestream, const void* buffer, size_t length);
 
+kernel::ValueOrError<size_t> seek(u16_t minor, kernel::FileStream* filestream, size_t position, int mode);
+
 kernel::PhysicalPage resolve_mapping(u16_t minor, const kernel::FilePage& mapping, virtaddr_t addr);

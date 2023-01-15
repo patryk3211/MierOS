@@ -23,8 +23,8 @@ TEXT_FREE_AFTER_INIT Scheduler::Scheduler()
     idle_ksp->rsp = (virtaddr_t)idle_stack.ptr() + 4096;
     idle_ksp->ss = 0x10;
 
-    _is_idle = false;
-    first_switch = true;
+    f_is_idle = false;
+    f_first_switch = true;
 }
 
 Scheduler::~Scheduler() {
@@ -44,13 +44,15 @@ CPUState* Scheduler::schedule(CPUState* current_state) {
         current_state->next_switch_time = 1; // 1 us
         return current_state;
     }
-
-    if(!first_switch) {
+    if(!f_first_switch) {
         if(current_thread == 0) {
             // We were in the idle task.
             idle_ksp = current_state;
         } else {
+            current_thread->save_fpu_state();
             current_thread->f_ksp = current_state;
+            task_switched();
+
             if(current_thread->f_state == RUNNING) {
                 current_thread->f_state = RUNNABLE;
                 runnable_queue.push_back(current_thread);
@@ -60,17 +62,17 @@ CPUState* Scheduler::schedule(CPUState* current_state) {
             current_thread = 0;
         }
     } else
-        first_switch = false;
+        f_first_switch = false;
 
     Thread* new_thread = runnable_queue.get_optimal_thread(core_id);
     queue_lock.unlock();
     if(new_thread == 0) {
         // No thread needs to be executed.
-        _is_idle = true;
+        f_is_idle = true;
         idle_ksp->next_switch_time = 250; // 250 us
         return idle_ksp;
     } else {
-        _is_idle = false;
+        f_is_idle = false;
         new_thread->f_state = RUNNING;
         current_thread = new_thread;
         current_thread->f_ksp->next_switch_time = 1000; // 1000 us -> 1 ms
@@ -114,4 +116,8 @@ void Scheduler::remove_thread(Thread* thread) {
     if(!runnable_queue.erase(thread))
         wait_queue.erase(thread);
     queue_lock.unlock();
+}
+
+bool Scheduler::is_initialized() {
+    return schedulers != 0;
 }

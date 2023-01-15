@@ -1,0 +1,14 @@
+[constants]
+toolchain_location = '/home/patryk/Projects/MierOS/cross/host/bin'
+
+[binaries]
+c = toolchain_location / 'x86_64-mieros-gcc'
+cpp = toolchain_location / 'x86_64-mieros-g++'
+ar = toolchain_location / 'x86_64-mieros-ar'
+strip = toolchain_location / 'x86_64-mieros-strip'
+
+[host_machine]
+system = 'mieros'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'

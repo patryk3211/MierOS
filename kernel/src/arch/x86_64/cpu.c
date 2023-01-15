@@ -28,3 +28,10 @@ TEXT_FREE_AFTER_INIT void early_init_cpu() {
     EFER |= (1 << 11); // Enable Execute Disable Bit
     wrmsr(EFER_REG, EFER);
 }
+
+void task_switched() {
+    // We need to set the task switched bit for SSE
+    // instructions to cause an exception and for us
+    // to be able to restore the FPU state
+    asm volatile("mov %%cr0, %%rax; or $0x08, %%rax; mov %%rax, %%cr0" ::: "rax");
+}

@@ -72,7 +72,7 @@ int_nc 0xFE
 
 handle_int:
     push rbp
-    
+
     push r15
     push r14
     push r13
@@ -84,7 +84,7 @@ handle_int:
 
     push rdi
     push rsi
-    
+
     push rdx
     push rcx
     push rbx
@@ -93,6 +93,17 @@ handle_int:
     mov rax, cr3
     push rax
 
+    # IA32_FS_BASE Model Specific Register
+    mov ecx, 0xC0000100
+    rdmsr
+
+    mov ebx, edx
+    shl rbx, 32
+    mov ebx, eax
+
+    push rbx
+
+    # Make space for `next_switch_time`
     sub rsp, 8
 
     mov ax, 0x10
@@ -107,7 +118,9 @@ handle_int:
     mov rsp, rax
 
 int_ret:
-    mov ax, [rsp + 160]
+    # REMINDER! When updating CPU State remember to change this offset
+    # to point to the new location of the CS field
+    mov ax, [rsp + 168]
     add ax, 8 # 0x08 -> 0x10, 0x1B -> 0x23
 
     mov ds, ax
@@ -115,7 +128,19 @@ int_ret:
     mov fs, ax
     mov gs, ax
 
+    # Skip past the `next_switch_time`
     add rsp, 8
+
+    # Read fs base
+    pop rbx
+    # Lower 32 bits into eax
+    mov eax, ebx
+    # Upper 32 bits into edx
+    shr rbx, 32
+    mov edx, ebx
+    # IA32_FS_BASE Model Specific Register
+    mov ecx, 0xC0000100
+    wrmsr
 
     pop rax
     mov cr3, rax
@@ -139,6 +164,7 @@ int_ret:
 
     pop rbp
 
+    # Skip past `int_num` and `err_code`
     add rsp, 16
 
 int_ignore:

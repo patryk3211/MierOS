@@ -119,7 +119,7 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
 
     // Allocate required structures
     physaddr_t command_list_p = palloc(1);
-    drive_info->command_list = (Port_Command_List*)pager.kmap(command_list_p, 1, { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 1 });
+    drive_info->command_list = (Port_Command_List*)pager.kmap(command_list_p, 1, kernel::PageFlags(true, true, false, false, true, true));
 
     memset(drive_info->command_list, 0, sizeof(Port_Command_List));
 
@@ -164,7 +164,7 @@ extern "C" int init(PCI_Header* header) {
     minor_num = 0;
     module_major_num = kernel::Thread::current()->f_current_module->major();
 
-    HBA_MEM* hba = (HBA_MEM*)pager.kmap(header->bar[5] & ~0xFFF, 1, { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 1 });
+    HBA_MEM* hba = (HBA_MEM*)pager.kmap(header->bar[5] & ~0xFFF, 1, kernel::PageFlags(true, true, false, false, true, true));
     if(!(hba->capabilities & (1 << 18))) hba->global_host_control |= (1 << 31); // Enable AHCI mode
 
     bool support64 = (hba->capabilities >> 31) & 1;
@@ -178,7 +178,7 @@ extern "C" int init(PCI_Header* header) {
         if(biggest_implemented >= 30) {
             // Remap the HBA memory to include the last ports.
             pager.unmap((virtaddr_t)hba, 1);
-            hba = (HBA_MEM*)pager.kmap(header->bar[5] & ~0xFFF, 2, { .present = 1, .writable = 1, .user_accesible = 0, .executable = 0, .global = 1, .cache_disable = 1 });
+            hba = (HBA_MEM*)pager.kmap(header->bar[5] & ~0xFFF, 2, kernel::PageFlags(true, true, false, false, true, true));
         }
     }
 

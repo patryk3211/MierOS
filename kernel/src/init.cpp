@@ -39,6 +39,9 @@ __attribute__((section(".stivale2hdr"), used)) static stivale2_header stivalehdr
 extern "C" void (*_global_constructor_start)();
 extern "C" void (*_global_constructor_end)();
 
+extern "C" void (*_init_array_start)();
+extern "C" void (*_init_array_end)();
+
 FREE_AFTER_INIT stivale2_module mod;
 FREE_AFTER_INIT stivale2_module sym_map;
 
@@ -97,6 +100,11 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
     for(void (**contructor)() = &_global_constructor_start; contructor < &_global_constructor_end; ++contructor) {
         (*contructor)();
     }
+    for(void (**constructor)() = &_init_array_start; constructor < &_init_array_end; ++constructor) {
+        if(*constructor == 0 || *constructor == (void (*)())-1)
+            continue;
+        (*constructor)();
+    }
 
     init_pmm(mem_map);
 
@@ -111,7 +119,7 @@ extern "C" TEXT_FREE_AFTER_INIT void _start() {
 
     init_cpu();
 
-    pmm_release_bootloader_resources();
+    /// pmm_release_bootloader_resources();
 
     kernel::Process* kern_proc = kernel::Process::construct_kernel_process((virtaddr_t)&stage2_init);
     kernel::Scheduler::schedule_process(*kern_proc);
@@ -130,7 +138,7 @@ public:
 
     }
 
-    virtual size_t read(void* buffer, size_t length) {
+    virtual size_t read(void*, size_t) {
         return 0;
     }
 
@@ -199,9 +207,9 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     kernel::Thread::current()->f_current_module = kernel::get_module(fs_mod);
     auto* fs_mount = kernel::get_module_symbol<kernel::fs_function_table>(fs_mod, "fs_func_tab")->mount;
     u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(nullptr, "ahci0p1", {}));
-    kernel::ModuleFilesystem mfs(fs_mod, minor);
+    kernel::ModuleFilesystem* mfs = new kernel::ModuleFilesystem(fs_mod, minor);
 
-    vfs->mount(&mfs, "/");
+    vfs->mount(mfs, "/");
 
     auto result = vfs->get_files(nullptr, "", {});
     if(result) {
@@ -215,37 +223,16 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     TRACE("Test\n");
 
-    auto procFileRes = vfs->get_file(nullptr, "thing2", {});
-    if(procFileRes) {
-        auto procFile = *procFileRes;
-        auto stream = kernel::FileStream(procFile);
-        stream.open(FILE_OPEN_MODE_READ);
+    const char* execFile = "/test_user";
 
-        size_t page_size = (procFile->f_size >> 12) + ((procFile->f_size & 0xFFF) == 0 ? 0 : 1);
-        auto* proc = new kernel::Process(0x1000000);
+    auto& thisProc = kernel::Thread::current()->parent();
 
-        for(size_t i = 0; i < page_size; ++i) {
-            kernel::PhysicalPage page;
-            page.flags().executable = true;
-            page.flags().user_accesible = true;
-            page.flags().writable = true;
-            proc->map_page(0x1000000 + (i << 12), page, false);
-        }
+    auto* sstream = new SimpleStream();
+    thisProc.add_stream(sstream);
+    thisProc.add_stream(sstream);
+    thisProc.add_stream(sstream);
 
-        auto& pager = proc->pager();
-        auto& current = kernel::Pager::active();
-
-        pager.enable();
-        stream.read((void*)0x1000000, procFile->f_size);
-        current.enable();
-
-        auto* sstream = new SimpleStream();
-        proc->add_stream(sstream);
-        proc->add_stream(sstream);
-        proc->add_stream(sstream);
-
-        kernel::Scheduler::schedule_process(*proc);
-    } else kprintf("[%T] (Kernel) Failed to find executable file\n");
+    asm volatile("mov $10, %%rax; mov $0, %%rcx; mov $0, %%rdx; int $0x8F" :: "b"(execFile));
 
     while(true) asm volatile("hlt");
 }

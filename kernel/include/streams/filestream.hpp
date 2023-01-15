@@ -22,6 +22,8 @@ namespace kernel {
 
         virtual size_t read(void* buffer, size_t length);
 
+        virtual size_t seek(size_t position, int mode);
+
         std::SharedPtr<VNode>& node() { return f_file; }
     };
 }
