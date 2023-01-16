@@ -119,66 +119,66 @@ ValueOrError<VNodePtr> DeviceFilesystem::resolve_link(VNodePtr link) {
 }
 
 ValueOrError<void> DeviceFilesystem::open(FileStream* stream, int mode) {
-    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    /*auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
     auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->open;
     if(func != 0)
         return func(numbers->minor, stream, mode);
     else
-        return ERR_UNIMPLEMENTED;
+        return ERR_UNIMPLEMENTED;*/
 }
 
 ValueOrError<void> DeviceFilesystem::close(FileStream* stream) {
-    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    /*auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
     auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->close;
     if(func != 0)
         return func(numbers->minor, stream);
     else
-        return ERR_UNIMPLEMENTED;
+        return ERR_UNIMPLEMENTED;*/
 }
 
 ValueOrError<size_t> DeviceFilesystem::read(FileStream* stream, void* buffer, size_t length) {
-    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    /*auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
     auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->read;
     if(func != 0)
         return func(numbers->minor, stream, buffer, length);
     else
-        return ERR_UNIMPLEMENTED;
+        return ERR_UNIMPLEMENTED;*/
 }
 
 ValueOrError<size_t> DeviceFilesystem::write(FileStream* stream, const void* buffer, size_t length) {
-    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    /*auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
     auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->write;
     if(func != 0)
         return func(numbers->minor, stream, buffer, length);
     else
-        return ERR_UNIMPLEMENTED;
+        return ERR_UNIMPLEMENTED;*/
 }
 
 ValueOrError<size_t> DeviceFilesystem::seek(FileStream* stream, size_t position, int mode) {
-    auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
+    /*auto* numbers = static_cast<DevFs_DevData*>(stream->node()->fs_data);
     auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->seek;
     if(func != 0)
         return func(numbers->minor, stream, position, mode);
     else
-        return ERR_UNIMPLEMENTED;
+        return ERR_UNIMPLEMENTED;*/
 }
 
 ValueOrError<u32_t> DeviceFilesystem::block_read(std::SharedPtr<VNode> bdev, u64_t lba, u32_t sector_count, void* buffer) {
-    auto* numbers = static_cast<DevFs_DevData*>(bdev->fs_data);
+    /*auto* numbers = static_cast<DevFs_DevData*>(bdev->fs_data);
     auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->block_read;
     if(func != 0)
         return func(numbers->minor, lba, sector_count, buffer);
     else
-        return ERR_UNIMPLEMENTED;
+        return ERR_UNIMPLEMENTED;*/
 }
 
 ValueOrError<u32_t> DeviceFilesystem::block_write(std::SharedPtr<VNode> bdev, u64_t lba, u32_t sector_count, const void* buffer) {
-    auto* numbers = static_cast<DevFs_DevData*>(bdev->fs_data);
+    /*auto* numbers = static_cast<DevFs_DevData*>(bdev->fs_data);
     auto* func = get_module_symbol<DevFsFunctionTable>(numbers->major, "dev_func_tab")->block_write;
     if(func != 0)
         return func(numbers->minor, lba, sector_count, buffer);
     else
-        return ERR_UNIMPLEMENTED;
+        return ERR_UNIMPLEMENTED;*/
 }
 
 ValueOrError<std::SharedPtr<VNode>> DeviceFilesystem::add_dev(const char* path, u16_t major, u16_t minor) {

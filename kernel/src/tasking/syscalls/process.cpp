@@ -5,6 +5,7 @@
 #include <tasking/syscalls/map.hpp>
 #include <fs/vfs.hpp>
 #include <vector.hpp>
+#include <elf.h>
 
 using namespace kernel;
 

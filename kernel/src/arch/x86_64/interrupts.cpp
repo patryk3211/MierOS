@@ -184,7 +184,7 @@ NO_EXPORT void handle_exception(CPUState* state) {
     file_line_pair p = addr_to_line(state->rip);
     kprintf("Line: %s:%d\n", p.name, p.line);
 
-    if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
+    //if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
     trace_stack((void*)state->rbp);
 
     // Prepare resources for serial debugging
