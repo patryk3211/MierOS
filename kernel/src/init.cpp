@@ -16,6 +16,7 @@
 #include <tests/test.hpp>
 #include <trace.h>
 #include <debug.h>
+#include <event/event_manager.hpp>
 
 #include <fs/modulefs.hpp>
 #include <fs/modulefs_functions.hpp>
@@ -155,6 +156,9 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     init_syscalls();
 
+    // Initialize the event system
+    new kernel::EventManager();
+
     kernel::tests::do_tests();
 
     {
@@ -179,12 +183,12 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     void** files = get_files("*.mod");
     for(size_t i = 0; files[i] != 0; ++i) {
-        kernel::add_preloaded_module(files[i]);
+        //kernel::add_preloaded_module(files[i]);
     }
 
     new kernel::DeviceFilesystem();
 
-    kernel::init_modules("INIT", 0);
+    //kernel::init_modules("INIT", 0);
 
     {
         auto devices = kernel::DeviceFilesystem::instance()->get_files(nullptr, "", { .resolve_link = 0, .follow_links = 1 });
@@ -203,13 +207,13 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     kernel::VFS* vfs = new kernel::VFS();
 
-    u16_t fs_mod = kernel::init_modules("FS-ext2", 0);
+    /*u16_t fs_mod = kernel::init_modules("FS-ext2", 0);
     kernel::Thread::current()->f_current_module = kernel::get_module(fs_mod);
     auto* fs_mount = kernel::get_module_symbol<kernel::fs_function_table>(fs_mod, "fs_func_tab")->mount;
     u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(nullptr, "ahci0p1", {}));
-    kernel::ModuleFilesystem* mfs = new kernel::ModuleFilesystem(fs_mod, minor);
+    kernel::ModuleFilesystem* mfs = new kernel::ModuleFilesystem(fs_mod, minor);*/
 
-    vfs->mount(mfs, "/");
+    //vfs->mount(mfs, "/");
 
     auto result = vfs->get_files(nullptr, "", {});
     if(result) {
