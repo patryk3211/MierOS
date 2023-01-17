@@ -25,5 +25,10 @@ namespace kernel {
         }
 
         void* get_symbol_ptr(const char* name);
+    
+    private:
+        int parse_module_header(void* file);
+
+        int parse_module_header_v1(void* headerPtr);
     };
 }
