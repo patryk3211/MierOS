@@ -3,23 +3,16 @@
 #include <dmesg.h>
 #include <list.hpp>
 #include <modules/module_header.h>
-#include <modules/module_manager.hpp>
+#include <event/event_manager.hpp>
+#include <event/kernel_events.hpp>
 
-extern char header_mod_name[];
-extern char init_on[];
 MODULE_HEADER static module_header header {
-    .header_version = 1, // Header Version 1
-    .reserved1 = 0,
-    .preferred_major = 0, // No preferred major number value
-    .flags = 0,
-    .reserved2 = 0,
-    .dependencies_ptr = 0, // No dependencies
-    .name_ptr = (u64_t)&header_mod_name, // Name
-    .init_on_ptr = (u64_t)&init_on // Initialize on
+    .magic = MODULE_HEADER_MAGIC,
+    .mod_name = "pci",
+    .dependencies = 0
 };
 
-MODULE_HEADER char header_mod_name[] = "pci";
-MODULE_HEADER char init_on[] = "INIT\0";
+/*MODULE_HEADER char init_on[] = "INIT\0";*/
 
 std::List<PCI_Header> pci_headers;
 
@@ -60,7 +53,8 @@ extern "C" int init() {
 
         kprintf("[%T] (PCI) Initalizing modules for signal '%s'\n", init_signal);
 
-        kernel::init_modules(init_signal, &header);
+        kernel::Event* event = new kernel::Event(EVENT_LOAD_MODULE, init_signal, 0);
+        kernel::EventManager::get().raise(event);
     }
     return 0;
 }

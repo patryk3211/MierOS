@@ -149,19 +149,8 @@ public:
     }
 };
 
-TEXT_FREE_AFTER_INIT void stage2_init() {
-    kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
-
-    init_debug();
-
-    init_syscalls();
-
-    // Initialize the event system
-    new kernel::EventManager();
-
-    kernel::tests::do_tests();
-
-    {
+TEXT_FREE_AFTER_INIT void init_modules() {
+    { // Find initrd loaded by bootloader
         physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;
         physaddr_t mod_phys_end = mod.end & 0x7FFFFFFFFFFF;
         size_t length = mod_phys_end - mod_phys_start;
@@ -181,14 +170,37 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         set_initrd((void*)mod_start);
     }
 
-    void** files = get_files("*.mod");
-    for(size_t i = 0; files[i] != 0; ++i) {
-        //kernel::add_preloaded_module(files[i]);
-    }
+    // Initialize the module manager
+    new kernel::ModuleManager();
 
+    // Preload all .mod files as modules
+    void** files = get_files("*.mod");
+    for(size_t i = 0; files[i] != 0; ++i)
+        kernel::ModuleManager::get().preload_module(files[i]);
+
+    // Prepare device filesystem (/dev)
     new kernel::DeviceFilesystem();
 
-    //kernel::init_modules("INIT", 0);
+    // Load modules specifies by modules.init file
+    char* initModules = (char*)get_file("modules.init");
+}
+
+TEXT_FREE_AFTER_INIT void stage2_init() {
+    kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
+
+    init_debug();
+
+    init_syscalls();
+
+    // Initialize the event system
+    new kernel::EventManager();
+
+    kernel::tests::do_tests();
+
+    // Initialize the virtual filesystem
+    new kernel::VFS();
+
+    init_modules();
 
     {
         auto devices = kernel::DeviceFilesystem::instance()->get_files(nullptr, "", { .resolve_link = 0, .follow_links = 1 });
@@ -205,8 +217,6 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         kprintf("\n");
     }
 
-    kernel::VFS* vfs = new kernel::VFS();
-
     /*u16_t fs_mod = kernel::init_modules("FS-ext2", 0);
     kernel::Thread::current()->f_current_module = kernel::get_module(fs_mod);
     auto* fs_mount = kernel::get_module_symbol<kernel::fs_function_table>(fs_mod, "fs_func_tab")->mount;
@@ -215,7 +225,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     //vfs->mount(mfs, "/");
 
-    auto result = vfs->get_files(nullptr, "", {});
+    /*auto result = vfs->get_files(nullptr, "", {});
     if(result) {
         auto nodes = *result;
         for(auto& node : nodes) {
@@ -223,7 +233,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         }
         kprintf("\n");
     }
-    kernel::Thread::current()->f_current_module = 0;
+    kernel::Thread::current()->f_current_module = 0;*/
 
     TRACE("Test\n");
 

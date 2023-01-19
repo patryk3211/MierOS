@@ -19,21 +19,19 @@
 #define SATA_SIG_SEMB 0xC33C0101
 #define SATA_SIG_PM 0x96690101
 
-extern char header_mod_name[];
-extern char init_on[];
-MODULE_HEADER static module_header header {
-    .header_version = 1, // Header Version 1
-    .reserved1 = 0,
-    .preferred_major = 0, // No preferred major number value
-    .flags = 0,
-    .reserved2 = 0,
-    .dependencies_ptr = 0, // No dependencies
-    .name_ptr = (u64_t)&header_mod_name, // Name
-    .init_on_ptr = (u64_t)&init_on // Initialize on
+MODULE_HEADER char __header_dep_pci[] = "pci";
+MODULE_HEADER char* __header_dependencies[] = {
+    __header_dep_pci,
+    0
 };
 
-MODULE_HEADER char header_mod_name[] = "ahci";
-MODULE_HEADER char init_on[] = "PCI-V???\?-D???\?-C01S06P01R??\0";
+MODULE_HEADER static module_header header {
+    .magic = MODULE_HEADER_MAGIC,
+    .mod_name = "ahci",
+    .dependencies = __header_dependencies
+};
+
+/*MODULE_HEADER char init_on[] = "PCI-V???\?-D???\?-C01S06P01R??\0";*/
 
 u16_t module_major_num;
 

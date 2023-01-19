@@ -12,6 +12,7 @@ extern int atoi(const char* str);
 extern void memset(void* ptr, int val, size_t count);
 extern void memcpy(void* dst, const void* src, size_t count);
 extern int memcmp(const void* a, const void* b, size_t count);
+extern void* memfind(void* ptr, const void* value, size_t valueLength, size_t ptrLength);
 
 extern int strcmp(const char* a, const char* b);
 extern int strncmp(const char* a, const char* b, size_t len);

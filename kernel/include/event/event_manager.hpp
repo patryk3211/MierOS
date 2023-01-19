@@ -8,7 +8,7 @@
 #include <tasking/process.hpp>
 
 namespace kernel {
-    typedef bool event_handler_t(Event& event);
+    typedef void event_handler_t(Event& event);
 
     class EventManager {
         static EventManager* s_instance;
@@ -24,6 +24,9 @@ namespace kernel {
         EventManager();
         ~EventManager();
 
+        // This function consumes the pointer and will take care
+        // of it's destruction but it will not take care of the
+        // cleanup of pointers passed on the event object
         void raise(Event* event);
         void register_handler(u64_t identifier, event_handler_t* handler);
 

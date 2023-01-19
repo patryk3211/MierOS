@@ -45,6 +45,7 @@ void EventManager::event_loop() {
         if(handlersRef) {
             auto& handlers = *handlersRef;
             for(auto& handler : handlers) {
+                event->reset_arg_ptr();
                 handler(*event);
 
                 if(event->is_consumed())

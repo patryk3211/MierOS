@@ -30,4 +30,8 @@ set(INITRD_MODULES kernel/modules/pci/pci.mod
                    kernel/modules/ahci/ahci.mod
                    kernel/modules/ext2/ext2.mod)
 
-add_custom_target(initrd.img ALL "sh" "make_initrd.sh" "${INITRD_MODULES}" "${SYSROOT_DIR}/initrd.img" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} VERBATIM DEPENDS ${INITRD_MODULES})
+add_custom_target(initrd.img ALL "sh" "make_initrd.sh"
+        "${INITRD_MODULES}"
+        "${SYSROOT_DIR}/initrd.img"
+        "${CMAKE_SOURCE_DIR}/kernel/modules/modules.init"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} VERBATIM DEPENDS ${INITRD_MODULES})

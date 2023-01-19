@@ -8,9 +8,12 @@
 extern "C" {
 #endif
 
+#define MODULE_HEADER_MAGIC { 0x7F, 'M', 'O', 'D', 'H', 'D', 'R', '1' }
+
 struct module_header {
-    char magic[8]; // magic = "MODHDRV1"
+    char magic[8]; // magic = "\0177MODHDR1"
     char mod_name[128];
+    char** dependencies;
 } PACKED;
 
 #if defined(__cplusplus)

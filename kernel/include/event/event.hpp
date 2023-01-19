@@ -2,6 +2,7 @@
 
 #include <types.h>
 #include <assert.h>
+#include <stdlib.h>
 
 namespace kernel {
     template<typename T> struct EventArg {
@@ -15,6 +16,21 @@ namespace kernel {
             T* ptr = reinterpret_cast<T*>(buffer);
             buffer += sizeof(T);
             return *ptr;
+        }
+    };
+
+    template<> struct EventArg<char*> {
+        size_t encode(u8_t* buffer, const char* value) {
+            size_t len = strlen(value) + 1;
+            memcpy(buffer, value, len);
+            return len;
+        }
+
+        char* decode(u8_t*& buffer) {
+            char* ptr = (char*)buffer;
+            size_t len = strlen(ptr);
+            buffer += len + 1;
+            return ptr;
         }
     };
 
@@ -51,8 +67,12 @@ namespace kernel {
             return f_identified;
         }
 
-        template<typename T> T& get_arg() {
+        template<typename T> T get_arg() {
             return EventArg<T>().decode(f_arg_ptr);
+        }
+
+        void reset_arg_ptr() {
+            f_arg_ptr = f_arg_storage;
         }
 
     private:
