@@ -4,12 +4,13 @@
 
 namespace kernel {
     class InitRdFilesystem : public Filesystem {
-        void* f_memory;
         VNodePtr f_root;
 
     public:
         InitRdFilesystem(void* initrd);
-        virtual ~InitRdFilesystem();
+        virtual ~InitRdFilesystem() = default;
+
+        virtual ValueOrError<void> umount();
 
         virtual ValueOrError<VNodePtr> get_file(VNodePtr root, const char* path, FilesystemFlags flags);
         virtual ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, const char* path, FilesystemFlags flags);
@@ -23,6 +24,6 @@ namespace kernel {
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
 
     private:
-        ValueOrError<VNodePtr> InitRdFilesystem::get_node(VNodePtr root, const char* file);
+        ValueOrError<VNodePtr> get_node(VNodePtr root, const char* file);
     };
 }

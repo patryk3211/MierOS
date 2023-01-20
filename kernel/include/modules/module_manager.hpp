@@ -30,6 +30,8 @@ namespace kernel {
 
         Module* get_module(u16_t major);
 
+        void reload_modules();
+
         static ModuleManager& get();
 
     private:

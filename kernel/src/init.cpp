@@ -17,6 +17,7 @@
 #include <trace.h>
 #include <debug.h>
 #include <event/event_manager.hpp>
+#include <fs/initrdfs.hpp>
 
 #include <fs/modulefs.hpp>
 #include <fs/modulefs_functions.hpp>
@@ -167,22 +168,38 @@ TEXT_FREE_AFTER_INIT void init_modules() {
         kernel::Pager::kernel().unlock();
 
         set_line_map((void*)map_start);
-        set_initrd((void*)mod_start);
+        //set_initrd((void*)mod_start);
+
+        kernel::InitRdFilesystem* initrdfs = new kernel::InitRdFilesystem((void*)mod_start);
+        kernel::VFS::instance()->mount(initrdfs, "/");
     }
 
     // Initialize the module manager
     new kernel::ModuleManager();
 
-    // Preload all .mod files as modules
-    void** files = get_files("*.mod");
-    for(size_t i = 0; files[i] != 0; ++i)
-        kernel::ModuleManager::get().preload_module(files[i]);
+    auto file = kernel::VFS::instance()->get_file(nullptr, "/etc/modules.init", { });
+    if(file) {
+        auto stream = kernel::FileStream(*file);
+        stream.open(FILE_OPEN_MODE_READ);
 
-    // Prepare device filesystem (/dev)
-    new kernel::DeviceFilesystem();
+        char buffer[stream.node()->f_size + 1];
+        buffer[stream.node()->f_size] = 0;
+        stream.read(buffer, stream.node()->f_size);
 
-    // Load modules specifies by modules.init file
-    char* initModules = (char*)get_file("modules.init");
+        kprintf("[%T] File contents '%s'\n", buffer);
+    }
+
+    while(true);
+//    // Preload all .mod files as modules
+//    void** files = get_files("*.mod");
+//    for(size_t i = 0; files[i] != 0; ++i)
+//        kernel::ModuleManager::get().preload_module(files[i]);
+//
+//    // Prepare device filesystem (/dev)
+//    new kernel::DeviceFilesystem();
+//
+//    // Load modules specifies by modules.init file
+//    char* initModules = (char*)get_file("modules.init");
 }
 
 TEXT_FREE_AFTER_INIT void stage2_init() {

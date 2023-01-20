@@ -27,16 +27,16 @@ struct TarHeader {
     }
 };
 
-int oct2bin(char* str, int size) {
-    int n = 0;
-    char* c = str;
-    while(size-- > 0) {
-        n *= 8;
-        n += *c - '0';
-        c++;
-    }
-    return n;
-}
+// int oct2bin(char* str, int size) {
+//     int n = 0;
+//     char* c = str;
+//     while(size-- > 0) {
+//         n *= 8;
+//         n += *c - '0';
+//         c++;
+//     }
+//     return n;
+// }
 
 struct InitRdVNodeData : VNodeDataStorage {
     TarHeader* ptr;
@@ -47,8 +47,7 @@ struct InitRdVNodeData : VNodeDataStorage {
     virtual ~InitRdVNodeData() = default;
 };
 
-InitRdFilesystem::InitRdFilesystem(void* initrd)
-    : f_memory(initrd) {
+InitRdFilesystem::InitRdFilesystem(void* initrd) {
     f_root = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, "", VNode::DIRECTORY, this);
     f_root->fs_data = new InitRdVNodeData((TarHeader*)initrd);
 }
@@ -91,9 +90,10 @@ ValueOrError<VNodePtr> InitRdFilesystem::get_node(VNodePtr root, const char* fil
         // Read from disk
         auto* node_data = static_cast<InitRdVNodeData*>(root->fs_data);
 
+        /// My parsing is waaay off
         TarHeader* header = node_data->ptr;
         while(memcmp((char*)header + 257, "ustar", 5)) {
-            int fileSize = oct2bin(header->size, 11);
+            int fileSize = header->getSize(); //oct2bin(header->size, 11);
             if(!strcmp(header->filename, file)) {
                 // We found a file
                 VNode::Type vtype = get_vnode_type(header->typeflag[0]);
@@ -112,7 +112,7 @@ ValueOrError<VNodePtr> InitRdFilesystem::get_node(VNodePtr root, const char* fil
     }
 }
 
-ValueOrError<VNodePtr> InitRdFilesystem::get_file(VNodePtr root, const char* path, FilesystemFlags flags) {
+ValueOrError<VNodePtr> InitRdFilesystem::get_file(VNodePtr root, const char* path, FilesystemFlags) {
     if(!root) root = f_root;
     ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
 
@@ -163,7 +163,7 @@ ValueOrError<std::List<VNodePtr>> InitRdFilesystem::get_files(VNodePtr root, con
     auto* node_data = static_cast<InitRdVNodeData*>(node->fs_data);
     TarHeader* header = node_data->ptr;
     while(memcmp((char*)header + 257, "ustar", 5)) {
-        int fileSize = oct2bin(header->size, 11);
+        int fileSize = header->getSize(); //oct2bin(header->size, 11);
         if(node->f_children.find(header->filename) == node->f_children.end()) {
             // This node was not loaded before so we can load it now
             auto childNode = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, fileSize, header->filename, get_vnode_type(header->typeflag[0]), this);
@@ -178,22 +178,60 @@ ValueOrError<std::List<VNodePtr>> InitRdFilesystem::get_files(VNodePtr root, con
     return nodes;
 }
 
-ValueOrError<void> InitRdFilesystem::open(FileStream* stream, int mode) {
+struct InitRdStreamData {
+    size_t offset;
 
+    InitRdStreamData() {
+        offset = 0;
+    }
+};
+
+ValueOrError<void> InitRdFilesystem::open(FileStream* stream, int) {
+    stream->fs_data = new InitRdStreamData();
+    return { };
 }
 
 ValueOrError<void> InitRdFilesystem::close(FileStream* stream) {
-
+    delete reinterpret_cast<InitRdStreamData*>(stream->fs_data);
+    return { };
 }
 
 ValueOrError<size_t> InitRdFilesystem::read(FileStream* stream, void* buffer, size_t length) {
+    auto* stream_data = reinterpret_cast<InitRdStreamData*>(stream->fs_data);
+    size_t max_size = stream->node()->f_size;
+    if(stream_data->offset >= max_size) return 0;
 
+    size_t length_left = max_size - stream_data->offset;
+    if(length > length_left) length = length_left;
+
+    auto* vnode_data = reinterpret_cast<InitRdVNodeData*>(stream->node()->fs_data);
+    memcpy(buffer, ((u8_t*)vnode_data->ptr + 512), length);
+
+    return length;
 }
 
-ValueOrError<size_t> InitRdFilesystem::write(FileStream* stream, const void* buffer, size_t length) {
-
+ValueOrError<size_t> InitRdFilesystem::write(FileStream*, const void*, size_t) {
+    /// TODO: [20.01.2023] This should be changed to 'Filesystem Read-only Error'
+    return ERR_UNIMPLEMENTED;
 }
 
 ValueOrError<size_t> InitRdFilesystem::seek(FileStream* stream, size_t position, int mode) {
+    auto* stream_data = reinterpret_cast<InitRdStreamData*>(stream->fs_data);
+    size_t old_offset = stream_data->offset;
+    switch(mode) {
+        case SEEK_MODE_CUR:
+            stream_data->offset += position;
+            break;
+        case SEEK_MODE_BEG:
+            stream_data->offset = position;
+            break;
+        case SEEK_MODE_END:
+            stream_data->offset = stream->node()->f_size + position;
+            break;
+    }
+    return old_offset;
+}
 
+ValueOrError<void> InitRdFilesystem::umount() {
+    return { };
 }
