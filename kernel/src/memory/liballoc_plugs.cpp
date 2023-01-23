@@ -66,18 +66,22 @@ extern "C" void* liballoc_alloc(size_t page_count) {
         }
     fail:;
     }
-    return (void*)Pager::active().kalloc(page_count);
+    Pager pager = Pager::active();
+    Locker lock(pager);
+    return (void*)pager.kalloc(page_count);
 }
 
 extern "C" int liballoc_free(void* ptr, size_t page_count) {
-    if(ptr >= initial_heap && ptr < initial_heap + HEAP_PAGE_SIZE) {
+    if(ptr >= initial_heap && ptr < initial_heap + HEAP_SIZE) {
         // Free on local heap.
         u32_t page = ((u64_t)ptr - (u64_t)heap_usage_bitmap) >> 12;
         for(u32_t i = 0; i < page_count; ++i) set_page_used(page + i, 0);
         if(page < heap_first_potential_page) heap_first_potential_page = page;
         return 0;
     }
-    Pager::active().free((virtaddr_t)ptr, page_count);
+    Pager pager = Pager::active();
+    Locker lock(pager);
+    pager.free((virtaddr_t)ptr, page_count);
     return 0;
 }
 

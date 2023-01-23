@@ -1,3 +1,3 @@
-set(SOURCES main.cpp ata.cpp devfs.cpp)
+set(SOURCES main.cpp ata.cpp devfs.cpp drive.cpp pci.cpp)
 
 add_kernel_module(ahci ${SOURCES})

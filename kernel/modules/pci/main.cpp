@@ -1,10 +1,12 @@
 #include "pci_header.h"
+#include "pci_driver.h"
 #include <defines.h>
 #include <dmesg.h>
 #include <list.hpp>
 #include <modules/module_header.h>
 #include <event/event_manager.hpp>
 #include <event/kernel_events.hpp>
+#include <modules/module.hpp>
 
 MODULE_HEADER static module_header header {
     .magic = MODULE_HEADER_MAGIC,
@@ -12,11 +14,14 @@ MODULE_HEADER static module_header header {
     .dependencies = 0
 };
 
-/*MODULE_HEADER char init_on[] = "INIT\0";*/
-
 std::List<PCI_Header> pci_headers;
 
 extern void detect_pci();
+
+void mod_load_cb(kernel::Module* mod, void* arg) {
+    PCI_Driver* driver = (PCI_Driver*)mod->get_symbol_ptr("pci_driver");
+    driver->add((PCI_Header*)arg);
+}
 
 const char lookup[] = "0123456789abcdef";
 extern "C" int init() {
@@ -53,7 +58,7 @@ extern "C" int init() {
 
         kprintf("[%T] (PCI) Initalizing modules for signal '%s'\n", init_signal);
 
-        kernel::Event* event = new kernel::Event(EVENT_LOAD_MODULE, init_signal, 0);
+        kernel::Event* event = new kernel::Event(EVENT_LOAD_MODULE, init_signal, &mod_load_cb, &header, 0);
         kernel::EventManager::get().raise(event);
     }
     return 0;

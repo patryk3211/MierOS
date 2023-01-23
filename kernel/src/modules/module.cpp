@@ -14,7 +14,6 @@ Module::Module(u16_t major)
 
     f_loaded = false;
     f_initialized = false;
-    f_preload_file = 0;
 }
 
 Module::~Module() {
@@ -23,16 +22,11 @@ Module::~Module() {
 
 #define CHECK_ERROR(expr) { int _code = (expr); if(_code) { print_error(_code); return _code; } }
 
-const char ELF_IDENT[] = { 0x7F, 'E', 'L', 'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-const char MOD_IDENT[] = MODULE_HEADER_MAGIC;
+static const char ELF_IDENT[] = { 0x7F, 'E', 'L', 'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+static const char MOD_IDENT[] = MODULE_HEADER_MAGIC;
 int Module::load(void* file) {
     if(f_loaded)
         return 0;
-
-    if(file == 0) {
-        file = f_preload_file;
-        f_preload_file = 0;
-    }
 
     // Do the parsing
     Elf64_Header* elfHeader = (Elf64_Header*)file;
@@ -49,14 +43,16 @@ int Module::load(void* file) {
     virtaddr_t firstAddr = ~0;
     virtaddr_t lastAddr = 0;
     for(size_t i = 0; i < elfHeader->phdr_entry_count; ++i) {
-        virtaddr_t phdrFirst = programHeaders->vaddr & ~0xFFF;
-        virtaddr_t phdrLast = programHeaders->vaddr + programHeaders->mem_size;
+        if(programHeaders[i].type != PT_LOAD) continue;
+
+        virtaddr_t phdrFirst = programHeaders[i].vaddr & ~0xFFF;
+        virtaddr_t phdrLast = programHeaders[i].vaddr + programHeaders[i].mem_size;
 
         if(phdrLast & 0xFFF)
             phdrLast = (phdrLast | 0xFFF) + 1;
 
-        if(firstAddr > phdrFirst) phdrFirst = firstAddr;
-        if(lastAddr < phdrLast) phdrLast = lastAddr;
+        if(firstAddr > phdrFirst) firstAddr = phdrFirst;
+        if(lastAddr < phdrLast) lastAddr = phdrLast;
     }
 
     // Now we find a suitable location
@@ -107,15 +103,15 @@ int Module::load(void* file) {
             size_t pageMemSize = (alignedMemSize >> 12) + ((alignedMemSize & 0xFFF) == 0 ? 0 : 1);
 
             for(size_t j = 0; j < pageMemSize; ++j)
-                pager.map(palloc(1), (programHeaders[i].vaddr & ~0xFFF) + (j << 12), 1, PageFlags(true, true));
+                pager.map(palloc(1), f_base_addr + (programHeaders[i].vaddr & ~0xFFF) + (j << 12), 1, PageFlags(true, true));
 
             // Copy from file...
-            memcpy((void*)programHeaders[i].vaddr, (u8_t*)file + programHeaders[i].offset, programHeaders[i].file_size);
+            memcpy((void*)(f_base_addr + programHeaders[i].vaddr), (u8_t*)file + programHeaders[i].offset, programHeaders[i].file_size);
 
             // ...and clear the rest
-            memset((void*)(programHeaders[i].vaddr + programHeaders[i].file_size), 0, programHeaders[i].mem_size - programHeaders[i].file_size);
+            memset((void*)(f_base_addr + programHeaders[i].vaddr + programHeaders[i].file_size), 0, programHeaders[i].mem_size - programHeaders[i].file_size);
 
-            flagRegions.push_back({ programHeaders[i].vaddr & ~0xFFF, pageMemSize, PageFlags(
+            flagRegions.push_back({ f_base_addr + (programHeaders[i].vaddr & ~0xFFF), pageMemSize, PageFlags(
                 true, // Present
                 programHeaders[i].flags & 2, // Writable
                 false, // User
@@ -136,6 +132,10 @@ int Module::load(void* file) {
     // Relocation and linking
     CHECK_ERROR(link());
 
+    u16_t* mod_major_num = (u16_t*)get_symbol_ptr("major");
+    if(mod_major_num != 0)
+        *mod_major_num = f_major_num;
+
     // Set correct flags for sections
     pager.lock();
     for(auto& reg : flagRegions) {
@@ -145,10 +145,6 @@ int Module::load(void* file) {
 
     f_loaded = true;
     return 0;
-}
-
-void Module::preload(void* file) {
-    f_preload_file = file;
 }
 
 bool Module::is_loaded() {
@@ -175,8 +171,9 @@ int Module::parse_module_header_v1(void* headerPtr, size_t size) {
     f_name = header->mod_name;
 
     if(header->dependencies) {
-        for(char** ptr = header->dependencies; *ptr != 0; ++ptr) {
-            char* depName = *ptr;
+        // This is happening before relocations so we need to add base address to things
+        for(char** ptr = (char**)((u8_t*)header->dependencies + f_base_addr); *ptr != 0; ++ptr) {
+            char* depName = (char*)((u8_t*)*ptr + f_base_addr);
             u16_t major_num = ModuleManager::get().find_module(depName);
             f_dependencies.push_back(major_num);
         }

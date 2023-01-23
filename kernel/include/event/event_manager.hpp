@@ -18,6 +18,7 @@ namespace kernel {
 
         Process* f_event_loop_proc;
 
+        // This lock secures the event queue from concurrent modification
         SpinLock f_lock;
 
     public:

@@ -9,9 +9,9 @@ EventManager* EventManager::s_instance = 0;
 
 EventManager::EventManager() {
     f_event_loop_proc = Process::construct_kernel_process((virtaddr_t)&event_loop);
-    Scheduler::schedule_process(*f_event_loop_proc);
-
     s_instance = this;
+
+    Scheduler::schedule_process(*f_event_loop_proc);
 }
 
 EventManager::~EventManager() { }
@@ -23,8 +23,6 @@ void EventManager::raise(Event* event) {
 }
 
 void EventManager::register_handler(u64_t identifier, event_handler_t* handler) {
-    Locker locker(f_lock);
-
     f_handlers[identifier].push_back(handler);
 }
 
@@ -39,7 +37,10 @@ void EventManager::event_loop() {
         while(!s_instance->f_event_queue.size())
             asm volatile("hlt"); // For now we halt if there are no events to process
 
+        s_instance->f_lock.lock();
         auto* event = s_instance->f_event_queue.pop_front();
+        s_instance->f_lock.unlock();
+
         auto handlersRef = s_instance->f_handlers.at(event->identifier());
 
         if(handlersRef) {

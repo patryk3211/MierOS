@@ -26,3 +26,7 @@ struct drive_file {
     u64_t partition_end;
     std::SharedPtr<kernel::VNode> node;
 };
+
+static size_t drive_count;
+static u16_t minor_num;
+static std::UnorderedMap<u16_t, drive_file> drives;

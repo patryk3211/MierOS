@@ -36,6 +36,8 @@ void detect_pci() {
                         header.bar[4] = pci_read(bus, device, func, 0x20);
                         header.bar[5] = pci_read(bus, device, func, 0x24);
 
+                        header.claimed = false;
+
                         pci_headers.push_back(header);
                     }
                 }

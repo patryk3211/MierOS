@@ -34,4 +34,5 @@ add_custom_target(initrd.img ALL "sh" "make_initrd.sh"
         "${INITRD_MODULES}"
         "${SYSROOT_DIR}/initrd.img"
         "${CMAKE_SOURCE_DIR}/kernel/modules/modules.init"
+        "${CMAKE_SOURCE_DIR}/kernel/modules/modules.alias"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} VERBATIM DEPENDS ${INITRD_MODULES})

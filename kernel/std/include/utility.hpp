@@ -18,4 +18,11 @@ namespace std {
     template<typename T> T&& forward(remove_reference<T>&& t) {
         return static_cast<T&&>(t);
     }
+
+
+    template<class T> struct __remove_cv { typedef T Type; };
+    template<class T> struct __remove_cv<const T> { typedef T Type; };
+    template<class T> struct __remove_cv<volatile T> { typedef T Type; };
+
+    template<typename T> using remove_cv = typename __remove_cv<T>::Type;
 }

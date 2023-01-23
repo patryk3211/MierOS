@@ -84,7 +84,7 @@ void atexit(void (*exit_handler)()) { }
 
 void* memfind(void* ptr, const void* value, size_t valueLength, size_t ptrLength) {
     for(size_t i = 0; i < ptrLength - valueLength; ++i) {
-        if(memcmp((u8_t*)ptr, (const u8_t*)value, valueLength)) {
+        if(memcmp((u8_t*)ptr + i, (const u8_t*)value, valueLength)) {
             return (u8_t*)ptr + i;
         }
     }

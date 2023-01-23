@@ -4,6 +4,7 @@
 #include <locking/spinlock.hpp>
 #include <types.h>
 #include <event/event.hpp>
+#include <fs/vfs.hpp>
 
 namespace kernel {
     class ModuleManager {
@@ -18,24 +19,28 @@ namespace kernel {
             std::String<> f_alias;
             std::String<> f_module_name;
         };
-
         std::List<ModuleAlias> f_module_aliases;
+
+        std::UnorderedMap<std::String<>, VNodePtr> f_module_index;
 
     public:
         ModuleManager();
         ~ModuleManager();
 
-        void preload_module(void* file);
         u16_t find_module(const std::String<>& name);
 
         Module* get_module(u16_t major);
 
         void reload_modules();
+        void run_init_modules();
 
         static ModuleManager& get();
 
     private:
         u16_t generate_major();
+
+        void process_directory(VNodePtr dir);
+        void process_file(VNodePtr file);
 
         static void handle_load_event(Event& event);
     };

@@ -1,7 +1,5 @@
 #include <fs/initrdfs.hpp>
 
-#include <fs/vnode.hpp>
-
 using namespace kernel;
 
 struct TarHeader {
@@ -25,18 +23,7 @@ struct TarHeader {
 
         return val;
     }
-};
-
-// int oct2bin(char* str, int size) {
-//     int n = 0;
-//     char* c = str;
-//     while(size-- > 0) {
-//         n *= 8;
-//         n += *c - '0';
-//         c++;
-//     }
-//     return n;
-// }
+} PACKED;
 
 struct InitRdVNodeData : VNodeDataStorage {
     TarHeader* ptr;
@@ -47,12 +34,66 @@ struct InitRdVNodeData : VNodeDataStorage {
     virtual ~InitRdVNodeData() = default;
 };
 
-InitRdFilesystem::InitRdFilesystem(void* initrd) {
-    f_root = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, "", VNode::DIRECTORY, this);
-    f_root->fs_data = new InitRdVNodeData((TarHeader*)initrd);
+void InitRdFilesystem::parse_header(void* headerPtr) {
+    TarHeader* header = (TarHeader*)headerPtr;
+
+    VNodePtr root = f_root;
+
+    const char* path_ptr = header->filename;
+    const char* next_separator;
+    while((next_separator = strchr(path_ptr, '/')) != 0) {
+        size_t length = next_separator - path_ptr;
+        if(length == 0) {
+            ++path_ptr;
+            continue;
+        }
+
+        char part[length + 1];
+        memcpy(part, path_ptr, length);
+        part[length] = 0;
+
+        auto stat = get_node(root, part);
+        if(!stat) {
+            // We need to create a directory node here
+            VNodePtr node = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, header->getSize(), part, VNode::DIRECTORY, this);
+            node->f_parent = root;
+            root->add_child(node);
+            node->fs_data = 0;
+        } else {
+            root = *stat;
+        }
+
+        path_ptr = next_separator + 1;
+    }
+
+    if(strlen(path_ptr) > 0) {
+        // There is still something left to process, create a node
+        // with type set to the type in tar header
+        VNode::Type vtype = get_vnode_type(header->typeflag[0]);
+        VNodePtr node = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, header->getSize(), path_ptr, vtype, this);
+        if(vtype == VNode::FILE) {
+            // We only need the fs_data to be set for regular files
+            node->fs_data = new InitRdVNodeData(header);
+        }
+        node->f_parent = root;
+        root->add_child(node);
+    }
 }
 
-VNode::Type get_vnode_type(char typeFlag) {
+InitRdFilesystem::InitRdFilesystem(void* initrd) {
+    f_root = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, "", VNode::DIRECTORY, this);
+    f_root->fs_data = 0;
+
+    // Convert the tar archive into our VFS structure
+    TarHeader* header = (TarHeader*)initrd;
+    while(memcmp((char*)header + 257, "ustar", 5)) {
+        int fileSize = header->getSize();
+        parse_header(header);
+        header = (TarHeader*)((virtaddr_t)header + 512 + ((fileSize / 512 + (fileSize % 512 == 0 ? 0 : 1)) * 512));
+    }
+}
+
+VNode::Type InitRdFilesystem::get_vnode_type(char typeFlag) {
     switch(typeFlag) {
         case 0:
         case '0':
@@ -84,37 +125,17 @@ ValueOrError<VNodePtr> InitRdFilesystem::get_node(VNodePtr root, const char* fil
     }
 
     auto next_root = root->f_children.at(file);
-    if(next_root) {
+    if(next_root)
         return *next_root;
-    } else {
-        // Read from disk
-        auto* node_data = static_cast<InitRdVNodeData*>(root->fs_data);
-
-        /// My parsing is waaay off
-        TarHeader* header = node_data->ptr;
-        while(memcmp((char*)header + 257, "ustar", 5)) {
-            int fileSize = header->getSize(); //oct2bin(header->size, 11);
-            if(!strcmp(header->filename, file)) {
-                // We found a file
-                VNode::Type vtype = get_vnode_type(header->typeflag[0]);
-
-                auto vnode = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, fileSize, header->filename, vtype, this);
-                vnode->f_parent = root;
-                vnode->fs_data = new InitRdVNodeData((TarHeader*)((u8_t*)header + 512));
-                root->f_children.insert({ vnode->name(), vnode });
-
-                return vnode;
-            }
-            header = (TarHeader*)((virtaddr_t)header + 512 + ((fileSize / 512 + (fileSize % 512 == 0 ? 0 : 1)) * 512));
-        }
-
+    else
         return ERR_FILE_NOT_FOUND;
-    }
 }
 
 ValueOrError<VNodePtr> InitRdFilesystem::get_file(VNodePtr root, const char* path, FilesystemFlags) {
     if(!root) root = f_root;
     ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
+
+    /// I'm pretty sure this code will never be reached
 
     const char* path_ptr = path;
     const char* next_separator;
@@ -150,7 +171,7 @@ ValueOrError<std::List<VNodePtr>> InitRdFilesystem::get_files(VNodePtr root, con
     auto node = *val;
     if(node->type() == VNode::LINK) {
         if(flags.follow_links)
-            return ERR_UNIMPLEMENTED; /// TODO: [19.01.2023] Handle symbolic links
+            return ERR_UNIMPLEMENTED; /// TODO: [19.01.2023] Handle symbolic links (maybe...)
         else
             return ERR_LINK;
     }
@@ -158,22 +179,6 @@ ValueOrError<std::List<VNodePtr>> InitRdFilesystem::get_files(VNodePtr root, con
     std::List<std::SharedPtr<VNode>> nodes;
     for(auto val : node->f_children)
         nodes.push_back(val.value);
-
-    // Read from disk
-    auto* node_data = static_cast<InitRdVNodeData*>(node->fs_data);
-    TarHeader* header = node_data->ptr;
-    while(memcmp((char*)header + 257, "ustar", 5)) {
-        int fileSize = header->getSize(); //oct2bin(header->size, 11);
-        if(node->f_children.find(header->filename) == node->f_children.end()) {
-            // This node was not loaded before so we can load it now
-            auto childNode = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, fileSize, header->filename, get_vnode_type(header->typeflag[0]), this);
-            childNode->f_parent = node;
-            childNode->fs_data = new InitRdVNodeData((TarHeader*)((u8_t*)header + 512));
-            node->f_children.insert({ childNode->name(), childNode });
-            nodes.push_back(childNode);
-        }
-        header = (TarHeader*)((virtaddr_t)header + 512 + ((fileSize / 512 + (fileSize % 512 == 0 ? 0 : 1)) * 512));
-    }
 
     return nodes;
 }
@@ -199,14 +204,15 @@ ValueOrError<void> InitRdFilesystem::close(FileStream* stream) {
 ValueOrError<size_t> InitRdFilesystem::read(FileStream* stream, void* buffer, size_t length) {
     auto* stream_data = reinterpret_cast<InitRdStreamData*>(stream->fs_data);
     size_t max_size = stream->node()->f_size;
-    if(stream_data->offset >= max_size) return 0;
+    if(stream_data->offset >= max_size) return (size_t)0;
 
     size_t length_left = max_size - stream_data->offset;
     if(length > length_left) length = length_left;
 
     auto* vnode_data = reinterpret_cast<InitRdVNodeData*>(stream->node()->fs_data);
-    memcpy(buffer, ((u8_t*)vnode_data->ptr + 512), length);
+    memcpy(buffer, (u8_t*)vnode_data->ptr + 512 + stream_data->offset, length);
 
+    stream_data->offset += length;
     return length;
 }
 

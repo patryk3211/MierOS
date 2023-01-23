@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fs/filesystem.hpp>
+#include <fs/vnode.hpp>
 
 namespace kernel {
     class InitRdFilesystem : public Filesystem {
@@ -25,5 +26,8 @@ namespace kernel {
 
     private:
         ValueOrError<VNodePtr> get_node(VNodePtr root, const char* file);
+
+        VNode::Type get_vnode_type(char typeFlag);
+        void parse_header(void* header);
     };
 }

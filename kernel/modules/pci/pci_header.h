@@ -17,6 +17,8 @@ struct PCI_Header {
     u8_t revision;
 
     u32_t bar[6];
+
+    bool claimed;
 };
 
 #if defined(__cplusplus)

@@ -4,7 +4,6 @@
 #include <fs/devicefs.hpp>
 #include <fs/vfs.hpp>
 #include <fs/vnode.hpp>
-#include <initrd.h>
 #include <memory/liballoc.h>
 #include <memory/physical.h>
 #include <memory/virtual.hpp>
@@ -168,38 +167,20 @@ TEXT_FREE_AFTER_INIT void init_modules() {
         kernel::Pager::kernel().unlock();
 
         set_line_map((void*)map_start);
-        //set_initrd((void*)mod_start);
 
         kernel::InitRdFilesystem* initrdfs = new kernel::InitRdFilesystem((void*)mod_start);
         kernel::VFS::instance()->mount(initrdfs, "/");
     }
 
+    // Prepare device filesystem (/dev)
+    new kernel::DeviceFilesystem();
+
     // Initialize the module manager
-    new kernel::ModuleManager();
+    auto* modMgr = new kernel::ModuleManager();
+    modMgr->reload_modules();
 
-    auto file = kernel::VFS::instance()->get_file(nullptr, "/etc/modules.init", { });
-    if(file) {
-        auto stream = kernel::FileStream(*file);
-        stream.open(FILE_OPEN_MODE_READ);
-
-        char buffer[stream.node()->f_size + 1];
-        buffer[stream.node()->f_size] = 0;
-        stream.read(buffer, stream.node()->f_size);
-
-        kprintf("[%T] File contents '%s'\n", buffer);
-    }
-
-    while(true);
-//    // Preload all .mod files as modules
-//    void** files = get_files("*.mod");
-//    for(size_t i = 0; files[i] != 0; ++i)
-//        kernel::ModuleManager::get().preload_module(files[i]);
-//
-//    // Prepare device filesystem (/dev)
-//    new kernel::DeviceFilesystem();
-//
-//    // Load modules specifies by modules.init file
-//    char* initModules = (char*)get_file("modules.init");
+    // Run the modules in modules.init
+    modMgr->run_init_modules();
 }
 
 TEXT_FREE_AFTER_INIT void stage2_init() {
@@ -212,6 +193,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     // Initialize the event system
     new kernel::EventManager();
 
+    /// TODO: [22.01.2023] Move tests into a module
     kernel::tests::do_tests();
 
     // Initialize the virtual filesystem

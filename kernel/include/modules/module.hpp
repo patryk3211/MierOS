@@ -35,13 +35,11 @@ namespace kernel {
 
         bool f_loaded;
         bool f_initialized;
-        void* f_preload_file;
 
     public:
         Module(u16_t major);
         ~Module();
 
-        void preload(void* file);
         int load(void* file);
         bool is_loaded();
 
@@ -51,6 +49,7 @@ namespace kernel {
         template<typename... Args> int init(Args... args) {
             if(f_initialized)
                 return 0;
+            f_initialized = true;
             int status = preinit();
             if(status)
                 return status;

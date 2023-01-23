@@ -15,7 +15,9 @@
 			"memory_resource": "cpp",
 			"sstream": "cpp",
 			"regex": "cpp",
-			"tuple": "cpp"
+			"tuple": "cpp",
+			"*.ipp": "cpp",
+			"*.tcc": "cpp"
 		}
 	}
 }

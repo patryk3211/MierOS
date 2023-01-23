@@ -2,10 +2,11 @@
 
 ##
 ## Usage:
-## ./make_initrd.sh <modules> <output_file> <module_init>
+## ./make_initrd.sh <modules> <output_file> <module_init> <module_alias>
 ## <modules> is a semicolon separated list of file paths
 ## <output_file> is a filename of the output file
 ## <module_init> is a path to the modules.init file to be stored on the initrd
+## <module_alias> is a path to the modules.alias file to be stored on the initrd
 ##
 
 if [ "$2" = "" ]; then
@@ -23,6 +24,7 @@ for arg in $(echo $1 | tr ';' ' '); do
 done
 
 cp -v $3 tar/etc
+cp -v $4 tar/etc
 
 echo "Compressing tar image..."
 

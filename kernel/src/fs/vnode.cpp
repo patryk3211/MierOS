@@ -19,3 +19,7 @@ VNode::VNode(u16_t permissions, u16_t user_id, u16_t group_id, time_t create_tim
 VNode::~VNode() {
     if(fs_data != 0) delete fs_data;
 }
+
+void VNode::add_child(VNodePtr child) {
+    f_children.insert({ child->name(), child });
+}

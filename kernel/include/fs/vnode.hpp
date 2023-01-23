@@ -63,6 +63,8 @@ namespace kernel {
         Type type() { return f_type; }
 
         const std::String<>& name() const { return f_name; }
+
+        void add_child(VNodePtr child);
     };
 
     typedef std::SharedPtr<VNode> VNodePtr;
