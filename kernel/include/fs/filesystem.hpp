@@ -36,8 +36,30 @@ namespace kernel {
 
         virtual ValueOrError<void> umount();
 
-        virtual ValueOrError<std::SharedPtr<VNode>> get_file(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
-        virtual ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
+        /**
+         * @brief Get file
+         *
+         * This function is used in the path resolving in VFS.
+         * It is only run if the filename does not exist in the children of root (it was not already resolved)
+         *
+         * @param root Where should the fs look for the file. Can be set to nullptr for the current location to be root of this filesystem
+         * @param filename Filename to look for. This is guaranteed to be a filename and not a path.
+         * @param flags Filesystem flags to change the behaviour of the resolving
+         * @return ValueOrError<VNodePtr> VNodePtr for the filename or an error
+         */
+        virtual ValueOrError<VNodePtr> get_file(VNodePtr root, const char* filename, FilesystemFlags flags);
+
+        /**
+         * @brief Get files in directory
+         *
+         * This function is used by the VFS as the last step
+         * of VFS::get_files function.
+         *
+         * @param root Where should the fs look for the files. Can be set to nullptr for the current location to be root of this filesystem
+         * @param flags Filesystem flags to change the behaviour of the resolving
+         * @return ValueOrError<std::List<VNodePtr>> List of nodes or an error
+         */
+        virtual ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, FilesystemFlags flags);
 
         virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link);
 

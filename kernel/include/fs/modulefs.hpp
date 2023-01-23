@@ -3,14 +3,10 @@
 #include <errno.h>
 #include <fs/filesystem.hpp>
 #include <fs/vnode.hpp>
+#include <fs/modulefs_functions.hpp>
 
 namespace kernel {
-    struct ModuleVNodeDataStorage : public VNodeDataStorage {
-        u16_t major;
-
-        ModuleVNodeDataStorage(u16_t major);
-        ~ModuleVNodeDataStorage();
-    };
+    class ModuleFilesystem;
 
     class ModuleFilesystem : public Filesystem {
         u16_t major;
@@ -22,8 +18,8 @@ namespace kernel {
 
         virtual ValueOrError<void> umount();
 
-        virtual ValueOrError<std::SharedPtr<VNode>> get_file(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
-        virtual ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
+        virtual ValueOrError<VNodePtr> get_file(VNodePtr root, const char* filename, FilesystemFlags flags);
+        virtual ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, FilesystemFlags flags);
 
         virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link);
 
@@ -37,5 +33,7 @@ namespace kernel {
 
         virtual PhysicalPage resolve_mapping(const FilePage& mapping, virtaddr_t addr);
         virtual void sync_mapping(const MemoryFilePage& mapping);
+
+        FilesystemDriver* get_driver();
     };
 }

@@ -13,6 +13,8 @@ namespace kernel {
         VFS();
         ~VFS();
 
+        ValueOrError<void> mount(VNodePtr fsFile, const char* fsType, const char* location);
+
         ValueOrError<void> mount(Filesystem* fs, const char* location);
         ValueOrError<void> umount(const char* location);
 

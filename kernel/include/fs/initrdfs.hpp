@@ -13,8 +13,8 @@ namespace kernel {
 
         virtual ValueOrError<void> umount();
 
-        virtual ValueOrError<VNodePtr> get_file(VNodePtr root, const char* path, FilesystemFlags flags);
-        virtual ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, const char* path, FilesystemFlags flags);
+        virtual ValueOrError<VNodePtr> get_file(VNodePtr root, const char* filename, FilesystemFlags flags);
+        virtual ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, FilesystemFlags flags);
 
         virtual ValueOrError<void> open(FileStream* stream, int mode);
         virtual ValueOrError<void> close(FileStream* stream);

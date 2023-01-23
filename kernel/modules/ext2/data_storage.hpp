@@ -3,11 +3,11 @@
 #include "inode.hpp"
 #include <fs/modulefs.hpp>
 
-struct Ext2VNodeDataStorage : public kernel::ModuleVNodeDataStorage {
+struct Ext2VNodeDataStorage : public kernel::VNodeDataStorage {
     INodePtr inode;
 
     Ext2VNodeDataStorage(INodePtr& inode);
-    ~Ext2VNodeDataStorage();
+    virtual ~Ext2VNodeDataStorage();
 };
 
 struct Ext2StreamDataStorage {

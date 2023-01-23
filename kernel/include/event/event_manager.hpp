@@ -35,5 +35,7 @@ namespace kernel {
 
     private:
         static void event_loop();
+
+        static void sync_event_handler(Event& event);
     };
 }

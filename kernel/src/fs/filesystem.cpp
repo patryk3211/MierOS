@@ -7,11 +7,11 @@ ValueOrError<void> Filesystem::umount() {
     return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<std::SharedPtr<VNode>> Filesystem::get_file(std::SharedPtr<VNode>, const char*, FilesystemFlags) {
+ValueOrError<VNodePtr> Filesystem::get_file(VNodePtr, const char*, FilesystemFlags) {
     return ERR_UNIMPLEMENTED;
 }
 
-ValueOrError<std::List<std::SharedPtr<VNode>>> Filesystem::get_files(std::SharedPtr<VNode>, const char*, FilesystemFlags) {
+ValueOrError<std::List<VNodePtr>> Filesystem::get_files(VNodePtr, FilesystemFlags) {
     return ERR_UNIMPLEMENTED;
 }
 

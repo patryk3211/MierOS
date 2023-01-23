@@ -1,9 +1,10 @@
 #pragma once
 
 #include <fs/filesystem.hpp>
+#include <pair.hpp>
 
 namespace kernel {
-    struct DevFsFunctionTable {
+    struct DeviceFunctionTable {
         ValueOrError<void> (*open)(u16_t minor, FileStream* stream, int mode);
         ValueOrError<void> (*close)(u16_t minor, FileStream* stream);
 
@@ -19,14 +20,14 @@ namespace kernel {
     class DeviceFilesystem : public Filesystem {
         static DeviceFilesystem* s_instance;
 
-        std::SharedPtr<VNode> root;
+        VNodePtr root;
 
     public:
         DeviceFilesystem();
         virtual ~DeviceFilesystem() { }
 
-        virtual ValueOrError<std::SharedPtr<VNode>> get_file(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
-        virtual ValueOrError<std::List<std::SharedPtr<VNode>>> get_files(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags);
+        virtual ValueOrError<VNodePtr> get_file(VNodePtr root, const char* filename, FilesystemFlags flags);
+        virtual ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, FilesystemFlags flags);
 
         virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link);
 
@@ -38,12 +39,15 @@ namespace kernel {
 
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
 
-        ValueOrError<u32_t> block_read(std::SharedPtr<VNode> bdev, u64_t lba, u32_t sector_count, void* buffer);
-        ValueOrError<u32_t> block_write(std::SharedPtr<VNode> bdev, u64_t lba, u32_t sector_count, const void* buffer);
+        ValueOrError<u32_t> block_read(VNodePtr bdev, u64_t lba, u32_t sector_count, void* buffer);
+        ValueOrError<u32_t> block_write(VNodePtr bdev, u64_t lba, u32_t sector_count, const void* buffer);
 
-        ValueOrError<std::SharedPtr<VNode>> add_dev(const char* path, u16_t major, u16_t minor);
-        ValueOrError<std::SharedPtr<VNode>> add_link(const char* path, std::SharedPtr<VNode> destination);
+        ValueOrError<VNodePtr> add_dev(const char* path, u16_t major, u16_t minor);
+        ValueOrError<VNodePtr> add_link(const char* path, VNodePtr destination);
 
         static DeviceFilesystem* instance() { return s_instance; }
+
+    private:
+        std::Pair<u16_t, DeviceFunctionTable*> get_function_table(VNodePtr node);
     };
 }

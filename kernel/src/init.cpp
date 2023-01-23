@@ -201,7 +201,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     init_modules();
 
-    {
+    /*{
         auto devices = kernel::DeviceFilesystem::instance()->get_files(nullptr, "", { .resolve_link = 0, .follow_links = 1 });
         for(auto& dev : *devices) {
             kprintf(dev->name().c_str());
@@ -214,7 +214,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
             kprintf(" ");
         }
         kprintf("\n");
-    }
+    }*/
 
     /*u16_t fs_mod = kernel::init_modules("FS-ext2", 0);
     kernel::Thread::current()->f_current_module = kernel::get_module(fs_mod);

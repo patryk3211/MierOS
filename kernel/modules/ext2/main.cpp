@@ -14,13 +14,10 @@ MODULE_HEADER static module_header header {
     .dependencies = 0
 };
 
-/*MODULE_HEADER char init_on[] = "FS-ext2";*/
-
-fs_function_table fs_func_tab {
+FilesystemDriver filesystem_driver {
     .mount = &mount,
 
     .set_fs_object = &set_fs_object,
-    .fs_data_destroy = &fs_data_destroy,
 
     .get_file = &get_file,
     .get_files = &get_files,

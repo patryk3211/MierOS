@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <locking/locker.hpp>
 #include <tasking/scheduler.hpp>
+#include <event/kernel_events.hpp>
 
 using namespace kernel;
 
@@ -10,6 +11,8 @@ EventManager* EventManager::s_instance = 0;
 EventManager::EventManager() {
     f_event_loop_proc = Process::construct_kernel_process((virtaddr_t)&event_loop);
     s_instance = this;
+
+    register_handler(EVENT_SYNC, &sync_event_handler);
 
     Scheduler::schedule_process(*f_event_loop_proc);
 }
@@ -31,6 +34,7 @@ EventManager& EventManager::get() {
     return *s_instance;
 }
 
+/// TODO: [23.01.2023] Add the ability to process multiple events concurrently
 void EventManager::event_loop() {
     // We will have to make this process wake up only when there are things to process on the event queue
     while(true) {
@@ -56,4 +60,12 @@ void EventManager::event_loop() {
 
         delete event;
     }
+}
+
+void EventManager::sync_event_handler(Event& event) {
+    auto* cb = event.get_arg<void (*)(void*)>();
+    auto* cbArg = event.get_arg<void*>();
+
+    if(cb != 0)
+        cb(cbArg);
 }

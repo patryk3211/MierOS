@@ -1,6 +1,5 @@
 #include <errno.h>
 #include <fs/modulefs.hpp>
-#include <fs/modulefs_functions.hpp>
 #include <modules/module_manager.hpp>
 
 using namespace kernel;
@@ -8,118 +7,75 @@ using namespace kernel;
 ModuleFilesystem::ModuleFilesystem(u16_t major, u16_t minor)
     : major(major)
     , minor(minor) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab");
-    if(func == 0) panic("Filesystem module does not have a function table!");
-    if(func->set_fs_object == 0) panic("Filesystem module does not implement set_fs_object function! (Required for any filesystem)");
+    auto* driver = get_driver();
+    if(driver == 0) panic("Filesystem module does not have a function table!");
+    if(driver->set_fs_object == 0) panic("Filesystem module does not implement set_fs_object function! (Required for any filesystem)");
 
-    func->set_fs_object(minor, this);*/
+    driver->set_fs_object(minor, this);
 }
 
 ModuleFilesystem::~ModuleFilesystem() {
 }
 
-ModuleVNodeDataStorage::ModuleVNodeDataStorage(u16_t major)
-    : major(major) {
+FilesystemDriver* ModuleFilesystem::get_driver() {
+    auto* mod = ModuleManager::get().get_module(major);
+    FilesystemDriver* driver = (FilesystemDriver*)mod->get_symbol_ptr("filesystem_driver");
+    return driver;
 }
 
-ModuleVNodeDataStorage::~ModuleVNodeDataStorage() {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->fs_data_destroy;
-    if(func == 0) panic("Filesystem module does not implement fs_data_destroy function! (Required for any filesystem)");
-    func(*this);*/
+#define RUN_FUNC(func, ...) { \
+    auto* f = get_driver()->func; \
+    if(!f) \
+        return ERR_UNIMPLEMENTED; \
+    return f(minor, __VA_ARGS__); \
 }
 
 ValueOrError<void> ModuleFilesystem::umount() {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->umount;
-    return func(minor);*/
+    auto* func = get_driver()->umount;
+    return func(minor);
 }
 
-ValueOrError<std::SharedPtr<VNode>> ModuleFilesystem::get_file(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->get_file;
-    if(func != 0)
-        return func(minor, root, path, flags);
-    else
-        return ERR_UNIMPLEMENTED;*/
+ValueOrError<VNodePtr> ModuleFilesystem::get_file(VNodePtr root, const char* path, FilesystemFlags flags) {
+    RUN_FUNC(get_file, root, path, flags);
 }
 
-ValueOrError<std::List<std::SharedPtr<VNode>>> ModuleFilesystem::get_files(std::SharedPtr<VNode> root, const char* path, FilesystemFlags flags) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->get_files;
-    if(func != 0)
-        return func(minor, root, path, flags);
-    else
-        return ERR_UNIMPLEMENTED;*/
+ValueOrError<std::List<VNodePtr>> ModuleFilesystem::get_files(VNodePtr root, FilesystemFlags flags) {
+    RUN_FUNC(get_files, root, flags);
 }
 
 ValueOrError<VNodePtr> ModuleFilesystem::resolve_link(VNodePtr link) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->resolve_link;
-    if(func != 0)
-        return func(minor, link);
-    else
-        return ERR_UNIMPLEMENTED;*/
+    RUN_FUNC(resolve_link, link);
 }
 
 ValueOrError<void> ModuleFilesystem::open(FileStream* stream, int mode) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->open;
-    if(func != 0)
-        return func(minor, stream, mode);
-    else
-        return ERR_UNIMPLEMENTED;*/
+    RUN_FUNC(open, stream, mode);
 }
 
 ValueOrError<void> ModuleFilesystem::close(FileStream* stream) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->close;
-    if(func != 0)
-        return func(minor, stream);
-    else
-        return ERR_UNIMPLEMENTED;*/
+    RUN_FUNC(close, stream);
 }
 
 ValueOrError<size_t> ModuleFilesystem::read(FileStream* stream, void* buffer, size_t length) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->read;
-    if(func != 0)
-        return func(minor, stream, buffer, length);
-    else
-        return ERR_UNIMPLEMENTED;*/
+    RUN_FUNC(read, stream, buffer, length);
 }
 
 ValueOrError<size_t> ModuleFilesystem::write(FileStream* stream, const void* buffer, size_t length) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->write;
-    if(func != 0)
-        return func(minor, stream, buffer, length);
-    else
-        return ERR_UNIMPLEMENTED;*/
+    RUN_FUNC(write, stream, buffer, length);
 }
 
 ValueOrError<size_t> ModuleFilesystem::seek(FileStream* stream, size_t position, int mode) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->seek;
-    if(func != 0)
-        return func(minor, stream, position, mode);
-    else
-        return ERR_UNIMPLEMENTED;*/
+    RUN_FUNC(seek, stream, position, mode);
 }
 
 PhysicalPage ModuleFilesystem::resolve_mapping(const FilePage& mapping, virtaddr_t addr) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->resolve_mapping;
-    if(func != 0)
+    auto* func = get_driver()->resolve_mapping;
+    if(func)
         return func(minor, mapping, addr);
     else
-        return nullptr;*/
-/*
-    auto vnode = mapping.file();
-
-    // Default mmap behaviour
-    size_t file_offset = addr - mapping.start_addr() + mapping.offset();
-
-    // Check if range is already mapped as shared somewhere
-    auto pageOpt = vnode->f_shared_pages.at(file_offset);
-    if(pageOpt) {
-        // We have a mapping (flags will be handled in process resolve function)
-        return *pageOpt;
-    }
-
-    // Read file range into a page*/
+        return nullptr;
 }
 
 void ModuleFilesystem::sync_mapping(const MemoryFilePage& mapping) {
-    /*auto* func = get_module_symbol<fs_function_table>(major, "fs_func_tab")->sync_mapping;
-    if(func != 0) return func(minor, mapping);*/
+    auto* func = get_driver()->sync_mapping;
+    if(func != 0) func(minor, mapping);
 }

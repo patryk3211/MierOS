@@ -131,53 +131,22 @@ ValueOrError<VNodePtr> InitRdFilesystem::get_node(VNodePtr root, const char* fil
         return ERR_FILE_NOT_FOUND;
 }
 
-ValueOrError<VNodePtr> InitRdFilesystem::get_file(VNodePtr root, const char* path, FilesystemFlags) {
+ValueOrError<VNodePtr> InitRdFilesystem::get_file(VNodePtr root, const char* filename, FilesystemFlags) {
     if(!root) root = f_root;
     ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
+    if(filename[0] == 0) return root;
 
-    /// I'm pretty sure this code will never be reached
+    /// This will probably never be called, should consider just returning file not found error
 
-    const char* path_ptr = path;
-    const char* next_separator;
-    while((next_separator = strchr(path_ptr, '/')) != 0) {
-        size_t length = next_separator - path_ptr;
-        if(length == 0) {
-            ++path_ptr;
-            continue;
-        }
-
-        char part[length + 1];
-        memcpy(part, path_ptr, length);
-        part[length] = 0;
-
-        auto stat = get_node(root, part);
-        if(!stat) return stat.errno();
-
-        root = *stat;
-
-        path_ptr = next_separator + 1;
-    }
-
-    return get_node(root, path_ptr);
+    return get_node(root, filename);
 }
 
-ValueOrError<std::List<VNodePtr>> InitRdFilesystem::get_files(VNodePtr root, const char* path, FilesystemFlags flags) {
+ValueOrError<std::List<VNodePtr>> InitRdFilesystem::get_files(VNodePtr root, FilesystemFlags) {
     if(!root) root = f_root;
     ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
 
-    auto val = get_file(root, path, flags);
-    if(val.errno() != 0) return val.errno();
-
-    auto node = *val;
-    if(node->type() == VNode::LINK) {
-        if(flags.follow_links)
-            return ERR_UNIMPLEMENTED; /// TODO: [19.01.2023] Handle symbolic links (maybe...)
-        else
-            return ERR_LINK;
-    }
-
-    std::List<std::SharedPtr<VNode>> nodes;
-    for(auto val : node->f_children)
+    std::List<VNodePtr> nodes;
+    for(auto val : root->f_children)
         nodes.push_back(val.value);
 
     return nodes;

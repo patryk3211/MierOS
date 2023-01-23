@@ -11,7 +11,7 @@ using namespace kernel;
 extern u16_t minor_num;
 extern std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
-ValueOrError<u16_t> mount(std::SharedPtr<VNode> fs_file) {
+ValueOrError<u16_t> mount(VNodePtr fs_file) {
     MountInfo mi;
 
     DeviceFilesystem::instance()->block_read(fs_file, 2, 2, mi.superblock.ptr());

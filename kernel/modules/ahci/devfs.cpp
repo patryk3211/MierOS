@@ -7,7 +7,7 @@ using namespace kernel;
 
 ValueOrError<u32_t> dev_block_read(u16_t minor, u64_t lba, u32_t sector_count, void* buffer);
 
-DevFsFunctionTable dev_func_tab {
+DeviceFunctionTable device_function_table {
     .block_read = dev_block_read
 };
 
