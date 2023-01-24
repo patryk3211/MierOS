@@ -65,6 +65,8 @@ namespace kernel {
         const std::String<>& name() const { return f_name; }
 
         void add_child(VNodePtr child);
+
+        void mount(VNodePtr location);
     };
 
     typedef std::SharedPtr<VNode> VNodePtr;

@@ -36,6 +36,7 @@ set(KERNEL_SOURCES src/init.cpp
                    src/fs/vfs.cpp
                    src/fs/initrdfs.cpp
                    src/util/crc.c
+                   src/util/uuid.cpp
                    src/streams/stream.cpp
                    src/streams/filestream.cpp
                    src/memory/page/unresolvedpage.cpp

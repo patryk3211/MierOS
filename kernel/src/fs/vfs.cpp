@@ -16,42 +16,62 @@ VFS::~VFS() {
 }
 
 ValueOrError<void> VFS::mount(VNodePtr fsFile, const char* fsType, const char* location) {
-    std::String<> modName = "FS-";
-    modName += fsType;
+    auto mountHandler = f_filesystems.at(fsType);
+    if(mountHandler) {
+        auto result = (*mountHandler)(fsFile);
+        if(!result)
+            return result.errno();
 
-    u16_t modMajor = ModuleManager::get().find_module(modName);
-    if(modMajor == 0)
-        return ERR_MOUNT_FAILED;
+        return mount(*result, location);
+    } else {
+        // The filesystem is not registered, let's try to load a module for it
+        std::String<> modName = "FS-";
+        modName += fsType;
 
-    auto* mod = ModuleManager::get().get_module(modMajor);
-    auto result = ((FilesystemDriver*)mod->get_symbol_ptr("filesystem_driver"))->mount(fsFile);
-    if(!result)
-        return result.errno();
+        u16_t modMajor = ModuleManager::get().find_module(modName);
+        if(modMajor == 0)
+            return ERR_MOUNT_FAILED;
 
-    auto* modFs = new ModuleFilesystem(modMajor, *result);
-    return mount(modFs, location);
+        auto* mod = ModuleManager::get().get_module(modMajor);
+        auto result = ((FilesystemDriver*)mod->get_symbol_ptr("filesystem_driver"))->mount(fsFile);
+        if(!result)
+            return result.errno();
+
+        auto* modFs = new ModuleFilesystem(modMajor, *result);
+        return mount(modFs, location);
+    }
 }
 
 ValueOrError<void> VFS::mount(Filesystem* fs, const char* location) {
-    if(!strcmp(location, "/")) {
+    auto fsRootRes = fs->get_file(nullptr, "", {});
+    if(!fsRootRes)
+        return fsRootRes.errno();
+    auto fsRoot = *fsRootRes;
+
+    if(location[0] == 0 || (location[0] == '/' && location[1] == 0)) {
         // Mounting root
-        auto value = fs->get_file(nullptr, "", {});
+        if(f_rootNode) {
+            // return ERR_MOUNT_FAILED;
+        }
 
-        if(value)
-            f_rootNode = *value;
-        else
-            return value.errno();
+        f_rootNode = fsRoot;
+    } else {
+        // Mounting somewhere else
+        auto locationNodeRes = get_file(nullptr, location, { .resolve_link = true, .follow_links = true });
+        if(!locationNodeRes)
+            return locationNodeRes.errno();
+        auto locationNode = *locationNodeRes;
 
-        return {};
+        fsRoot->mount(locationNode);
+        fsRoot->f_parent->add_child(fsRoot);
     }
 
-    auto locationNode = get_file(nullptr, (std::String(location) + "/..").c_str(), { .resolve_link = true, .follow_links = true });
-
-    /// TODO: [12.04.2022] Complete this
+    return {};
 }
 
 ValueOrError<void> VFS::umount(const char* location) {
     /// TODO: [12.04.2022] And this
+    panic("umount is unimplemented");
 }
 
 ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, FilesystemFlags flags) {
@@ -125,4 +145,15 @@ ValueOrError<std::List<VNodePtr>> VFS::get_files(VNodePtr root, const char* path
     VNodePtr ptr = *dir;
 
     return ptr->filesystem()->get_files(ptr, flags);
+}
+
+void VFS::register_filesystem(const char* fsType, mount_handler_t* handler) {
+    auto current = f_filesystems.at(fsType);
+    if(!current) {
+        f_filesystems.insert({ fsType, handler });
+    }
+}
+
+void VFS::unregister_filesystem(const char* fsType) {
+    f_filesystems.erase(fsType);
 }

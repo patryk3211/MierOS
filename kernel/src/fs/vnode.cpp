@@ -23,3 +23,9 @@ VNode::~VNode() {
 void VNode::add_child(VNodePtr child) {
     f_children.insert({ child->name(), child });
 }
+
+void VNode::mount(VNodePtr location) {
+    f_parent = location->f_parent;
+    f_parent->f_children.erase(location->f_name);
+    f_name = location->f_name;
+}

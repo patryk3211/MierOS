@@ -25,3 +25,11 @@
  * @param callbackArg An argument to be passed to the callback
  */
 #define EVENT_SYNC          0x5ce90a4b4133c36a
+
+/**
+ * @brief Event queue empty event.
+ *
+ * This event is fired by the event manager when it has processed all
+ * events on it's queue. It does not provide any arguments.
+ */
+#define EVENT_QUEUE_EMPTY   0x2801da0cf10a2d25

@@ -14,6 +14,7 @@ EventManager::EventManager() {
 
     register_handler(EVENT_SYNC, &sync_event_handler);
 
+    f_processing_event = false;
     Scheduler::schedule_process(*f_event_loop_proc);
 }
 
@@ -38,15 +39,33 @@ EventManager& EventManager::get() {
 void EventManager::event_loop() {
     // We will have to make this process wake up only when there are things to process on the event queue
     while(true) {
-        while(!s_instance->f_event_queue.size())
-            asm volatile("hlt"); // For now we halt if there are no events to process
+        while(!s_instance->f_event_queue.size()) {
+            if(s_instance->f_processing_event) {
+                s_instance->f_processing_event = false;
+                s_instance->raise(new Event(EVENT_QUEUE_EMPTY));
+            } else {
+                asm volatile("hlt"); // For now we halt if there are no events to process
+            }
+        }
 
         s_instance->f_lock.lock();
         auto* event = s_instance->f_event_queue.pop_front();
         s_instance->f_lock.unlock();
 
-        auto handlersRef = s_instance->f_handlers.at(event->identifier());
+        // We need this to prevent queue empty event from triggering itself
+        if(event->identifier() != EVENT_QUEUE_EMPTY) {
+            s_instance->f_processing_event = true;
+        }
 
+        // Signal all waits for the event id
+        for(auto& wait : s_instance->f_event_waits) {
+            if(wait->f_event_id == event->identifier()) {
+                wait->f_semaphore.release();
+            }
+        }
+
+        // Fire all event handlers for the event id
+        auto handlersRef = s_instance->f_handlers.at(event->identifier());
         if(handlersRef) {
             auto& handlers = *handlersRef;
             for(auto& handler : handlers) {
@@ -68,4 +87,14 @@ void EventManager::sync_event_handler(Event& event) {
 
     if(cb != 0)
         cb(cbArg);
+}
+
+void EventManager::wait(u64_t identifier) {
+    Wait wait(identifier);
+
+    f_lock.lock();
+    f_event_waits.push_back(&wait);
+    f_lock.unlock();
+
+    wait.f_semaphore.acquire();
 }

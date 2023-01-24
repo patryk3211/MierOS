@@ -58,7 +58,7 @@ ValueOrError<VNodePtr> DeviceFilesystem::resolve_link(VNodePtr link) {
     ASSERT_F(link->filesystem() == this, "Using a VNode from a different filesystem");
 
     if(link->type() != VNode::LINK) return ERR_NOT_LINK;
-    return root = static_cast<DevFs_LinkData*>(root->fs_data)->destination;
+    return static_cast<DevFs_LinkData*>(link->fs_data)->destination;
 }
 
 std::Pair<u16_t, DeviceFunctionTable*> DeviceFilesystem::get_function_table(VNodePtr node) {
@@ -146,7 +146,8 @@ ValueOrError<VNodePtr> DeviceFilesystem::add_dev(const char* path, u16_t major, 
 
     auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, path_ptr, VNode::DEVICE, this);
     node->fs_data = new DevFs_DevData(major, minor);
-    root->f_children.insert({ path_ptr, node });
+    root->add_child(node);
+    node->f_parent = root;
 
     return node;
 }
@@ -188,7 +189,8 @@ ValueOrError<VNodePtr> DeviceFilesystem::add_link(const char* path, VNodePtr des
 
     auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, path_ptr, VNode::LINK, this);
     node->fs_data = new DevFs_LinkData(destination);
-    root->f_children.insert({ path_ptr, node });
+    root->add_child(node);
+    node->f_parent = root;
 
     return node;
 }

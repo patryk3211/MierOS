@@ -2,11 +2,12 @@
 
 ##
 ## Usage:
-## ./make_initrd.sh <modules> <output_file> <module_init> <module_alias>
+## ./make_initrd.sh <modules> <output_file> <module_init> <module_alias> <fstab>
 ## <modules> is a semicolon separated list of file paths
 ## <output_file> is a filename of the output file
 ## <module_init> is a path to the modules.init file to be stored on the initrd
 ## <module_alias> is a path to the modules.alias file to be stored on the initrd
+## <fstab> is a path to the fstab file to be stored on the initrd
 ##
 
 if [ "$2" = "" ]; then
@@ -25,6 +26,7 @@ done
 
 cp -v $3 tar/etc
 cp -v $4 tar/etc
+cp -v $5 tar/etc
 
 echo "Compressing tar image..."
 

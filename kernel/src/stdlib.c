@@ -67,6 +67,29 @@ char* strchr(const char* str, char c) {
     return 0;
 }
 
+char* strchrs(const char* str, const char* chars) {
+    for(size_t i = 0; str[i] != 0; ++i) {
+        for(size_t j = 0; chars[j] != 0; ++j) {
+            if(str[i] == chars[j]) return (char*)str + i;
+        }
+    }
+    return 0;
+}
+
+char* strnchrs(const char* str, const char* chars) {
+    for(size_t i = 0; str[i] != 0; ++i) {
+        int found = 0;
+        for(size_t j = 0; chars[j] != 0; ++j) {
+            if(str[i] == chars[j]) {
+                found = 1;
+                break;
+            }
+        }
+        if(!found) return (char*)str + i;
+    }
+    return 0;
+}
+
 int strncmp(const char* a, const char* b, size_t len) {
     for(size_t i = 0; i < len; ++i)
         if(a[i] != b[i]) return a[i] - b[i];
@@ -78,6 +101,20 @@ void strupper(char* str) {
         if(*str >= 'a' && *str <= 'z') *str &= ~0x20;
         ++str;
     }
+}
+
+char* strfind(const char* str, const char* find) {
+    for(size_t i = 0; str[i] != 0; ++i) {
+        int matched = 1;
+        for(size_t j = 0; find[j] != 0; ++j) {
+            if(str[i + j] != find[j]) {
+                matched = 0;
+                break;
+            }
+        }
+        if(matched) return (char*)str + i;
+    }
+    return 0;
 }
 
 void atexit(void (*exit_handler)()) { }

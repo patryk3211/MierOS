@@ -9,8 +9,9 @@ namespace kernel {
     class ModuleFilesystem;
 
     class ModuleFilesystem : public Filesystem {
-        u16_t major;
-        u16_t minor;
+        FilesystemDriver* f_driver;
+        u16_t f_major;
+        u16_t f_minor;
 
     public:
         ModuleFilesystem(u16_t major, u16_t minor);
