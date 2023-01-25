@@ -2,8 +2,8 @@
 
 #include <types.h>
 
-#define SEEK_MODE_CUR 0
-#define SEEK_MODE_BEG 1
+#define SEEK_MODE_BEG 0
+#define SEEK_MODE_CUR 1
 #define SEEK_MODE_END 2
 
 namespace kernel {
