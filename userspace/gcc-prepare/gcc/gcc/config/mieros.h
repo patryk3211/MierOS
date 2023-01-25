@@ -15,7 +15,7 @@
     do {                                    \
         builtin_define("__mieros__");       \
         builtin_define("__unix__");         \
-        builtin_define("system=mieros");    \
-        builtin_define("system=unix");      \
-        builtin_define("system=posix");     \
+        builtin_assert("system=mieros");    \
+        builtin_assert("system=unix");      \
+        builtin_assert("system=posix");     \
     } while(0);
