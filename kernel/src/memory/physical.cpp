@@ -3,6 +3,7 @@
 #include <dmesg.h>
 #include <memory/liballoc.h>
 #include <memory/physical.h>
+#include <memory/virtual.hpp>
 #include <stdlib.h>
 
 #include <locking/locker.hpp>
@@ -76,6 +77,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
 
     // Mark the first MiB as used since it could be utilized in the startup of AP cores.
     for(u64_t page = 0; page < 1024 * 1024; page += 4096) set_page_status(page, 1);
+    /// This is very much incorrect since there are some peripherals in the first MiB
     freeable_mem->add(0, 1024 * 1024);
 
     kprintf("[%T] (Kernel) Found %d KiB of free memory\n", free_mem / 1024);
@@ -95,6 +97,31 @@ extern "C" void pmm_release_bootloader_resources() {
     }
     delete freeable_mem;
     kprintf("[%T] (Kernel) Freed %d KiB of bootloader memory\n", freed_mem / 1024);
+}
+
+extern u8_t _init_text_start;
+extern u8_t _init_text_end;
+extern u8_t _init_data_start;
+extern u8_t _init_data_end;
+
+extern "C" void pmm_release_init_resources() {
+    size_t text_length = &_init_text_end - &_init_text_start;
+    size_t page_text_length = (text_length >> 12) + ((text_length & 0xFFF) == 0 ? 0 : 1);
+
+    size_t data_length = &_init_data_end - &_init_data_start;
+    size_t page_data_length = (data_length >> 12) + ((data_length & 0xFFF) == 0 ? 0 : 1);
+
+    auto& pager = Pager::active();
+    Locker lock(pager);
+
+    auto phys = pager.unmap((virtaddr_t)&_init_text_start, page_text_length);
+    // I think the bootloader guarantees us a linear physical memory location
+    pfree(phys, page_text_length);
+
+    phys = pager.unmap((virtaddr_t)&_init_data_start, page_data_length);
+    pfree(phys, page_data_length);
+
+    kprintf("[%T] (Kernel) Freed %d KiB of init resources\n", (page_text_length + page_data_length) * 4);
 }
 
 extern "C" physaddr_t palloc(size_t page_count) {

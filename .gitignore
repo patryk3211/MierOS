@@ -12,6 +12,7 @@ limine
 
 sysroot/usr/include
 sysroot/usr/bin
+sysroot/usr/sbin
 sysroot/usr/lib
 
 pass.txt

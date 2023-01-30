@@ -152,6 +152,17 @@ public:
 };
 
 TEXT_FREE_AFTER_INIT void init_modules() {
+    // Initialize the module manager
+    auto* modMgr = new kernel::ModuleManager();
+    modMgr->reload_modules();
+
+    // Run the modules in modules.init
+    modMgr->run_init_modules();
+}
+
+TEXT_FREE_AFTER_INIT void init_filesystems() {
+    auto* vfs = new kernel::VFS();
+
     { // Find initrd loaded by bootloader
         physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;
         physaddr_t mod_phys_end = mod.end & 0x7FFFFFFFFFFF;
@@ -170,39 +181,25 @@ TEXT_FREE_AFTER_INIT void init_modules() {
 
         set_line_map((void*)map_start);
 
-        kernel::InitRdFilesystem* initrdfs = new kernel::InitRdFilesystem((void*)mod_start);
-        kernel::VFS::instance()->mount(initrdfs, "/");
+        auto* initrdfs = new kernel::InitRdFilesystem((void*)mod_start);
+        vfs->mount(initrdfs, "/");
     }
 
     // Prepare device filesystem (/dev)
     new kernel::DeviceFilesystem();
-    kernel::VFS::instance()->register_filesystem("devfs",
+    vfs->register_filesystem("devfs",
         [](kernel::VNodePtr) -> kernel::ValueOrError<kernel::Filesystem*> {
             return kernel::DeviceFilesystem::instance();
         });
-
-    // Initialize the module manager
-    auto* modMgr = new kernel::ModuleManager();
-    modMgr->reload_modules();
-
-    // Run the modules in modules.init
-    modMgr->run_init_modules();
 }
 
 void transfer_function() {
     // At this stage all of the init modules should be set up
     // and we should be ready to launch the init process.
     // But first we need to free the init code and data
+    pmm_release_init_resources();
 
     const char* execFile = "/sbin/init";
-
-    auto& thisProc = kernel::Thread::current()->parent();
-
-    auto* sstream = new SimpleStream();
-    thisProc.add_stream(sstream);
-    thisProc.add_stream(sstream);
-    thisProc.add_stream(sstream);
-
     asm volatile("mov $10, %%rax; mov $0, %%rcx; mov $0, %%rdx; int $0x8F" :: "b"(execFile));
 
     ASSERT_NOT_REACHED("We really shouldn't be here");
@@ -222,13 +219,14 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     /// TODO: [22.01.2023] Move tests into a module
     kernel::tests::do_tests();
 
-    // Initialize the virtual filesystem
-    new kernel::VFS();
+    // Initialize the filesystems
+    init_filesystems();
 
-    init_modules();
-
-    // Wait for all events to be processed
-    kernel::EventManager::get().wait(EVENT_QUEUE_EMPTY);
+//    /// I might want to deffer module loading all the way to the init process
+//    init_modules();
+//
+//    // Wait for all events to be processed
+//    kernel::EventManager::get().wait(EVENT_QUEUE_EMPTY);
 
     transfer_function();
 }

@@ -19,8 +19,10 @@ SECTIONS {
 	} :text
 
 	.text_free_after_init : ALIGN(4096) {
+		_init_text_start = .;
 		*(.text_free_after_init)
 		*(.text_free_after_init.*)
+		_init_text_end = .;
 	} :text
 
 	.stivale2hdr : ALIGN(4096) {
@@ -76,7 +78,9 @@ SECTIONS {
 	} :data
 
 	.free_after_init (NOLOAD): ALIGN(4096) {
+		_init_data_start = .;
 		*(.free_after_init)
+		_init_data_end = .;
 	} :data
 
 	. = ALIGN(4096);

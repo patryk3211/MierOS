@@ -75,31 +75,38 @@ SYSROOT_PATH=$(realpath ../sysroot)
 export PREFIX="$CROSS_PATH/kern"
 export TARGET=x86_64-elf
 export PATH="$PREFIX/bin:$PATH"
-export LLVM_TARGET=x86_64-pc-none-elf
 
 ## We don't need to cross compile llvm for now since we are targeting x86_64
 
-#LLVM_VERSION="15.0.6"
-#LLVM_DOWNLOAD="https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVM_VERSION/llvm-project-$LLVM_VERSION.src.tar.xz"
-#$DOWNLOADER $LLVM_DOWNLOAD
-#tar -xJf llvm-project-$LLVM_VERSION.src.tar.xz
+# LLVM_VERSION="15.0.6"
+# if [ ! -e "llvm-project-$LLVM_VERSION.src" ]; then
+#     if [ ! -e "llvm-project-$LLVM_VERSION.src.tar.xz" ]; then
+#         LLVM_DOWNLOAD="https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVM_VERSION/llvm-project-$LLVM_VERSION.src.tar.xz"
+#         $DOWNLOADER $LLVM_DOWNLOAD
+#     fi
 #
-#cmake -S llvm-project-$LLVM_VERSION.src -B llvm-host-build \
-#    -DLLVM_ENABLE_PROJECTS='clang;compiler-rt;lld;clang-tools-extra' \
-#    -DCMAKE_INSTALL_PREFIX="$CROSS_PATH/tblgen"
-#    -DCMAKE_BUILD_TYPE=Release
-#    -G Ninja
-#cd llvm-host-build
-#ninja llvm-tblgen clang-tblgen
-#cd ..
+#     echo "Extracting LLVM..."
+#     tar -xJf llvm-project-$LLVM_VERSION.src.tar.xz
+#     cp -rv ../userspace/clang-prepare/* llvm-project-$LLVM_VERSION.src/
+# fi
 #
-#
+# if [ ! -e "llvm-host-tlb-build" ]; then
+#     cmake -S llvm-project-$LLVM_VERSION.src/llvm -B llvm-host-tlb-build \
+#         -DLLVM_ENABLE_PROJECTS='clang;compiler-rt;lld;clang-tools-extra' \
+#         -DCMAKE_INSTALL_PREFIX="$CROSS_PATH/tblgen" \
+#         -DCMAKE_BUILD_TYPE=Release \
+#         -G Ninja
+# fi
+# cd llvm-host-tlb-build
+# ninja llvm-tblgen clang-tblgen
+# cd ..
+
 ## Configure LLVM
 #cmake -S llvm-project-$LLVM_VERSION.src -B llvm-kernel-build \
 #    -DCMAKE_SYSTEM_NAME="$LLVM_TARGET" \
 #    -DCMAKE_INSTALL_PREFIX="$PREFIX" \
-#    -DLLVM_TABLEGEN="$CROSS_PATH/llvm-host-build/bin/llvm-tblgen" \
-#    -DCLANG_TABLEGEN="$CROSS_PATH/llvm-host-build/bin/clang-tblgen" \
+#    -DLLVM_TABLEGEN="$CROSS_PATH/llvm-host-tlb-build/bin/llvm-tblgen" \
+#    -DCLANG_TABLEGEN="$CROSS_PATH/llvm-host-tlb-build/bin/clang-tblgen" \
 #    -DLLVM_DEFAULT_TARGET_TRIPLE="$LLVM_TARGET" \
 #    -DLLVM_TARGET_ARCH=x86_64 \
 #    -DLLVM_TARGETS_TO_BUILD=x86_64 \
@@ -150,7 +157,7 @@ if [ -e "build" ]; then
 fi
 
 # Prepare for a headers only build of mlibc
-meson -Dprefix=/usr -Dheaders_only=true build
+meson setup -Dprefix=/usr -Dheaders_only=true --cross-file='../x86_64-mieros.txt' build
 cd build
 # Install the headers in our sysroot
 meson install --destdir ../../../../sysroot --only-changed
@@ -163,6 +170,27 @@ cd ../../../cross
 export PREFIX="$CROSS_PATH/host"
 export TARGET=x86_64-mieros
 export PATH="$PREFIX/bin:$PATH"
+
+# -DCMAKE_TOOLCHAIN_FILE="$CROSS_PATH/../scripts/x86_64-hosted_compiler_toolchain.cmake" \
+# -DCMAKE_SYSTEM_NAME="Generic" \
+
+# LLVM_TARGET=x86_64-pc-mieros-elf
+# cmake -S llvm-project-$LLVM_VERSION.src/llvm -B llvm-hosted-build \
+#     -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+#     -DLLVM_TABLEGEN="$CROSS_PATH/llvm-host-tlb-build/bin/llvm-tblgen" \
+#     -DCLANG_TABLEGEN="$CROSS_PATH/llvm-host-tlb-build/bin/clang-tblgen" \
+#     -DLLVM_DEFAULT_TARGET_TRIPLE="$LLVM_TARGET" \
+#     -DBUILD_SHARED_LIBS=false \
+#     -DLLVM_TARGET_ARCH="x86_64" \
+#     -DLLVM_TARGETS_TO_BUILD="X86" \
+#     -DLLVM_ENABLE_PROJECTS="clang" \
+#     -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi" \
+#     -DLLVM_ENABLE_THREADS=OFF \
+#     -DDEFAULT_SYSROOT="$SYSROOT_PATH" \
+#     -DCMAKE_BUILD_TYPE=Release \
+#     -G Ninja
+#
+# cmake --build llvm-hosted-build
 
 if [ -e "$PREFIX/bin/$TARGET-ld" ]; then
     echo "Hosted binutils already built, skipping..."
@@ -178,7 +206,7 @@ else
     cd build-binutils-hosted
 
     ../$BINUTILS_NAME/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot=$SYSROOT_PATH --disable-werror --disable-nls
-    make
+    make -j4
     make install
 
     cd ..
@@ -197,18 +225,18 @@ else
     mkdir -p build-gcc-hosted
     cd build-gcc-hosted
     ../$GCC_NAME/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot=$SYSROOT_PATH --enable-languages=c,c++ --disable-werror --disable-nls
-    make all-gcc
-    make all-target-libgcc
+    make all-gcc -j4
+    make all-target-libgcc -j4
     make install-gcc
     make install-target-libgcc
+
+    # TODO: Build libstdc++
 
     cd ..
 fi
 
 #rm -rf $BINUTILS_NAME
 #rm -rf $GCC_NAME
-rm -rf build-binutils-kernel
-rm -rf build-gcc-kernel
 #rm -rf build-binutils-hosted
 #rm -rf build-gcc-hosted
 rm -f $BINUTILS_PKG
