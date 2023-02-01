@@ -151,16 +151,17 @@ public:
     }
 };
 
-TEXT_FREE_AFTER_INIT void init_modules() {
-    // Initialize the module manager
-    auto* modMgr = new kernel::ModuleManager();
-    modMgr->reload_modules();
-
-    // Run the modules in modules.init
-    modMgr->run_init_modules();
-}
+// TEXT_FREE_AFTER_INIT void init_modules() {
+//     // Initialize the module manager
+//     auto* modMgr = new kernel::ModuleManager();
+//     modMgr->reload_modules();
+//
+//     // Run the modules in modules.init
+//     modMgr->run_init_modules();
+// }
 
 TEXT_FREE_AFTER_INIT void init_filesystems() {
+    // Create the VFS
     auto* vfs = new kernel::VFS();
 
     { // Find initrd loaded by bootloader
@@ -202,8 +203,7 @@ void transfer_function() {
     const char* execFile = "/sbin/init";
     asm volatile("mov $10, %%rax; mov $0, %%rcx; mov $0, %%rdx; int $0x8F" :: "b"(execFile));
 
-    ASSERT_NOT_REACHED("We really shouldn't be here");
-    while(true) asm volatile("hlt");
+    panic("Failed to execute /sbin/init");
 }
 
 TEXT_FREE_AFTER_INIT void stage2_init() {
@@ -221,6 +221,9 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     // Initialize the filesystems
     init_filesystems();
+
+    // Initialize the module manager
+    new kernel::ModuleManager();
 
 //    /// I might want to deffer module loading all the way to the init process
 //    init_modules();

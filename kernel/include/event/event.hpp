@@ -4,6 +4,13 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <utility.hpp>
+#include <stdatomic.h>
+#include <cstddef.hpp>
+
+#define EVENT_FLAG_CONSUMED     1
+#define EVENT_FLAG_CLEAR        2
+#define EVENT_FLAG_PROCESSED    4
+#define EVENT_FLAG_META_EVENT   8
 
 namespace kernel {
     template<typename T> struct EventArg {
@@ -17,6 +24,18 @@ namespace kernel {
             T* ptr = reinterpret_cast<T*>(buffer);
             buffer += sizeof(T);
             return *ptr;
+        }
+    };
+
+    template<> struct EventArg<std::nullptr_t> {
+        size_t encode(u8_t* buffer, std::nullptr_t) {
+            memset(buffer, 0, sizeof(void*));
+            return sizeof(void*);
+        }
+
+        std::nullptr_t decode(u8_t*& buffer) {
+            buffer += sizeof(void*);
+            return nullptr;
         }
     };
 
@@ -38,7 +57,7 @@ namespace kernel {
     template<> struct EventArg<const char*> : public EventArg<char*> { };
 
     template<> struct EventArg<char**> {
-        size_t encode(u8_t* buffer, const char** value) {
+        size_t encode(u8_t* buffer, char** value) {
             u16_t* bytesTaken = (u16_t*)buffer;
             *bytesTaken += 2;
             buffer += 2;
@@ -49,7 +68,7 @@ namespace kernel {
 
             char** argPtrs = (char**)(buffer);
             char* dataBuffer = (char*)(buffer + (sizeof(char**) * (argCount + 1)));
-            for(const char** arg = value; *arg != 0; ++arg) {
+            for(char** arg = value; *arg != 0; ++arg) {
                 size_t argLen = strlen(*arg);
                 memcpy(dataBuffer, *arg, argLen + 1);
                 *argPtrs = dataBuffer;
@@ -71,14 +90,20 @@ namespace kernel {
     };
 
     template<> struct EventArg<const char**> : public EventArg<char**> {
+        size_t encode(u8_t* buffer, const char** value) {
+            return EventArg<char**>().encode(buffer, const_cast<char**>(value));
+        }
+
         const char** decode(u8_t*& buffer) {
             return (const char**)EventArg<char**>().decode(buffer);
         }
     };
 
     class Event {
-        u64_t f_identified;
-        bool f_consumed;
+        u64_t f_identifier;
+        u64_t f_local_id;
+        atomic_int f_flags;
+        u64_t f_status;
 
         u8_t  f_arg_storage[1024];
         u8_t* f_arg_ptr;
@@ -89,24 +114,70 @@ namespace kernel {
         // is not exactly the same as the encoding order you will get
         // garbage instead of your arguments
         template<typename... Args> Event(u64_t id, Args... args) {
-            f_identified = id;
-            f_consumed = false;
+            f_identifier = id;
             f_arg_ptr = f_arg_storage;
+            f_flags = EVENT_FLAG_CLEAR;
+            f_status = 0;
 
             u8_t* buffer = f_arg_storage;
             encode_arg(buffer, args...);
         }
 
-        void consume() {
-            f_consumed = true;
+        /**
+         * @brief Keep event
+         *
+         * Running this function will tell the event manager to not delete an event
+         * after it has been processed. This can be useful in certain situations.
+         */
+        void keep() {
+            clear_flags(EVENT_FLAG_CLEAR);
         }
+
+        void consume() {
+            set_flags(EVENT_FLAG_CONSUMED);
+        }
+
+        void set_status(u64_t status) {
+            f_status = status;
+        }
+
+
+        void set_flags(u32_t flags) {
+            atomic_fetch_or(&f_flags, flags);
+        }
+
+        void clear_flags(u32_t flags) {
+            atomic_fetch_and(&f_flags, ~flags);
+        }
+
+        u32_t get_flags() const {
+            return atomic_load(&f_flags);
+        }
+
 
         bool is_consumed() const {
-            return f_consumed;
+            return get_flags() & EVENT_FLAG_CONSUMED;
         }
 
+        bool should_clear() const {
+            return get_flags() & EVENT_FLAG_CLEAR;
+        }
+
+        bool is_processed() const {
+            return get_flags() & EVENT_FLAG_PROCESSED;
+        }
+
+
         u64_t identifier() const {
-            return f_identified;
+            return f_identifier;
+        }
+
+        u64_t eid() const {
+            return f_local_id;
+        }
+
+        u64_t status() const {
+            return f_status;
         }
 
         template<typename T> T get_arg() {
@@ -133,5 +204,7 @@ namespace kernel {
         void encode_arg(u8_t*&) {
             // This gets "run" if there are no args passed in the Event constructor
         }
+
+        friend class EventManager;
     };
 }

@@ -1,11 +1,13 @@
+#include "locking/locker.hpp"
+#include "tasking/thread.hpp"
 #include <arch/cpu.h>
 #include <arch/interrupts.h>
+#include <assert.h>
 #include <defines.h>
 #include <tasking/scheduler.hpp>
 
 using namespace kernel;
 
-NO_EXPORT ThreadQueue Scheduler::wait_queue = ThreadQueue();
 NO_EXPORT ThreadQueue Scheduler::runnable_queue = ThreadQueue();
 NO_EXPORT Scheduler* Scheduler::schedulers;
 NO_EXPORT SpinLock Scheduler::queue_lock;
@@ -56,8 +58,6 @@ CPUState* Scheduler::schedule(CPUState* current_state) {
             if(current_thread->f_state == RUNNING) {
                 current_thread->f_state = RUNNABLE;
                 runnable_queue.push_back(current_thread);
-            } else {
-                wait_queue.push_back(current_thread);
             }
             current_thread = 0;
         }
@@ -101,21 +101,23 @@ Scheduler& Scheduler::scheduler(int core) {
 }
 
 void Scheduler::schedule_process(Process& proc) {
-    queue_lock.lock();
+    Locker lock(queue_lock);
     for(auto& thread : proc.f_threads) {
-        if(thread->f_state == RUNNABLE)
-            runnable_queue.push_back(thread);
-        else
-            wait_queue.push_back(thread);
+        if(thread->f_state != RUNNABLE)
+            continue;
+        runnable_queue.push_back(thread);
     }
-    queue_lock.unlock();
+}
+
+void Scheduler::schedule_thread(Thread* thread) {
+    ASSERT_F(thread->f_state == RUNNABLE, "Trying to run a thread that is not in the RUNNABLE state");
+    Locker lock(queue_lock);
+    runnable_queue.push_back(thread);
 }
 
 void Scheduler::remove_thread(Thread* thread) {
-    queue_lock.lock();
-    if(!runnable_queue.erase(thread))
-        wait_queue.erase(thread);
-    queue_lock.unlock();
+    Locker lock(queue_lock);
+    runnable_queue.erase(thread);
 }
 
 bool Scheduler::is_initialized() {

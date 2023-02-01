@@ -20,19 +20,19 @@ Module::~Module() {
 
 }
 
-#define CHECK_ERROR(expr) { int _code = (expr); if(_code) { print_error(_code); return _code; } }
+#define CHECK_ERROR(expr) { err_t _code = (expr); if(_code) { print_error(_code); return ERR_NO_EXEC; } }
 
 static const char ELF_IDENT[] = { 0x7F, 'E', 'L', 'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 static const char MOD_IDENT[] = MODULE_HEADER_MAGIC;
-int Module::load(void* file) {
+ValueOrError<void> Module::load(void* file) {
     if(f_loaded)
-        return 0;
+        return { };
 
     // Do the parsing
     Elf64_Header* elfHeader = (Elf64_Header*)file;
     if(!memcmp(elfHeader, ELF_IDENT, sizeof(ELF_IDENT))) {
         print_error(1);
-        return 1;
+        return ERR_NO_EXEC;
     }
 
     Elf64_Section* sections = (Elf64_Section*)((u8_t*)file + elfHeader->sect_offset);
@@ -69,7 +69,7 @@ int Module::load(void* file) {
     if(!f_base_addr) {
         print_error(3);
         pager.unlock();
-        return 3;
+        return ERR_NO_MEMORY;
     }
 
     // Let's now save the sections for later use
@@ -144,7 +144,7 @@ int Module::load(void* file) {
     pager.unlock();
 
     f_loaded = true;
-    return 0;
+    return { };
 }
 
 bool Module::is_loaded() {

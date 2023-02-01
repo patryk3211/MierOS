@@ -1,5 +1,6 @@
 #include <arch/cpu.h>
 #include <arch/interrupts.h>
+#include <assert.h>
 #include <locking/locker.hpp>
 #include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
@@ -48,27 +49,18 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process)
     f_state = RUNNABLE;
 }
 
-void Thread::sleep(std::Function<bool()>& until) {
-    f_blockers.push_back(until);
+void Thread::sleep(bool reschedule) {
     f_state = SLEEPING;
-    if(Thread::current() == this) {
+    Scheduler::remove_thread(this);
+    if(reschedule && Thread::current() == this)
         force_task_switch();
-    }
 }
 
-bool Thread::try_wakeup() {
-    auto iter = f_blockers.begin();
-    while(iter != f_blockers.end()) {
-        if((*iter)()) {
-            iter = f_blockers.erase(iter);
-        } else
-            ++iter;
-    }
-    if(f_blockers.empty()) {
-        f_state = RUNNABLE;
-        return true;
-    } else
-        return false;
+void Thread::wakeup() {
+    ASSERT_F(f_state == SLEEPING, "Cannot wake up a thread that's not sleeping");
+    f_state = RUNNABLE;
+    
+    Scheduler::schedule_thread(this);
 }
 
 Thread* Thread::current() {

@@ -15,4 +15,6 @@
 
 #define USED __attribute__((used))
 
+#define UNUSED(x) (void)(x)
+
 #endif // _MIEROS_KERNEL_SECTIONS_H

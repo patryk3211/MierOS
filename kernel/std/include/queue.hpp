@@ -2,6 +2,7 @@
 
 #include <utility.hpp>
 #include <allocator.hpp>
+#include <optional.hpp>
 
 namespace std {
     template<typename T, class Allocator = std::heap_allocator> class Queue {
@@ -77,6 +78,10 @@ namespace std {
             delete en;
 
             return value;
+        }
+
+        T& peek() {
+            return f_first->get();
         }
 
         size_t size() const {

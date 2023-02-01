@@ -35,3 +35,12 @@ void task_switched() {
     // to be able to restore the FPU state
     asm volatile("mov %%cr0, %%rax; or $0x08, %%rax; mov %%rax, %%cr0" ::: "rax");
 }
+
+void enter_critical() {
+    asm volatile("cli");
+}
+
+void leave_critical() {
+    asm volatile("sti");
+}
+

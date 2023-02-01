@@ -18,6 +18,9 @@ extern void register_syscall_handler(syscall_arg_t (*handler)(syscall_arg_t, sys
 extern void force_task_switch();
 extern void send_task_switch_irq(int core);
 
+extern void enter_critical();
+extern void leave_critical();
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

@@ -61,19 +61,21 @@ namespace kernel {
         ~Thread();
 
         /**
-         * @brief Puts the thread into SLEEPING state.
+         * @brief Put the thread to sleep.
          *
-         * @param until Wakes the thread up when true is returned.
-         **/
-        void sleep(std::Function<bool()>& until);
+         * This function will transition a thread into the SLEEPING state.
+         * If this thread is the current thread it will force a task switch and the
+         * thread will not execute until it is put back into the running queue.
+         */
+        void sleep(bool schedule = true);
 
         /**
-         * @brief Transitions the thread back into RUNNABLE state.
+         * @brief Wake thread up from sleep.
          *
-         * @return true - The thread is now RUNNABLE,
-         *         false - The thread is still SLEEPING
+         * This function will transition a thread into the RUNNABLE state
+         * from the SLEEPING state. It will also put it back on the scheduler queue.
          */
-        bool try_wakeup();
+        void wakeup();
 
         void schedule_finalization();
 

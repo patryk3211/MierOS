@@ -3,6 +3,7 @@
 #include <locking/locker.hpp>
 #include <tasking/scheduler.hpp>
 #include <event/kernel_events.hpp>
+#include <arch/interrupts.h>
 
 using namespace kernel;
 
@@ -11,6 +12,7 @@ EventManager* EventManager::s_instance = 0;
 EventManager::EventManager() {
     f_event_loop_proc = Process::construct_kernel_process((virtaddr_t)&event_loop);
     s_instance = this;
+    f_next_eid = 1;
 
     register_handler(EVENT_SYNC, &sync_event_handler);
 
@@ -23,6 +25,7 @@ EventManager::~EventManager() { }
 void EventManager::raise(Event* event) {
     Locker locker(f_lock);
 
+    event->f_local_id = f_next_eid++;
     f_event_queue.push_back(event);
 }
 
@@ -42,7 +45,9 @@ void EventManager::event_loop() {
         while(!s_instance->f_event_queue.size()) {
             if(s_instance->f_processing_event) {
                 s_instance->f_processing_event = false;
-                s_instance->raise(new Event(EVENT_QUEUE_EMPTY));
+                auto* event = new Event(EVENT_QUEUE_EMPTY);
+                event->set_flags(EVENT_FLAG_META_EVENT);
+                s_instance->raise(event);
             } else {
                 asm volatile("hlt"); // For now we halt if there are no events to process
             }
@@ -52,20 +57,13 @@ void EventManager::event_loop() {
         auto* event = s_instance->f_event_queue.pop_front();
         s_instance->f_lock.unlock();
 
-        // We need this to prevent queue empty event from triggering itself
-        if(event->identifier() != EVENT_QUEUE_EMPTY) {
+        // Meta-event don't trigger event manager events (So that we don't create an infinite event loop)
+        if(!(event->get_flags() & EVENT_FLAG_META_EVENT)) {
             s_instance->f_processing_event = true;
         }
 
-        // Signal all waits for the event id
-        for(auto& wait : s_instance->f_event_waits) {
-            if(wait->f_event_id == event->identifier()) {
-                wait->f_semaphore.release();
-            }
-        }
-
         // Fire all event handlers for the event id
-        auto handlersRef = s_instance->f_handlers.at(event->identifier());
+        auto handlersRef = s_instance->f_handlers.at(event->f_identifier);
         if(handlersRef) {
             auto& handlers = *handlersRef;
             for(auto& handler : handlers) {
@@ -77,7 +75,16 @@ void EventManager::event_loop() {
             }
         }
 
-        delete event;
+        event->set_flags(EVENT_FLAG_PROCESSED);
+
+        if(!(event->get_flags() & EVENT_FLAG_META_EVENT)) {
+            auto* meta = new Event(EVENT_PROCESSED_EVENT, event->f_identifier, event->f_local_id);
+            meta->set_flags(EVENT_FLAG_META_EVENT);
+            s_instance->raise(meta);
+        }
+
+        if(event->should_clear())
+            delete event;
     }
 }
 
@@ -89,12 +96,121 @@ void EventManager::sync_event_handler(Event& event) {
         cb(cbArg);
 }
 
-void EventManager::wait(u64_t identifier) {
-    Wait wait(identifier);
-
+void EventManager::wait(u64_t identifier, u64_t eid) {
+    Wait wait(identifier, eid, Thread::current());
     f_lock.lock();
-    f_event_waits.push_back(&wait);
-    f_lock.unlock();
 
-    wait.f_semaphore.acquire();
+    // We need to make sure that the wait is on wait queue and
+    // that the thread is transitioned into the wait state BEFORE
+    // we do any task switches or else we could lose the thread
+    // or possibly end up in a deadlock.
+    f_event_waits.push_back(&wait);
+
+    enter_critical();
+    Thread::current()->sleep(false);
+    f_lock.unlock();
+    leave_critical();
+
+    // We can now do a task switch, if the event was already processed we will
+    // just switch a task and not accidentally lose the thread or anything else.
+    force_task_switch();
 }
+
+void EventManager::raise_wait(Event* event) {
+    f_lock.lock();
+
+    // Assign an eid
+    event->f_local_id = f_next_eid++;
+
+    // Submit the wait before we submit the event
+    Wait wait(event->f_identifier, event->f_local_id, Thread::current());
+    f_event_waits.push_back(&wait);
+
+    // Submit the event
+    f_event_queue.push_back(event);
+
+    // Enter the sleep state
+    enter_critical();
+    Thread::current()->sleep(false);
+    f_lock.unlock();
+    leave_critical();
+
+    force_task_switch();
+}
+
+void EventManager::event_processed_handler(Event& event) {
+    Locker lock(s_instance->f_lock);
+
+    auto iter = s_instance->f_event_waits.begin();
+    while(iter != s_instance->f_event_waits.end()) {
+        auto* wait = *iter;
+
+        if((!wait->f_identifier || wait->f_identifier == event.f_identifier) &&
+           (!wait->f_eid || wait->f_eid == event.f_local_id)) {
+            wait->f_thread->wakeup();
+            iter = s_instance->f_event_waits.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+}
+
+void EventManager::raise_uevent(UEvent *uevent) {
+    Locker lock(f_lock);
+
+    UEvent* event_copy = reinterpret_cast<UEvent*>(new u8_t[uevent->f_event_size]);
+    memcpy(event_copy, uevent, uevent->f_event_size);
+    event_copy->f_event_id = f_next_eid++;
+
+    f_uevent_queue.push_back(event_copy);
+}
+
+u64_t EventManager::raise_wait_uevent(UEvent *uevent) {
+    f_lock.lock();
+
+    UEvent* event_copy = reinterpret_cast<UEvent*>(new u8_t[uevent->f_event_size]);
+    memcpy(event_copy, uevent, uevent->f_event_size);
+    event_copy->f_event_id = f_next_eid++;
+
+    Wait wait(EVENT_NULL, event_copy->f_event_id, Thread::current());
+    f_event_waits.push_back(&wait);
+
+    f_uevent_queue.push_back(event_copy);
+
+    enter_critical();
+    Thread::current()->sleep(false);
+    f_lock.unlock();
+    leave_critical();
+
+    force_task_switch();
+    return wait.f_processed_status;
+}
+
+size_t EventManager::uevent_poll(UEvent* event_out, bool block) {
+    if(block && !event_out) {
+        /// TODO: [01.02.2023] Improve the blocking by putting the thread to sleep
+        while(!f_uevent_queue.size());
+    } else {
+        if(!f_uevent_queue.size())
+            return 0;
+    }
+
+    Locker lock(f_lock);
+    UEvent* event = f_uevent_queue.peek();
+
+    if(event_out) {
+        memcpy(event_out, event, event->f_event_size);
+        f_uevent_queue.pop_front();
+        delete event;
+    }
+
+    return event->f_event_size;
+}
+
+void EventManager::uevent_signal_complete(UEvent* uevent, u64_t status) {
+    auto* meta = new Event(EVENT_PROCESSED_EVENT, (u64_t)EVENT_USERSPACE_EVENT, uevent->f_event_id);
+    meta->set_flags(EVENT_FLAG_META_EVENT);
+    meta->set_status(status);
+    raise(meta);
+}
+

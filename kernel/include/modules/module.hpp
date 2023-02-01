@@ -5,6 +5,7 @@
 #include <string.hpp>
 #include <list.hpp>
 #include <elf.h>
+#include <errno.h>
 
 namespace kernel {
     class Module {
@@ -40,7 +41,7 @@ namespace kernel {
         Module(u16_t major);
         ~Module();
 
-        int load(void* file);
+        ValueOrError<void> load(void* file);
         bool is_loaded();
 
         u16_t major();
