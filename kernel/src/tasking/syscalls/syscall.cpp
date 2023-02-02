@@ -23,7 +23,7 @@ DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset);
 DEF_SYSCALL(munmap, ptr, length);
 DEF_SYSCALL(execve, filename, argv, envp);
 DEF_SYSCALL(arch_prctl, func, ptr);
-DEF_SYSCALL(init_module_name, modName, argv);
+DEF_SYSCALL(init_module, modPtr, argv);
 DEF_SYSCALL(uevent_poll, eventPtr, flags);
 DEF_SYSCALL(uevent_complete, eventPtr, status);
 
@@ -41,7 +41,7 @@ extern "C" void init_syscalls() {
     SYSCALL(9,  munmap);
     SYSCALL(10, execve);
     SYSCALL(11, arch_prctl);
-    SYSCALL(12, init_module_name);
+    SYSCALL(12, init_module);
     SYSCALL(13, uevent_poll);
     SYSCALL(14, uevent_complete);
 

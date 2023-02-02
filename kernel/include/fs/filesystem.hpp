@@ -73,5 +73,7 @@ namespace kernel {
 
         virtual PhysicalPage resolve_mapping(const FilePage& mapping, virtaddr_t addr);
         virtual void sync_mapping(const MemoryFilePage& mapping);
+
+        virtual ValueOrError<void> ioctl(FileStream* stream, u64_t request, void* arg);
     };
 }

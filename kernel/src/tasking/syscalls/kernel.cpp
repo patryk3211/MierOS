@@ -2,23 +2,20 @@
 
 #include <event/event_manager.hpp>
 #include <event/kernel_events.hpp>
+#include <modules/module_manager.hpp>
 #include <tasking/syscalls/kernel.hpp>
 #include <memory/virtual.hpp>
 
 using namespace kernel;
 
-DEF_SYSCALL(init_module_name, modName, argv) {
+DEF_SYSCALL(init_module, modPtr, argv) {
     UNUSED(proc);
 
-    auto* event = new Event(EVENT_LOAD_MODULE, (char*)modName, nullptr, nullptr, (char**)argv);
-    event->keep();
+    if(!modPtr || modPtr >= KERNEL_START)
+        return -ERR_INVALID;
 
-    EventManager::get().raise_wait(event);
-
-    auto status = event->status();
-    delete event;
-
-    return status;
+    auto status = ModuleManager::get().load_module((void*)modPtr, (const char**)argv);
+    return status ? *status : status.errno();
 }
 
 /// TODO: [30.01.2023] Implement a 'remove_module' syscall

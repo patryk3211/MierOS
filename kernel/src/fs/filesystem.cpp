@@ -46,3 +46,8 @@ PhysicalPage Filesystem::resolve_mapping(const FilePage&, virtaddr_t) {
 void Filesystem::sync_mapping(const MemoryFilePage&) {
 
 }
+
+ValueOrError<void> Filesystem::ioctl(FileStream*, u64_t, void*) {
+    return ERR_UNIMPLEMENTED;
+}
+

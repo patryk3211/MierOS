@@ -31,12 +31,34 @@ add_custom_target(copy_sysroot "sh" "copy_sysroot.sh" "${SYSROOT_DIR}" "${CMAKE_
 set(INITRD_MODULES kernel/modules/pci/pci.mod
                    kernel/modules/test/test.mod
                    kernel/modules/ahci/ahci.mod
-                   kernel/modules/ext2/ext2.mod)
+                   kernel/modules/ext2/ext2.mod
+                   kernel/modules/pc_serial/pc_serial.mod)
 
-add_custom_target(initrd.img ALL "sh" "make_initrd.sh"
-        "${INITRD_MODULES}"
+set(INITRD_BINARIES userspace/programs/init/init
+                    userspace/programs/system/modprobe/modprobe)
+
+set(INITRD_MAPPINGS
+# Misc files
+    ${CMAKE_SOURCE_DIR}/kernel/modules/modules.init=lib/modules/modules.init
+    ${CMAKE_SOURCE_DIR}/kernel/modules/modules.alias=lib/modules/modules.alias
+    ${CMAKE_SOURCE_DIR}/kernel/modules/modules.dep=lib/modules/modules.dep
+    ${SYSROOT_DIR}/etc/fstab=etc/fstab
+# Modules
+    kernel/modules/pci/pci.mod=lib/modules/bus/pci.mod
+    kernel/modules/ahci/ahci.mod=lib/modules/block/ahci.mod
+    kernel/modules/ext2/ext2.mod=lib/modules/fs/ext2.mod
+    kernel/modules/pc_serial/pc_serial.mod=lib/modules/tty/pc_serial.mod
+# Executables
+    userspace/programs/init/init=sbin/init
+    userspace/programs/system/modprobe/modprobe=sbin/modprobe
+)
+
+add_custom_target(initrd.img ALL "sh" "${CMAKE_SOURCE_DIR}/scripts/make_initrd.sh"
+        #"${INITRD_MODULES}"
+        "${INITRD_MAPPINGS}"
         "${SYSROOT_DIR}/initrd.img"
-        "${CMAKE_SOURCE_DIR}/kernel/modules/modules.init"
-        "${CMAKE_SOURCE_DIR}/kernel/modules/modules.alias"
-        "${SYSROOT_DIR}/etc/fstab"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} VERBATIM DEPENDS ${INITRD_MODULES})
+        #"${CMAKE_SOURCE_DIR}/kernel/modules/modules.init"
+        #"${CMAKE_SOURCE_DIR}/kernel/modules/modules.alias"
+        #"${SYSROOT_DIR}/etc/fstab"
+        #"${INITRD_BINARIES}"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} VERBATIM DEPENDS ${INITRD_MODULES} ${INITRD_BINARIES})

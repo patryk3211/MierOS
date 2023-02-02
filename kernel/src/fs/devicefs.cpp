@@ -107,6 +107,10 @@ ValueOrError<u32_t> DeviceFilesystem::block_write(VNodePtr bdev, u64_t lba, u32_
     RUN_FUNC(bdev, block_write, lba, sector_count, buffer);
 }
 
+ValueOrError<void> DeviceFilesystem::ioctl(FileStream* stream, u64_t request, void* arg) {
+    RUN_FUNC(stream->node(), ioctl, request, arg);
+}
+
 ValueOrError<VNodePtr> DeviceFilesystem::add_dev(const char* path, u16_t major, u16_t minor) {
     ASSERT_F(major != 0, "Cannot have a major number of 0");
 

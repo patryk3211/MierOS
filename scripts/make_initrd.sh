@@ -2,38 +2,52 @@
 
 ##
 ## Usage:
-## ./make_initrd.sh <modules> <output_file> <module_init> <module_alias> <fstab>
-## <modules> is a semicolon separated list of file paths
-## <output_file> is a filename of the output file
-## <module_init> is a path to the modules.init file to be stored on the initrd
-## <module_alias> is a path to the modules.alias file to be stored on the initrd
-## <fstab> is a path to the fstab file to be stored on the initrd
+## ./make_initrd.sh <mappings> <output_file>
+## <mappings> is a semicolon separated list of <key>=<value> mappings where <key> is
+##            the input file and <value> is it's location on the initrd
+## <output_file> is the filename of the output file
 ##
+
+if [ "$1" = "" ]; then
+    echo "You have to specify file mappings!"
+    exit
+fi
 
 if [ "$2" = "" ]; then
     echo "You have to specify the output file name!"
     exit
 fi
 
-mkdir -p tar/lib/modules
-mkdir -p tar/dev
-mkdir -p tar/sys
-mkdir -p tar/etc
+TAR_ROOT=$(mktemp -d)
+if [ "$TAR_ROOT" = "" ]; then
+    echo "Failed to create a temporary directory!"
+    exit
+fi
 
-for arg in $(echo $1 | tr ';' ' '); do
-    cp -v $arg tar/lib/modules
+echo "Moving files into temporary directory..."
+
+for map in $(echo $1 | tr ';' ' '); do
+    array=( $(echo $map | tr '=' ' ') )
+    printf "'%s' -> '%s'\n" ${array[0]} ${array[1]}
+
+    mkdir -p $(dirname $TAR_ROOT/${array[1]})
+    cp ${array[0]} $TAR_ROOT/${array[1]}
 done
 
-cp -v $3 tar/etc
-cp -v $4 tar/etc
-cp -v $5 tar/etc
+mkdir -p $TAR_ROOT/dev
+mkdir -p $TAR_ROOT/sys
 
 echo "Compressing tar image..."
+RETURN_TO=$(pwd)
+FILE=$(realpath $2)
 
-cd tar
-tar -cf $2 *
-cd ..
+cd $TAR_ROOT
+if tar -cf $FILE *; then
+    echo "Initrd created successfully"
+else
+    echo "Failed to create initrd"
+fi
+cd $RETURN_TO
 
-echo "Initrd created succesfully"
+rm -rf $TAR_ROOT
 
-rm -rf tar

@@ -15,6 +15,8 @@ namespace kernel {
 
         ValueOrError<u32_t> (*block_read)(u16_t minor, u64_t lba, u32_t sector_count, void* buffer);
         ValueOrError<u32_t> (*block_write)(u16_t minor, u64_t lba, u32_t sector_count, const void* buffer);
+
+        ValueOrError<void> (*ioctl)(u16_t minor, u64_t request, void* arg);
     };
 
     class DeviceFilesystem : public Filesystem {
@@ -38,6 +40,8 @@ namespace kernel {
         virtual ValueOrError<size_t> write(FileStream* stream, const void* buffer, size_t length);
 
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
+
+        virtual ValueOrError<void> ioctl(FileStream* stream, u64_t request, void* arg);
 
         ValueOrError<u32_t> block_read(VNodePtr bdev, u64_t lba, u32_t sector_count, void* buffer);
         ValueOrError<u32_t> block_write(VNodePtr bdev, u64_t lba, u32_t sector_count, const void* buffer);

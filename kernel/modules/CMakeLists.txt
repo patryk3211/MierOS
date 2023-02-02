@@ -4,7 +4,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${KERNEL_CXX_FLAGS}")
 set(LD_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld)
 set(EXIT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/module.cpp)
 
-function(add_kernel_module MOD_NAME MOD_SOURCES)
+function(add_kernel_module MOD_NAME INSTALL_PREFIX MOD_SOURCES)
     set(_MOD_SOURCES ${MOD_SOURCES} ${ARGN})
     add_executable(${MOD_NAME}.mod ${_MOD_SOURCES} ${EXIT_FILE})
 
@@ -17,10 +17,12 @@ function(add_kernel_module MOD_NAME MOD_SOURCES)
 
     target_link_options(${MOD_NAME}.mod PRIVATE -T${LD_SCRIPT} -z max-page-size=0x1000 -pie -Wl,-export-dynamic -Wl,--no-dynamic-linker)
 
-    install(TARGETS ${MOD_NAME}.mod DESTINATION ${SYSROOT_DIR}/lib/modules)
+    install(TARGETS ${MOD_NAME}.mod DESTINATION ${SYSROOT_DIR}/lib/modules/${INSTALL_PREFIX})
 endfunction(add_kernel_module)
 
 add_subdirectory(test)
 add_subdirectory(pci)
 add_subdirectory(ahci)
 add_subdirectory(ext2)
+add_subdirectory(pc_serial)
+

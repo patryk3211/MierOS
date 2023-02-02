@@ -14,6 +14,7 @@ extern void init_interrupts();
 extern void register_handler(u8_t vector, void (*handler)());
 extern void register_task_switch_handler(CPUState* (*handler)(CPUState* current_state));
 extern void register_syscall_handler(syscall_arg_t (*handler)(syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t));
+extern void unregister_handler(u8_t vector, void (*handler)());
 
 extern void force_task_switch();
 extern void send_task_switch_irq(int core);

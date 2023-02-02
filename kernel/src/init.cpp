@@ -14,7 +14,6 @@
 #include <tasking/syscall.h>
 #include <tests/test.hpp>
 #include <trace.h>
-#include <debug.h>
 #include <event/event_manager.hpp>
 #include <fs/initrdfs.hpp>
 #include <event/kernel_events.hpp>
@@ -209,8 +208,6 @@ void transfer_function() {
 TEXT_FREE_AFTER_INIT void stage2_init() {
     kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
 
-    init_debug();
-
     init_syscalls();
 
     // Initialize the event system
@@ -231,6 +228,8 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 //    // Wait for all events to be processed
 //    kernel::EventManager::get().wait(EVENT_QUEUE_EMPTY);
 
+    // We need the transfer function because we
+    // will be freeing this one
     transfer_function();
 }
 

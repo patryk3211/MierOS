@@ -15,7 +15,6 @@ set(KERNEL_SOURCES src/init.cpp
                    src/dmesg.c
                    src/trace.c
                    src/stdlib.c
-                   src/debug.cpp
                    src/memory/physical.cpp
                    src/memory/liballoc.c
                    src/memory/liballoc_plugs.cpp
@@ -39,6 +38,7 @@ set(KERNEL_SOURCES src/init.cpp
                    src/util/uuid.cpp
                    src/streams/stream.cpp
                    src/streams/filestream.cpp
+                   src/streams/termios.cpp
                    src/memory/page/unresolvedpage.cpp
                    src/memory/page/anonpage.cpp
                    src/memory/page/filepage.cpp

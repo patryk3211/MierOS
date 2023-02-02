@@ -184,12 +184,8 @@ NO_EXPORT void handle_exception(CPUState* state) {
     file_line_pair p = addr_to_line(state->rip);
     kprintf("Line: %s:%d\n", p.name, p.line);
 
-    //if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
     trace_stack((void*)state->rbp);
 
-    // Prepare resources for serial debugging
-    kernel::Pager::kernel().unlock();
-    asm volatile("sti");
     while(true) asm volatile("hlt");
 }
 
@@ -273,6 +269,20 @@ extern "C" void register_handler(u8_t vector, void (*handler)()) {
         handler_entry* last = handlers[vector];
         while(last->next != 0) last = last->next;
         last->next = entry;
+    }
+}
+
+extern "C" void unregister_handler(u8_t vector, void (*handler)()) {
+    handler_entry* prev = 0;
+    for(handler_entry* en = handlers[vector]; en != 0; en = en->next) {
+        if(en->handler == handler) {
+            if(!prev)
+                handlers[vector] = en->next;
+            else
+                prev->next = en->next;
+            break;
+        }
+        prev = en;
     }
 }
 

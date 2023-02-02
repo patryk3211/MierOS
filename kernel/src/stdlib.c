@@ -128,3 +128,10 @@ void* memfind(void* ptr, const void* value, size_t valueLength, size_t ptrLength
 
     return 0;
 }
+
+void strcpy(char* dst, const char* src) {
+    while(*src != 0) {
+        *dst++ = *src++;
+    }
+}
+
