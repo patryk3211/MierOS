@@ -17,7 +17,7 @@ function(add_kernel_module MOD_NAME INSTALL_PREFIX MOD_SOURCES)
 
     target_link_options(${MOD_NAME}.mod PRIVATE -T${LD_SCRIPT} -z max-page-size=0x1000 -pie -Wl,-export-dynamic -Wl,--no-dynamic-linker)
 
-    install(TARGETS ${MOD_NAME}.mod DESTINATION ${SYSROOT_DIR}/lib/modules/${INSTALL_PREFIX})
+    install(TARGETS ${MOD_NAME}.mod DESTINATION ${SYSROOT_DIR}/usr/lib/modules/${INSTALL_PREFIX})
 endfunction(add_kernel_module)
 
 add_subdirectory(test)

@@ -2,8 +2,10 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MIEROS_H
 
 #include "Gnu.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "llvm/Option/ArgList.h"
 
 namespace clang {
 namespace driver {
@@ -28,7 +30,7 @@ public:
 class LLVM_LIBRARY_VISIBILITY Link : public Tool {
 public:
     Link(const ToolChain &TC)
-        : Tool("mieros::Link", "linker", TC) { }
+        : Tool("mieros::Link", "ld.lld", TC) { }
 
     bool hasIntegratedCPP() const override { return false; }
     bool isLinkJob() const override { return true; }
@@ -47,12 +49,20 @@ public:
   MierOSToolChain(const Driver &D, const llvm::Triple &Triple,
                   const llvm::opt::ArgList &Args);
 
-  /*bool HasNativeLLVMSupport() const override;
+  RuntimeLibType GetDefaultRuntimeLibType() const override;
+  CXXStdlibType GetDefaultCXXStdlibType() const override;
 
+  RuntimeLibType GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
+  CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
+  UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const override;
+
+  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const override; 
   void AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) const override;
-  void AddLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CC1Args) const override;*/
+  void AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                    llvm::opt::ArgStringList &CC1Args) const override;
+
+  const char *getDefaultLinker() const override;
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

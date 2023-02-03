@@ -347,6 +347,7 @@ protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
     // MierOS defines
+    DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__mieros__");
     Builder.defineMacro("__ELF__");
   }
