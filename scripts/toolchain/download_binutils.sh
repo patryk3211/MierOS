@@ -9,3 +9,5 @@ BINUTILS_URL="https://ftp.gnu.org/gnu/binutils/$BINUTILS_PKG"
 
 scripts/toolchain/download.sh $BINUTILS_NAME $BINUTILS_PKG $BINUTILS_URL $BINUTILS_MD5 gzip cross $EXTRACTED_NAME
 
+patch -N -d cross/$EXTRACTED_NAME -p1 < scripts/toolchain/patch/gnu/binutils.patch
+

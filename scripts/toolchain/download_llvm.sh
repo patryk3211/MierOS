@@ -9,6 +9,8 @@ LLVM_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVM_V
 scripts/toolchain/download.sh $LLVM_NAME $LLVM_NAME.tar.xz $LLVM_URL none xz cross $EXTRACTED_NAME
 
 # Patch llvm with our changes
-
-cp -rvu scripts/toolchain/patch/llvm/* cross/$EXTRACTED_NAME/
+echo "Patching LLVM..."
+for p in $(find scripts/toolchain/patch/llvm/ -type f); do
+    patch -N -d cross/$EXTRACTED_NAME -p1 < $p
+done
 
