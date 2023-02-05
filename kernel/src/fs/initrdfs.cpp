@@ -1,4 +1,5 @@
 #include <fs/initrdfs.hpp>
+#include <memory/page/filepage.hpp>
 
 using namespace kernel;
 
@@ -210,3 +211,46 @@ ValueOrError<size_t> InitRdFilesystem::seek(FileStream* stream, size_t position,
 ValueOrError<void> InitRdFilesystem::umount() {
     return { };
 }
+
+PhysicalPage InitRdFilesystem::resolve_mapping(const FilePage& mapping, virtaddr_t addr) {
+    size_t offset = ((addr - mapping.start_addr()) & ~0xFFF) + mapping.offset();
+
+    auto vnode = mapping.file();
+
+    auto pageOpt = vnode->f_shared_pages.at(offset);
+    if(pageOpt)
+        return *pageOpt;
+
+
+    auto* vnode_data = reinterpret_cast<InitRdVNodeData*>(vnode->fs_data);
+    if(!vnode_data)
+        return nullptr;
+
+    PhysicalPage page;
+    page.flags() = PageFlags(true, true, false, false, true, false);
+
+    auto& pager = Pager::active();
+    pager.lock();
+    virtaddr_t ptr = pager.kmap(page.addr(), 1, page.flags());
+
+    ssize_t lengthLeft = vnode->size() - offset;
+    if(lengthLeft > 0) {
+        if(lengthLeft > 4096)
+            lengthLeft = 4096;
+        memcpy((void*)ptr, (u8_t*)vnode_data->ptr + 512 + offset, lengthLeft);
+        if(lengthLeft < 4096)
+            memset((u8_t*)ptr + lengthLeft, 0, 4096 - lengthLeft);
+    } else {
+        memset((u8_t*)ptr, 0, 4096);
+    }
+
+    pager.unmap(ptr, 1);
+    pager.unlock();
+
+    if(mapping.shared()) {
+        vnode->f_shared_pages.insert({ offset, page });
+    }
+
+    return page;
+}
+

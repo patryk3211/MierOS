@@ -19,6 +19,7 @@ PhysicalPage::~PhysicalPage() {
     if(data->f_obj_ref_count.fetch_sub(1) == 1) {
         if(data->f_ref_count.load() == 0 && data->f_addr != 0) {
             pfree(data->f_addr, 1);
+            TRACE("Deleted physical page 0x%x16\n", data->f_addr);
             data->f_addr = 0;
         }
         delete data;

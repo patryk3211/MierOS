@@ -47,6 +47,7 @@ Process* Process::fork() {
     Process* child = new Process(CPUSTATE_IP(caller->f_syscall_state));
     memcpy(child->main_thread()->f_ksp, caller->f_syscall_state, sizeof(CPUState));
     CPUSTATE_RET(child->main_thread()->f_ksp) = 0;
+    child->main_thread()->f_ksp->cr3 = child->f_pager->cr3();
 
     // Copy the memory space
     f_pager->lock();
@@ -80,8 +81,10 @@ Process* Process::fork() {
                 }
 
                 child->f_pager->lock();
-                auto memoryEntry = std::make_shared<MemoryEntry>(*entry.value);
+                auto memoryEntry = std::make_shared<MemoryEntry>();
                 memoryEntry->page = new MemoryFilePage(page);
+                memoryEntry->type = MemoryEntry::FILE_MEMORY;
+                memoryEntry->shared = entry.value->shared;
                 child->f_memorymap[entry.key] = memoryEntry;
                 child->f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
                 child->f_pager->unlock();
@@ -125,6 +128,9 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
         // Invalid header magic
         return ERR_NO_EXEC;
     }
+
+    if(header.type != ET_EXEC && header.type != ET_DYN)
+        return ERR_NO_EXEC;
 
     Elf64_Phdr programHeaders[header.phdr_entry_count];
     stream.seek(header.phdr_offset, SEEK_MODE_BEG);
@@ -206,8 +212,13 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     }
     f_memorymap.clear();
 
-    virtaddr_t start = ~0;
-    virtaddr_t end = 0;
+    virtaddr_t base = 0;
+    if(header.type == ET_DYN) {
+        // Find a suitable base address for a PIE.
+        // For now we just set it to a hardcoded value
+        // but in the future we might randomize this address.
+        base = PIE_START;
+    }
 
     // Process headers
     for(int i = 0; i < header.phdr_entry_count; ++i) {
@@ -226,15 +237,15 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
                 if(filePages > 0) {
                     // Map a file segment here
-                    FilePage* page = new FilePage(file, header.vaddr & ~0xFFF, header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
+                    FilePage* page = new FilePage(file, base + (header.vaddr & ~0xFFF), header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
 
-                    file_pages(header.vaddr & ~0xFFF, filePages, page);
+                    file_pages(base + (header.vaddr & ~0xFFF), filePages, page);
 
                     // We need this since the .bss section will likely intersect
                     // with some data and we need to guarantee that it is cleared
-                    if(alignedMemSize > alignedFileSize) {
+                    if(alignedMemSize > alignedFileSize && ((header.vaddr + header.file_size) & 0xFFF)) {
                         // We need to zero out some memory
-                        memset((void*)(header.vaddr + header.file_size), 0, 4096 - ((header.vaddr + header.file_size) & 0xFFF));
+                        memset((void*)(base + header.vaddr + header.file_size), 0, 4096 - ((header.vaddr + header.file_size) & 0xFFF));
                     }
                 }
 
@@ -244,11 +255,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     int prot = 1;
                     prot |= (header.flags & 2) ? MMAP_PROT_WRITE : 0;
                     prot |= (header.flags & 1) ? MMAP_PROT_EXEC : 0;
-                    alloc_pages((header.vaddr + (filePages << 12)) & ~0xFFF, pagesLeft, MMAP_FLAG_ZERO, prot);
+                    alloc_pages(base + ((header.vaddr + (filePages << 12)) & ~0xFFF), pagesLeft, MMAP_FLAG_ZERO, prot);
                 }
-
-                if(start > header.vaddr) start = header.vaddr;
-                if(end < header.vaddr + (pageCount << 12)) end = header.vaddr + (pageCount << 12);
 
                 break;
             }
@@ -306,7 +314,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     // null aux vector
     execStack[stackOffset++] = 0;
 
-    thisThread->make_ks(header.entry_point, (virtaddr_t)execStack);
+    thisThread->make_ks(base + header.entry_point, (virtaddr_t)execStack);
 
     f_pager->unlock();
     f_lock.unlock();

@@ -228,6 +228,13 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 //    // Wait for all events to be processed
 //    kernel::EventManager::get().wait(EVENT_QUEUE_EMPTY);
 
+    auto& thisProc = kernel::Thread::current()->parent();
+
+    auto* sstream = new SimpleStream();
+    thisProc.add_stream(sstream);
+    thisProc.add_stream(sstream);
+    thisProc.add_stream(sstream);
+
     // We need the transfer function because we
     // will be freeing this one
     transfer_function();

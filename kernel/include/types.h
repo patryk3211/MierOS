@@ -16,6 +16,7 @@ typedef signed int          s32_t;
 typedef signed long long    s64_t;
 
 typedef unsigned long size_t;
+typedef signed long ssize_t;
 
 typedef u64_t physaddr_t;
 typedef u64_t virtaddr_t;

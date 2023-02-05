@@ -6,6 +6,8 @@
 
 #define MAX_WORK_PAGES 4
 #define KERNEL_START 0xFFFFFFFF80000000
+// Just an arbitrary address
+#define PIE_START 0x48000000
 
 namespace kernel {
     struct PageFlags {

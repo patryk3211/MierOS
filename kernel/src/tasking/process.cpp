@@ -207,7 +207,7 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
                     f_pager->lock();
                     auto vaddr = f_pager->kmap(new_page.addr(), 1, PageFlags(1, 1, 0, 0, 1, 0));
 
-                    memcpy((void*)vaddr, (void*)(fault_address & !0xFFF), 4096);
+                    memcpy((void*)vaddr, (void*)(fault_address & ~0xFFF), 4096);
 
                     // Remap our new page
                     new_page.ref();
@@ -253,11 +253,8 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
             auto page = ((UnresolvedPage*)mapping->page)->resolve(fault_address);
             if(!page) return false;
 
-            /// TODO: IMPLEMENT A RECURSIVE LOCK
-            f_lock.unlock();
             map_page(fault_address & ~0xFFF, page, mapping->shared);
             memset((void*)(fault_address & ~0xFFF), 0, 4096);
-            f_lock.lock();
             return true;
         }
         case MemoryEntry::FILE: {
@@ -295,6 +292,8 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
         case MemoryEntry::FILE_MEMORY: {
             auto* file_mapping = (MemoryFilePage*)mapping->page;
             auto& page = file_mapping->f_page;
+
+            //kprintf("Physical Page Addr = 0x%x16\n", page.addr());
 
             if((code & 0x02) && file_mapping->f_copy_on_write) {
                 if(page.ref_count() > 1) {

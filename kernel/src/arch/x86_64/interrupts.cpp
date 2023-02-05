@@ -171,14 +171,18 @@ extern "C" void cpu_state_dump(CPUState* state) {
             "| cr3 = 0x%x16 |\n"
             "+--------------------------+\n"
             "| iec = 0x%x16 |\n"
+            "| fs  = 0x%x16 |\n"
             "+--------------------------+\n"
             "state = 0x%x16\n",
             state->rax, state->rbx, state->rcx, state->rdx, state->rsi, state->rdi, state->rbp, state->r8, state->r9, state->r10,
             state->r11, state->r12, state->r13, state->r14, state->r15, state->rip, state->cs, state->rflags, state->rsp, state->ss,
-            cr0, cr2, cr3, state->err_code, state);
+            cr0, cr2, cr3, state->err_code, state->fs, state);
 }
 
+static kernel::SpinLock s_except_log_lock;
 NO_EXPORT void handle_exception(CPUState* state) {
+    s_except_log_lock.lock();
+
     kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
     cpu_state_dump(state);
     file_line_pair p = addr_to_line(state->rip);
@@ -186,6 +190,7 @@ NO_EXPORT void handle_exception(CPUState* state) {
 
     trace_stack((void*)state->rbp);
 
+    s_except_log_lock.unlock();
     while(true) asm volatile("hlt");
 }
 

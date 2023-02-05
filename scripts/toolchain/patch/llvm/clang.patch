@@ -79,7 +79,7 @@
        default:
 --- a/clang/lib/Driver/ToolChains/MierOS.cpp	1970-01-01 01:00:00.000000000 +0100
 +++ b/clang/lib/Driver/ToolChains/MierOS.cpp	2023-02-04 12:05:32.635641359 +0100
-@@ -0,0 +1,275 @@
+@@ -0,0 +1,282 @@
 +#include "MierOS.h"
 +#include "CommonArgs.h"
 +#include "clang/Config/config.h"
@@ -155,7 +155,7 @@
 +
 +  if (!D.SysRoot.empty())
 +    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
-+  if (!Args.hasArg(options::OPT_shared) && !Args.hasArg(options::OPT_r))
++  if (!Args.hasArg(options::OPT_shared, options::OPT_r) && Args.hasArg(options::OPT_pie))
 +    CmdArgs.push_back("-pie");
 +  if (Args.hasArg(options::OPT_rdynamic))
 +    CmdArgs.push_back("-export-dynamic");
@@ -199,8 +199,11 @@
 +    if (Args.hasArg(options::OPT_static))
 +      CmdArgs.push_back("-Bdynamic");
 +
-+    if (!Args.hasArg(options::OPT_nostartfiles))
++    if (!Args.hasArg(options::OPT_nostartfiles)) {
 +      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
++      if (ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT)
++        CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRT(Args, "crtbegin", ToolChain::FT_Object)));
++    }
 +
 +    if (D.CCCIsCXX()) {
 +      if (ToolChain.ShouldLinkCXXStdlib(Args)) {
@@ -221,6 +224,10 @@
 +
 +    if (!Args.hasArg(options::OPT_nolibc))
 +      CmdArgs.push_back("-lc");
++    
++    if (!Args.hasArg(options::OPT_nostartfiles) &&
++        ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT)
++      CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRT(Args, "crtend", ToolChain::FT_Object)));
 +  }
 +
 +  const char *Exec = Args.MakeArgString(getToolChain().GetLinkerPath());
