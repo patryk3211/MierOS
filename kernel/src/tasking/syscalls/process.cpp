@@ -298,7 +298,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     // argv
     for(auto& arg : argStore) {
         execStack[stackOffset++] = infoBlock;
-        memcpy((void*)infoBlock, arg.c_str(), arg.length() + 1);
+        memcpy((u8_t*)execStack + infoBlock, arg.c_str(), arg.length() + 1);
         infoBlock += arg.length() + 1;
     }
     execStack[stackOffset++] = 0;
@@ -306,7 +306,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     // envp
     for(auto& env : envStore) {
         execStack[stackOffset++] = infoBlock;
-        memcpy((void*)infoBlock, env.c_str(), env.length() + 1);
+        memcpy((u8_t*)execStack + infoBlock, env.c_str(), env.length() + 1);
         infoBlock += env.length() + 1;
     }
     execStack[stackOffset++] = 0;
