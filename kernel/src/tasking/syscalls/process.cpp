@@ -315,6 +315,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     execStack[stackOffset++] = 0;
 
     thisThread->make_ks(base + header.entry_point, (virtaddr_t)execStack);
+    f_first_free = MMAP_MIN_ADDR;
 
     f_pager->unlock();
     f_lock.unlock();

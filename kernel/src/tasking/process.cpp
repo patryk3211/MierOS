@@ -95,6 +95,8 @@ Stream* Process::get_stream(fd_t fd) {
 }
 
 void Process::set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry) {
+    Locker lock(f_lock);
+
     auto currentEntryOpt = f_memorymap.at(addr);
     if(currentEntryOpt) {
         auto currentEntry = *currentEntryOpt;
@@ -108,7 +110,7 @@ void Process::set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& ent
 }
 
 void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared) {
-    f_lock.lock();
+    Locker lock(f_lock);
     f_pager->lock();
 
     page.ref();
@@ -122,11 +124,12 @@ void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared) {
     f_pager->unlock();
     set_page_mapping(addr, ptr);
 
-    f_lock.unlock();
+    if(f_first_free == addr)
+        f_first_free = addr + 4096;
 }
 
 void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
-    f_lock.lock();
+    Locker lock(f_lock);
 
     if((flags & MMAP_FLAG_SHARED) && prot != 0) {
         // Shared mapping
@@ -150,11 +153,12 @@ void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
             set_page_mapping(addr + (i << 12), ptr);
     }
 
-    f_lock.unlock();
+    if(f_first_free == addr)
+        f_first_free = addr + (length << 12);
 }
 
 void Process::null_pages(virtaddr_t addr, size_t length) {
-    f_lock.lock();
+    Locker lock(f_lock);
 
     auto ptr = std::make_shared<MemoryEntry>();
 
@@ -165,11 +169,12 @@ void Process::null_pages(virtaddr_t addr, size_t length) {
     for(size_t i = 0; i < length; ++i)
         set_page_mapping(addr + (i << 12), ptr);
 
-    f_lock.unlock();
+    if(f_first_free == addr)
+        f_first_free = addr + (length << 12);
 }
 
 void Process::file_pages(virtaddr_t addr, size_t length, FilePage* page) {
-    f_lock.lock();
+    Locker lock(f_lock);
 
     auto ptr = std::make_shared<MemoryEntry>();
     ptr->type = MemoryEntry::FILE;
@@ -179,7 +184,8 @@ void Process::file_pages(virtaddr_t addr, size_t length, FilePage* page) {
     for(size_t i = 0; i < length; ++i)
         set_page_mapping(addr + (i << 12), ptr);
 
-    f_lock.unlock();
+    if(f_first_free == addr)
+        f_first_free = addr + (length << 12);
 }
 
 bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
@@ -293,8 +299,6 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
             auto* file_mapping = (MemoryFilePage*)mapping->page;
             auto& page = file_mapping->f_page;
 
-            //kprintf("Physical Page Addr = 0x%x16\n", page.addr());
-
             if((code & 0x02) && file_mapping->f_copy_on_write) {
                 if(page.ref_count() > 1) {
                     // Copy the page
@@ -383,8 +387,8 @@ virtaddr_t Process::get_free_addr(virtaddr_t hint, size_t length) {
 }
 
 void Process::unmap_pages(virtaddr_t addr, size_t length) {
-    f_lock.lock();
-    f_pager->lock();
+    Locker lock(f_lock);
+    Locker pager_lock(*f_pager);
 
     for(size_t i = 0; i < length; ++i) {
         virtaddr_t key = addr + (i << 12);
@@ -411,7 +415,4 @@ void Process::unmap_pages(virtaddr_t addr, size_t length) {
             f_memorymap.erase(key);
         }
     }
-
-    f_pager->unlock();
-    f_lock.unlock();
 }
