@@ -8,7 +8,8 @@ using namespace kernel;
 
 VFS* VFS::s_instance = 0;
 
-VFS::VFS() {
+VFS::VFS() 
+    : f_rootNode(nullptr) {
     s_instance = this;
 }
 

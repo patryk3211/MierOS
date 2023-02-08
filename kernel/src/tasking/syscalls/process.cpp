@@ -25,7 +25,7 @@ DEF_SYSCALL(fork) {
 DEF_SYSCALL(execve, filename, argv, envp) {
     const char* path = (const char*)filename;
 
-    VNodePtr file;
+    VNodePtr file = nullptr;
     if(path[0] == '/') {
         auto ret = VFS::instance()->get_file(nullptr, path, {});
         if(!ret) return -ret.errno();

@@ -18,7 +18,9 @@ namespace std {
 
     public:
         SharedPtr() {
-            data = 0;
+            data = new DataStorage();
+            data->ref_count.store(1);
+            new(data->storage) T();
         }
 
         SharedPtr(const T& value, std::Optional<std::Function<void(T&)>> destructor = std::Optional<std::Function<void(T&)>>()) {
@@ -95,10 +97,10 @@ namespace std {
     };
 
     template<typename C, typename... Args> SharedPtr<C> make_shared(Args... args) {
-        auto ptr = SharedPtr<C>();
+        auto ptr = SharedPtr<C>(nullptr);
         ptr.data = new typename SharedPtr<C>::DataStorage();
-        new(ptr.data->storage) C(args...);
         ptr.data->ref_count.store(1);
+        new(ptr.data->storage) C(args...);
         return ptr;
     }
 }

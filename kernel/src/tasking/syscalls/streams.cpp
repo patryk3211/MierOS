@@ -7,7 +7,7 @@ using namespace kernel;
 DEF_SYSCALL(open, name, flags) {
     const char* path = (const char*)name;
 
-    VNodePtr file;
+    VNodePtr file = nullptr;
     if(path[0] == '/') {
         auto ret = VFS::instance()->get_file(nullptr, path, {});
         if(!ret) return -ret.errno();

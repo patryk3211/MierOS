@@ -10,6 +10,7 @@ VNode::VNode(u16_t permissions, u16_t user_id, u16_t group_id, time_t create_tim
     , f_access_time(access_time)
     , f_modify_time(modify_time)
     , f_size(size)
+    , f_parent(nullptr)
     , f_name(name)
     , f_filesystem(fs)
     , f_type(type) {

@@ -26,7 +26,7 @@ static const u16_t serial_ports[] = {
 };
 
 static u32_t working_ports;
-static VNodePtr device_nodes[sizeof(serial_ports) / sizeof(u16_t)];
+//static VNodePtr device_nodes[sizeof(serial_ports) / sizeof(u16_t)];
 Port* device_ports[sizeof(serial_ports) / sizeof(u16_t)];
 
 extern u16_t major;

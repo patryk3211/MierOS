@@ -81,7 +81,8 @@ void InitRdFilesystem::parse_header(void* headerPtr) {
     }
 }
 
-InitRdFilesystem::InitRdFilesystem(void* initrd) {
+InitRdFilesystem::InitRdFilesystem(void* initrd) 
+    : f_root(nullptr) {
     f_root = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, "", VNode::DIRECTORY, this);
     f_root->fs_data = 0;
 

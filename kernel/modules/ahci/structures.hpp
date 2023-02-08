@@ -24,7 +24,16 @@ struct drive_file {
     drive_information* drive;
     u64_t partition_start;
     u64_t partition_end;
-    std::SharedPtr<kernel::VNode> node;
+    kernel::VNodePtr node;
+
+    drive_file()
+        : node(nullptr) { }
+
+    drive_file(drive_information* drive, u64_t start, u64_t end, const kernel::VNodePtr& node)
+        : drive(drive)
+        , partition_start(start)
+        , partition_end(end)
+        , node(node) { }
 };
 
 static size_t drive_count;

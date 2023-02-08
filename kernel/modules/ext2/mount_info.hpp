@@ -19,7 +19,9 @@ struct MountInfo {
     std::SharedPtr<kernel::VNode> root;
 
     MountInfo()
-        : block_groups(0) { }
+        : block_groups(0)
+        , fs_file(nullptr)
+        , root(nullptr) { }
 
     // Get the LBA address of this block
     u64_t get_lba(u32_t block) {

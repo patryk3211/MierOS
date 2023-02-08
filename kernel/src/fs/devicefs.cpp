@@ -24,7 +24,8 @@ struct DevFs_DevData : public VNodeDataStorage {
 
 DeviceFilesystem* DeviceFilesystem::s_instance = 0;
 
-DeviceFilesystem::DeviceFilesystem() {
+DeviceFilesystem::DeviceFilesystem() 
+    : root(nullptr) {
     root = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, "", VNode::DIRECTORY, this);
 
     s_instance = this;

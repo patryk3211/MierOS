@@ -35,7 +35,7 @@ namespace kernel {
 
         virtaddr_t f_first_free;
         /// TODO: [07.02.2023] Change from UnorderedMap to RangeMap (to be implemented)
-        std::UnorderedMap<virtaddr_t, std::SharedPtr<MemoryEntry>, std::hash<virtaddr_t>, std::equal_to<virtaddr_t>, std::traced_heap_allocator> f_memorymap;
+        std::UnorderedMap<virtaddr_t, std::SharedPtr<MemoryEntry>> f_memorymap;
 
         RecursiveMutex f_lock;
 
