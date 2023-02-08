@@ -1,7 +1,7 @@
 #pragma once
 
 #include <list.hpp>
-#include <streams/stream.hpp>
+#include <streams/streamwrapper.hpp>
 #include <string.hpp>
 #include <tasking/thread.hpp>
 #include <unordered_map.hpp>
@@ -21,7 +21,7 @@ namespace kernel {
         std::String<> f_workingDirectory;
 
         fd_t f_next_fd;
-        std::UnorderedMap<fd_t, Stream*> f_streams;
+        std::UnorderedMap<fd_t, StreamWrapper> f_streams;
 
         struct MemoryEntry {
             enum Type {

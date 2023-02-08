@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <fstream>
+#include <sys/syscall.h>
 
 struct Module {
     std::string f_moduleName;
@@ -172,8 +173,19 @@ void handle_dependencies(Module* module, std::list<Module*>& orderedModules, std
     }
 }
 
-void insmod(const std::string& modFile) {
+int insmod(const std::string& modFile, const std::string& modName) {
+    // We need to read the module file and call init_module
+    // Get the file size
+    std::ifstream file(modFile, std::ios::ate | std::ios::binary);
+    if(!file.is_open()) return -1;
 
+    size_t fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    char* buffer = new char[fileSize];
+    file.read(buffer, fileSize);
+
+    return syscall(SYS_init_module, buffer, 0);
 }
 
 void print_usage(char* progName) {
@@ -186,6 +198,7 @@ void print_usage(char* progName) {
         "  -h, --help - Displays this help message\n"
         "  -v, --verbose - Verbose output\n"
         "  -a, --all - Consider all non-arguments to be a module name\n"
+        "  -m, --major - Print major number this module was loaded at\n"
     , progName, progName);
 }
 
@@ -193,6 +206,7 @@ static const option options[] = {
     { 'h', "help", 0 },
     { 'v', "verbose", 0 },
     { 'a', "all", 0 },
+    { 'm', "major", 0 },
     { 0, 0, 0 }
 };
 
@@ -205,6 +219,7 @@ int main(int argc, char* argv[]) {
     module_directory = "/lib/modules";
     bool verbose = false;
     bool allModules = false;
+    bool printMajor = false;
     
     char opt;
     while((opt = get_next_option(apc)) != -1) {
@@ -220,6 +235,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'a':
                 allModules = true;
+                break;
+            case 'm':
+                printMajor = true;
                 break;
             case 'h':
             default:
@@ -255,7 +273,14 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "insmod '%s'\n", mod->f_moduleFile.c_str());
 
         /// TODO: [02.02.2023] This will also handle arguments later.
-        insmod(mod->f_moduleFile);
+        int major = insmod(mod->f_moduleFile, mod->f_moduleName);
+        if(printMajor) {
+            if(major > 0) {
+                std::cout << mod->f_moduleName << "=" << major << std::endl;
+            } else {
+                std::cout << mod->f_moduleName << "=0" << std::endl;
+            }
+        }
     }
 
     return 0;

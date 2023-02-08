@@ -91,7 +91,7 @@ Stream* Process::get_stream(fd_t fd) {
     f_lock.unlock();
 
     if(!val) return 0;
-    return *val;
+    return &val->base();
 }
 
 void Process::set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry) {
@@ -105,8 +105,9 @@ void Process::set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& ent
             f_pager->unmap(addr, 1);
             f_pager->unlock();
         }
+        f_memorymap.erase(addr);
     }
-    f_memorymap[addr] = entry;
+    f_memorymap.insert({ addr, entry });
 }
 
 void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared) {

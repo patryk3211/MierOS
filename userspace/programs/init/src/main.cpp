@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     int child = fork();
     printf("child = %d", child);
     if(!child) {
-        char* args[] = { "pc_serial" };
+        char* args[] = { "modprobe", "pc_serial", 0 };
         execvp("modprobe", args);
     }
     //system("modprobe pc_serial");

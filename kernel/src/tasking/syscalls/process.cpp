@@ -70,7 +70,7 @@ Process* Process::fork() {
             case MemoryEntry::EMPTY:
             case MemoryEntry::ANONYMOUS:
                 // Copy the memory entries
-                child->f_memorymap[entry.key] = entry.value;
+                child->f_memorymap.insert({ entry.key, entry.value });
                 break;
             case MemoryEntry::FILE_MEMORY: {
                 MemoryFilePage& page = *(MemoryFilePage*)entry.value->page;
@@ -85,7 +85,7 @@ Process* Process::fork() {
                 memoryEntry->page = new MemoryFilePage(page);
                 memoryEntry->type = MemoryEntry::FILE_MEMORY;
                 memoryEntry->shared = entry.value->shared;
-                child->f_memorymap[entry.key] = memoryEntry;
+                child->f_memorymap.insert({ entry.key, memoryEntry });
                 child->f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
                 child->f_pager->unlock();
                 break;
@@ -293,12 +293,12 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     execStack[stackOffset++] = argStore.size();
 
     /// TODO: [10.01.2023] Will also need to take aux vector size into account
-    virtaddr_t infoBlock = (4 + argStore.size() + envStore.size()) * sizeof(u64_t);
+    virtaddr_t infoBlock = (virtaddr_t)execStack + (4 + argStore.size() + envStore.size()) * sizeof(u64_t);
 
     // argv
     for(auto& arg : argStore) {
         execStack[stackOffset++] = infoBlock;
-        memcpy((u8_t*)execStack + infoBlock, arg.c_str(), arg.length() + 1);
+        memcpy((void*)infoBlock, arg.c_str(), arg.length() + 1);
         infoBlock += arg.length() + 1;
     }
     execStack[stackOffset++] = 0;
@@ -306,7 +306,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     // envp
     for(auto& env : envStore) {
         execStack[stackOffset++] = infoBlock;
-        memcpy((u8_t*)execStack + infoBlock, env.c_str(), env.length() + 1);
+        memcpy((void*)infoBlock, env.c_str(), env.length() + 1);
         infoBlock += env.length() + 1;
     }
     execStack[stackOffset++] = 0;

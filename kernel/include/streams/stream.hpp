@@ -14,10 +14,14 @@ namespace kernel {
         Stream(unsigned char type)
             : f_type(type) { }
 
+        void set_type(unsigned char type) {
+            f_type = type;
+        }
+
     public:
         virtual ~Stream() = default;
 
-        unsigned char type() { return f_type; }
+        unsigned char type() const { return f_type; }
 
         /**
          * @brief Read the given amount of bytes into the buffer.

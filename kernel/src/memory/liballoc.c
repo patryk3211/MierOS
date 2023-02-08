@@ -43,7 +43,7 @@
 //#include <stdio.h>
 //#include <stdlib.h>
 #include <dmesg.h>
-#define printf(...) dmesg(__VA_ARGS__)
+#define printf(...) kprintf(__VA_ARGS__)
 
 #define FLUSH() //fflush(stdout)
 
@@ -239,7 +239,7 @@ void* malloc(size_t req_size) {
 #ifdef DEBUG
         printf("liballoc: initialization of liballoc " VERSION "\n");
 #endif
-        atexit(liballoc_dump);
+        //atexit(liballoc_dump);
         FLUSH();
 #endif
 
