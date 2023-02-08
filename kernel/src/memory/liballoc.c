@@ -40,10 +40,12 @@
 
 #undef DEBUG
 #if defined DEBUG || defined INFO
-#include <stdio.h>
-#include <stdlib.h>
+//#include <stdio.h>
+//#include <stdlib.h>
+#include <dmesg.h>
+#define printf(...) dmesg(__VA_ARGS__)
 
-#define FLUSH() fflush(stdout)
+#define FLUSH() //fflush(stdout)
 
 #endif
 

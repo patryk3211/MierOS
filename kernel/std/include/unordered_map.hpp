@@ -216,11 +216,6 @@ namespace std {
 
             if(f_bucket[bucket_pos] == 0) return {};
             for(Entry* entry = f_bucket[bucket_pos]; entry != 0; entry = entry->next) {
-                /// Something goes wrong here, we are accessing an uninitialized pointer or
-                /// something cause we are causing a very bad fault
-                /// ...
-                /// I think we might be overriding the previously allocated entry
-                /// or something
                 if(Pred {}(key, entry->key)) {
                     // This is the value
                     return entry->value();

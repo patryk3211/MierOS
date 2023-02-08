@@ -52,19 +52,31 @@ extern "C" void* liballoc_alloc(size_t page_count) {
         for(u32_t page = heap_first_potential_page; page < HEAP_PAGE_SIZE; ++page) {
             bool found_block = true;
             for(u32_t i = 0; i < page_count; ++i) {
-                if(i + page >= HEAP_PAGE_SIZE) goto fail;
-                if(is_page_used(page + i)) {
-                    page += i - 1;
+                // We have exhausted the heap.
+                if(i + page >= HEAP_PAGE_SIZE) {
+                    page = HEAP_PAGE_SIZE;
                     found_block = false;
                     break;
                 }
+                // This block is used, skip to next possibly free block.
+                if(is_page_used(page + i)) {
+                    found_block = false;
+                    page += i;
+                    break;
+                }
             }
-            if(!found_block) continue;
-            heap_first_potential_page = page + page_count;
-            for(u32_t i = 0; i < page_count; ++i) set_page_used(page + i, true);
+            // Block not found, continue searching
+            if(!found_block)
+                continue;
+            // Move first potentially free page
+            if(heap_first_potential_page == page)
+                heap_first_potential_page = page + page_count;
+            // Mark pages as used
+            for(u32_t i = 0; i < page_count; ++i)
+                set_page_used(page + i, true);
+            // Return the allocated pointer
             return initial_heap + (page << 12);
         }
-    fail:;
     }
     Pager pager = Pager::active();
     Locker lock(pager);
