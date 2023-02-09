@@ -77,8 +77,6 @@ extern "C" void* liballoc_alloc(size_t page_count) {
             for(u32_t i = 0; i < page_count; ++i)
                 set_page_used(page + i, true);
             // Return the allocated pointer
-            /// DEBUG FURTHER
-            kprintf("Allocated 0x%x16, %d pages\n", page << 12, page_count);
             return initial_heap + (page << 12);
         }
     }
@@ -90,10 +88,9 @@ extern "C" void* liballoc_alloc(size_t page_count) {
 extern "C" int liballoc_free(void* ptr, size_t page_count) {
     if(ptr >= initial_heap && ptr < initial_heap + HEAP_SIZE) {
         // Free on local heap.
-        u32_t page = ((u64_t)ptr - (u64_t)heap_usage_bitmap) >> 12;
+        u32_t page = ((u8_t*)ptr - initial_heap) >> 12;
         for(u32_t i = 0; i < page_count; ++i) set_page_used(page + i, 0);
         if(page < heap_first_potential_page) heap_first_potential_page = page;
-        kprintf("Freed 0x%x16, %d pages\n", page << 12, page_count);
         return 0;
     }
     Pager pager = Pager::active();
