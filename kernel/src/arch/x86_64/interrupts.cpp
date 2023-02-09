@@ -126,6 +126,7 @@ void trace_stack(void* base_pointer) {
         u64_t ret_ip;
     };
 
+    u64_t depth = 0;
     frame* f = (frame*)base_pointer;
     while(f != 0) {
         if(!kernel::Pager::active().getFlags((virtaddr_t)f).present) return;
@@ -133,6 +134,12 @@ void trace_stack(void* base_pointer) {
         file_line_pair p = addr_to_line(f->ret_ip);
         kprintf("Stack frame 0x%x16 Ret: 0x%x16 %s:%d\n", f, f->ret_ip, p.name, p.line);
         f = f->next_frame;
+
+        // Limit the stack trace to 32 frames
+        if(depth++ > 32) {
+            kprintf("...\n");
+            break;
+        }
     }
 }
 
