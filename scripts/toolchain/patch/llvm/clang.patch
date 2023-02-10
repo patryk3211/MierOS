@@ -79,7 +79,7 @@
        default:
 --- a/clang/lib/Driver/ToolChains/MierOS.cpp	1970-01-01 01:00:00.000000000 +0100
 +++ b/clang/lib/Driver/ToolChains/MierOS.cpp	2023-02-04 12:05:32.635641359 +0100
-@@ -0,0 +1,282 @@
+@@ -0,0 +1,283 @@
 +#include "MierOS.h"
 +#include "CommonArgs.h"
 +#include "clang/Config/config.h"
@@ -184,6 +184,7 @@
 +
 +  Args.AddAllArgs(CmdArgs, options::OPT_L);
 +  Args.AddAllArgs(CmdArgs, options::OPT_u);
++  Args.AddAllArgs(CmdArgs, options::OPT_T);
 +
 +  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 +
@@ -224,7 +225,7 @@
 +
 +    if (!Args.hasArg(options::OPT_nolibc))
 +      CmdArgs.push_back("-lc");
-+    
++
 +    if (!Args.hasArg(options::OPT_nostartfiles) &&
 +        ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT)
 +      CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRT(Args, "crtend", ToolChain::FT_Object)));
