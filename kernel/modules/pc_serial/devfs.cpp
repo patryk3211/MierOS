@@ -3,6 +3,7 @@
 #include "port.hpp"
 #include <defines.h>
 #include <fs/vnode.hpp>
+#include <asm/ioctls.h>
 
 using namespace kernel;
 
@@ -48,8 +49,18 @@ ValueOrError<size_t> dev_write(u16_t minor, FileStream* stream, const void* buff
     return device_ports[minor]->termiosHelper.stream_write(buffer, length);
 }
 
-ValueOrError<void> dev_ioctl(u16_t minor, u64_t request, void* arg) {
+ValueOrError<int> dev_ioctl(u16_t minor, u64_t request, void* arg) {
+    if(!((working_ports >> minor) & 1))
+        return ENODEV;
 
+    switch(request) {
+        case TCGETS:
+            if(arg)
+                memcpy(arg, device_ports[minor]->termiosHelper.termios(), sizeof(termios));
+            return 0;
+        default:
+            return EINVAL;
+    }
 }
 
 DeviceFunctionTable device_function_table = {

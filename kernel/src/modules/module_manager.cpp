@@ -75,21 +75,21 @@ ValueOrError<u16_t> ModuleManager::load_module(const std::String<>& name, const 
 
     // Raise a uevent
     UEvent* event = (UEvent*)eventStorage;
-    event->f_event_type = UEVENT_LOAD_MODULE;
-    event->f_event_size = eventSize;
-    event->f_arg_count = 1;
+    event->type = UEVENT_LOAD_MODULE;
+    event->size = eventSize;
+    event->argc = 1;
 
-    event->f_args[0].f_size = name.length() + 1;
-    event->f_args[0].f_type = UEVENT_ARGT_STR;
-    strcpy(event->f_args[0].f_name, "MODULE_NAME");
-    memcpy(event->f_args[0].f_value, name.c_str(), name.length() + 1);
+    event->argv[0].size = name.length() + 1;
+    event->argv[0].type = UEVENT_ARGT_STR;
+    strcpy(event->argv[0].name, "MODULE_NAME");
+    memcpy(event->argv[0].value, name.c_str(), name.length() + 1);
 
-    event->f_args[1].f_size = argSize + 1;
-    event->f_args[1].f_type = UEVENT_ARGT_STR;
-    strcpy(event->f_args[1].f_name, "MODULE_ARGS");
+    event->argv[1].size = argSize + 1;
+    event->argv[1].type = UEVENT_ARGT_STR;
+    strcpy(event->argv[1].name, "MODULE_ARGS");
 
     size_t offset = 0;
-    char* storage = (char*)event->f_args[1].f_value;
+    char* storage = (char*)event->argv[1].value;
     for(size_t i = 0; i < argc; ++i) {
         strcpy(storage + offset, args[argc]);
         offset += strlen(args[argc]);

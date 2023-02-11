@@ -6,6 +6,7 @@
 #include <fs/vfs.hpp>
 #include <vector.hpp>
 #include <elf.h>
+#include <asm/procid.h>
 
 using namespace kernel;
 
@@ -40,6 +41,17 @@ DEF_SYSCALL(execve, filename, argv, envp) {
 
     TRACE("(syscall) Process (pid = %d) trying to execute file '%s'\n", proc.main_thread()->pid(), path);
     return proc.execve(file, (char**)argv, (char**)envp);
+}
+
+DEF_SYSCALL(getid, id) {
+    switch(id) {
+        case PROCID_PID:
+            return proc.main_thread()->pid();
+        case PROCID_TID:
+            return Thread::current()->pid();
+        default:
+            return -EINVAL;
+    }
 }
 
 Process* Process::fork() {
@@ -324,5 +336,5 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     f_lock.unlock();
 
     // We will now return into our new state
-    return 0;
+    return { };
 }

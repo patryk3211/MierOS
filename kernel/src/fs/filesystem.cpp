@@ -47,7 +47,7 @@ void Filesystem::sync_mapping(const MemoryFilePage&) {
 
 }
 
-ValueOrError<void> Filesystem::ioctl(FileStream*, u64_t, void*) {
+ValueOrError<int> Filesystem::ioctl(FileStream*, u64_t, void*) {
     return ENOTSUP;
 }
 

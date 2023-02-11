@@ -24,6 +24,8 @@ namespace kernel {
 
         virtual size_t seek(size_t position, int mode);
 
+        ValueOrError<int> ioctl(unsigned long request, void* arg);
+
         std::SharedPtr<VNode>& node() { return f_file; }
     };
 }

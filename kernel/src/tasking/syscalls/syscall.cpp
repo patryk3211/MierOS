@@ -26,6 +26,9 @@ DEF_SYSCALL(arch_prctl, func, ptr);
 DEF_SYSCALL(init_module, modPtr, argv);
 DEF_SYSCALL(uevent_poll, eventPtr, flags);
 DEF_SYSCALL(uevent_complete, eventPtr, status);
+DEF_SYSCALL(ioctl, fd, request, arg);
+DEF_SYSCALL(getid, id);
+DEF_SYSCALL(dup, oldfd, newfd, flags);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
@@ -44,6 +47,9 @@ extern "C" void init_syscalls() {
     SYSCALL(12, init_module);
     SYSCALL(13, uevent_poll);
     SYSCALL(14, uevent_complete);
+    SYSCALL(15, ioctl);
+    SYSCALL(16, getid);
+    SYSCALL(17, dup);
 
     register_syscall_handler(&run_syscall);
 }

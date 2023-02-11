@@ -66,21 +66,33 @@ void Process::die(u32_t exitCode) {
     }
 }
 
-fd_t Process::add_stream(Stream* stream) {
-    f_lock.lock();
-    fd_t fd = f_next_fd++;
-    f_streams.insert({ fd, stream });
+fd_t Process::add_stream(Stream* stream, fd_t hint) {
+    Locker lock(f_lock);
 
-    f_lock.unlock();
-    return fd;
+    if(hint != -1) {
+        auto current = f_streams.at(hint);
+        if(current)
+            f_streams.erase(hint);
+        f_streams.insert({ hint, stream });
+        return hint;
+    } else {
+        fd_t fd = f_next_fd;
+        while(f_streams.find(fd) != f_streams.end())
+            ++fd;
+
+        f_streams.insert({ fd, stream });
+        if(fd == f_next_fd)
+            f_next_fd = fd + 1;
+        return fd;
+    }
 }
 
 void Process::close_stream(fd_t fd) {
-    f_lock.lock();
+    Locker lock(f_lock);
 
     f_streams.erase(fd);
-
-    f_lock.unlock();
+    if(fd < f_next_fd)
+        f_next_fd = fd;
 }
 
 Stream* Process::get_stream(fd_t fd) {

@@ -158,9 +158,9 @@ void EventManager::event_processed_handler(Event& event) {
 void EventManager::raise_uevent(UEvent *uevent) {
     Locker lock(f_lock);
 
-    UEvent* event_copy = reinterpret_cast<UEvent*>(new u8_t[uevent->f_event_size]);
-    memcpy(event_copy, uevent, uevent->f_event_size);
-    event_copy->f_event_id = f_next_eid++;
+    UEvent* event_copy = reinterpret_cast<UEvent*>(new u8_t[uevent->size]);
+    memcpy(event_copy, uevent, uevent->size);
+    event_copy->id = f_next_eid++;
 
     f_uevent_queue.push_back(event_copy);
 }
@@ -168,11 +168,11 @@ void EventManager::raise_uevent(UEvent *uevent) {
 u64_t EventManager::raise_wait_uevent(UEvent *uevent) {
     f_lock.lock();
 
-    UEvent* event_copy = reinterpret_cast<UEvent*>(new u8_t[uevent->f_event_size]);
-    memcpy(event_copy, uevent, uevent->f_event_size);
-    event_copy->f_event_id = f_next_eid++;
+    UEvent* event_copy = reinterpret_cast<UEvent*>(new u8_t[uevent->size]);
+    memcpy(event_copy, uevent, uevent->size);
+    event_copy->id = f_next_eid++;
 
-    Wait wait(EVENT_NULL, event_copy->f_event_id, Thread::current());
+    Wait wait(EVENT_NULL, event_copy->id, Thread::current());
     f_event_waits.push_back(&wait);
 
     f_uevent_queue.push_back(event_copy);
@@ -199,16 +199,16 @@ size_t EventManager::uevent_poll(UEvent* event_out, bool block) {
     UEvent* event = f_uevent_queue.peek();
 
     if(event_out) {
-        memcpy(event_out, event, event->f_event_size);
+        memcpy(event_out, event, event->size);
         f_uevent_queue.pop_front();
         delete event;
     }
 
-    return event->f_event_size;
+    return event->size;
 }
 
 void EventManager::uevent_signal_complete(UEvent* uevent, u64_t status) {
-    auto* meta = new Event(EVENT_PROCESSED_EVENT, (u64_t)EVENT_USERSPACE_EVENT, uevent->f_event_id);
+    auto* meta = new Event(EVENT_PROCESSED_EVENT, (u64_t)EVENT_USERSPACE_EVENT, uevent->id);
     meta->set_flags(EVENT_FLAG_META_EVENT);
     meta->set_status(status);
     raise(meta);

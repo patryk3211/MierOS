@@ -83,6 +83,7 @@ void va_kprintf(const char* format, va_list args) {
                 case 'd': {
                     int n = va_arg(args, int);
                     int neg = n < 0;
+                    if(neg) n = -n;
                     char buffer[80];
                     int index = 0;
                     do {

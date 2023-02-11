@@ -1,6 +1,8 @@
 #pragma once
 
 #include <tasking/syscall.h>
+#include <memory/virtual.hpp>
+#include <errno.h>
 
 // ~Macro Magic~
 #define DEF_SYSCALLN0(name) syscall_arg_t syscall_##name(Process& proc)
@@ -20,3 +22,8 @@
 
 #define DEF_SYSCALL(name, ...) SYSCALLN_(XPASTE(DEF_SYSCALLN, NARGS(__VA_ARGS__)), name, ##__VA_ARGS__)
 #define SYSCALL(index, name) syscall_table[(index)] = (syscall_func_t*)&syscall_##name
+
+#define VALIDATE_PTR(addr) \
+    if((addr) == 0 || (addr) >= KERNEL_START) \
+        return -EFAULT;
+

@@ -46,8 +46,6 @@ namespace kernel {
 
         virtaddr_t first_potential_page;
 
-        bool has_kernel_lock;
-
     public:
         Pager();
         ~Pager();

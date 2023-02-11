@@ -40,7 +40,7 @@ DEF_SYSCALL(close, fd) {
 
 DEF_SYSCALL(read, fd, ptr, length) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -EINVAL;
+    if(stream == 0) return -EBADF;
 
     /// TODO: [16.04.2022] Check if ptr isn't outside of the program memory
 
@@ -52,7 +52,7 @@ DEF_SYSCALL(read, fd, ptr, length) {
 
 DEF_SYSCALL(write, fd, ptr, length) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -EINVAL;
+    if(stream == 0) return -EBADF;
 
     /// TODO: [16.04.2022] Check if ptr isn't outside of the program memory
 
@@ -64,17 +64,33 @@ DEF_SYSCALL(write, fd, ptr, length) {
 
 DEF_SYSCALL(seek, fd, position, mode) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -EINVAL;
+    if(stream == 0) return -EBADF;
 
     return stream->seek(position, mode);
 }
 
 DEF_SYSCALL(ioctl, fd, request, arg) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -EINVAL;
+    if(stream == 0) return -EBADF;
 
     if(stream->type() != STREAM_TYPE_FILE)
         return EPIPE;
+
+    auto* fstream = (FileStream*)stream;
+    auto result = fstream->ioctl(request, (void*)arg);
+
+    syscall_arg_t resolvedResult = result ? *result : -result.errno();
+    TRACE("(syscall) Process (pid = %d) ioctl request 0x%x on fd %d with arg = 0x%x16, result = %d\n",
+            proc.main_thread()->pid(), request, fd, arg, resolvedResult);
+
+    return resolvedResult;
 }
 
+DEF_SYSCALL(dup, oldfd, newfd, flags) {
+    auto* stream = proc.get_stream(oldfd);
+    if(stream == 0) return -EBADF;
+
+    auto result = proc.add_stream(stream, newfd);
+    return result;
+}
 

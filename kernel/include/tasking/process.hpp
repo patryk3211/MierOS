@@ -54,7 +54,7 @@ namespace kernel {
 
         std::String<>& cwd() { return f_workingDirectory; }
 
-        fd_t add_stream(Stream* stream);
+        fd_t add_stream(Stream* stream, fd_t hint = -1);
         void close_stream(fd_t fd);
         Stream* get_stream(fd_t fd);
 

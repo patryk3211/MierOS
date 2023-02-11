@@ -94,10 +94,13 @@ if(${DEBUG})
 endif()
 
 target_link_options(kernel.bin PRIVATE -T${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -z max-page-size=0x1000 -pie -Wl,-export-dynamic ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o -Wl,--no-dynamic-linker)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/std/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/std/include ${CMAKE_CURRENT_SOURCE_DIR}/abi/include)
 
 install(TARGETS kernel.bin DESTINATION ${SYSROOT_DIR}/)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/kernel.map DESTINATION ${SYSROOT_DIR}/)
+
+# Install kernel headers
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/abi/include/asm DESTINATION ${SYSROOT_DIR}/usr/include)
 
 add_subdirectory(modules)
 

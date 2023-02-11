@@ -35,3 +35,8 @@ size_t FileStream::seek(size_t position, int mode) {
     else
         return -1;
 }
+
+ValueOrError<int> FileStream::ioctl(unsigned long request, void* arg) {
+    return f_file->filesystem()->ioctl(this, request, arg);
+}
+

@@ -4,10 +4,22 @@
 #include <types.h>
 
 #if defined(__cplusplus)
+struct err_t {
+    int value;
+
+    err_t(int value) : value(value) { }
+
+    operator int() {
+        return value;
+    }
+};
+
 extern "C" {
-#endif
+#else
 
 typedef int err_t;
+
+#endif
 
 // Copied from mlibc errno
 

@@ -31,7 +31,7 @@ DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
     auto* stream = proc.get_stream(fd);
     if(stream->type() != STREAM_TYPE_FILE) {
         // The file descriptor has to refer to a file
-        return -EINVAL;
+        return -EBADF;
     }
 
     if((offset & 0xFFF) != 0) {

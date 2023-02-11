@@ -49,16 +49,11 @@ set(INITRD_MAPPINGS
     kernel/modules/ext2/ext2.mod=lib/modules/fs/ext2.mod
     kernel/modules/pc_serial/pc_serial.mod=lib/modules/tty/pc_serial.mod
 # Executables
-    userspace/programs/init/init=sbin/init
+    userspace/programs/init/main/init=sbin/init
     userspace/programs/system/modprobe/modprobe=sbin/modprobe
 )
 
 add_custom_target(initrd.img ALL "sh" "${CMAKE_SOURCE_DIR}/scripts/make_initrd.sh"
-        #"${INITRD_MODULES}"
         "${INITRD_MAPPINGS}"
         "${SYSROOT_DIR}/initrd.img"
-        #"${CMAKE_SOURCE_DIR}/kernel/modules/modules.init"
-        #"${CMAKE_SOURCE_DIR}/kernel/modules/modules.alias"
-        #"${SYSROOT_DIR}/etc/fstab"
-        #"${INITRD_BINARIES}"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} VERBATIM DEPENDS ${INITRD_MODULES} ${INITRD_BINARIES})
