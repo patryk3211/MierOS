@@ -20,7 +20,7 @@ Module::~Module() {
 
 }
 
-#define CHECK_ERROR(expr) { err_t _code = (expr); if(_code) { print_error(_code); return ERR_NO_EXEC; } }
+#define CHECK_ERROR(expr) { err_t _code = (expr); if(_code) { print_error(_code); return ENOEXEC; } }
 
 static const char ELF_IDENT[] = { 0x7F, 'E', 'L', 'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 static const char MOD_IDENT[] = MODULE_HEADER_MAGIC;
@@ -32,7 +32,7 @@ ValueOrError<void> Module::load(void* file) {
     Elf64_Header* elfHeader = (Elf64_Header*)file;
     if(!memcmp(elfHeader, ELF_IDENT, sizeof(ELF_IDENT))) {
         print_error(1);
-        return ERR_NO_EXEC;
+        return ENOEXEC;
     }
 
     Elf64_Section* sections = (Elf64_Section*)((u8_t*)file + elfHeader->sect_offset);
@@ -69,7 +69,7 @@ ValueOrError<void> Module::load(void* file) {
     if(!f_base_addr) {
         print_error(3);
         pager.unlock();
-        return ERR_NO_MEMORY;
+        return ENOMEM;
     }
 
     // Let's now save the sections for later use

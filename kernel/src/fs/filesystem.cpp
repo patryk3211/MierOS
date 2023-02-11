@@ -4,39 +4,39 @@
 using namespace kernel;
 
 ValueOrError<void> Filesystem::umount() {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<VNodePtr> Filesystem::get_file(VNodePtr, const char*, FilesystemFlags) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<std::List<VNodePtr>> Filesystem::get_files(VNodePtr, FilesystemFlags) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<VNodePtr> Filesystem::resolve_link(VNodePtr) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<void> Filesystem::open(FileStream*, int) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<void> Filesystem::close(FileStream*) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<size_t> Filesystem::read(FileStream*, void*, size_t) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<size_t> Filesystem::write(FileStream*, const void*, size_t) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<size_t> Filesystem::seek(FileStream*, size_t, int) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 PhysicalPage Filesystem::resolve_mapping(const FilePage&, virtaddr_t) {
@@ -48,6 +48,6 @@ void Filesystem::sync_mapping(const MemoryFilePage&) {
 }
 
 ValueOrError<void> Filesystem::ioctl(FileStream*, u64_t, void*) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 

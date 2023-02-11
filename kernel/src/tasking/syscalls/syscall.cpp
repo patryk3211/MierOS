@@ -52,7 +52,7 @@ extern "C" syscall_arg_t run_syscall(syscall_arg_t call, syscall_arg_t arg1, sys
     if(syscall_table[call] != 0)
         return syscall_table[call](Thread::current()->parent(), arg1, arg2, arg3, arg4, arg5, arg6);
     else
-        return -1;
+        return -ENOSYS;
 }
 
 #pragma GCC diagnostic pop

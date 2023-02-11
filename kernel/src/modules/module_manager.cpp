@@ -31,7 +31,7 @@ ValueOrError<u16_t> ModuleManager::find_module(const std::String<>& name) {
     auto cacheHit = f_module_cache.at(name);
     if(cacheHit)
         return *cacheHit;
-    return ERR_NO_EXEC;
+    return ENOEXEC;
 }
 
 ValueOrError<u16_t> ModuleManager::load_module(void* modImage, const char** args) {

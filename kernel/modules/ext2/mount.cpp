@@ -15,7 +15,7 @@ ValueOrError<u16_t> mount(VNodePtr fs_file) {
     MountInfo mi;
 
     DeviceFilesystem::instance()->block_read(fs_file, 2, 2, mi.superblock.ptr());
-    if(mi.superblock->signature != 0xef53) return ERR_MOUNT_FAILED;
+    if(mi.superblock->signature != 0xef53) return EINVAL;
     mi.fs_file = fs_file;
 
     { // Read the superblock

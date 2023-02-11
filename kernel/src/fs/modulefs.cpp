@@ -26,7 +26,7 @@ FilesystemDriver* ModuleFilesystem::get_driver() {
 #define RUN_FUNC(func, ...) { \
     auto* f = f_driver->func; \
     if(!f) \
-        return ERR_UNIMPLEMENTED; \
+        return ENOTSUP; \
     return f(f_minor, __VA_ARGS__); \
 }
 

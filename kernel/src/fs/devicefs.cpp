@@ -38,7 +38,7 @@ ValueOrError<VNodePtr> DeviceFilesystem::get_file(VNodePtr root, const char* pat
     if(path[0] == 0) return root;
 
     auto result = root->f_children.at(path);
-    if(!result) return ERR_FILE_NOT_FOUND;
+    if(!result) return ENOENT;
 
     auto file = *result;
     return (file->type() == VNode::LINK && flags.resolve_link) ? static_cast<DevFs_LinkData*>(file->fs_data)->destination : file;
@@ -58,7 +58,7 @@ ValueOrError<std::List<VNodePtr>> DeviceFilesystem::get_files(VNodePtr root, Fil
 ValueOrError<VNodePtr> DeviceFilesystem::resolve_link(VNodePtr link) {
     ASSERT_F(link->filesystem() == this, "Using a VNode from a different filesystem");
 
-    if(link->type() != VNode::LINK) return ERR_NOT_LINK;
+    if(link->type() != VNode::LINK) return ENOLINK;
     return static_cast<DevFs_LinkData*>(link->fs_data)->destination;
 }
 
@@ -73,10 +73,10 @@ std::Pair<u16_t, DeviceFunctionTable*> DeviceFilesystem::get_function_table(VNod
 #define RUN_FUNC(node, func, ...) {\
     auto result = get_function_table(node); \
     if(!result.key) \
-        return ERR_DEVICE_DOES_NOT_EXIST; \
+        return ENODEV; \
     auto* f = result.value->func; \
     if(!f) \
-        return ERR_UNIMPLEMENTED; \
+        return ENOTSUP; \
     return f(result.key, __VA_ARGS__); \
 }
 
@@ -120,7 +120,7 @@ ValueOrError<VNodePtr> DeviceFilesystem::add_dev(const char* path, u16_t major, 
     const char* path_ptr = path;
     const char* next_separator;
     while((next_separator = strchr(path_ptr, '/')) != 0) {
-        if(root->type() != VNode::DIRECTORY) return ERR_NOT_A_DIRECTORY;
+        if(root->type() != VNode::DIRECTORY) return ENOTDIR;
 
         size_t length = next_separator - path_ptr;
         if(length == 0) {
@@ -136,7 +136,7 @@ ValueOrError<VNodePtr> DeviceFilesystem::add_dev(const char* path, u16_t major, 
         if(next_root)
             root = *next_root;
         else {
-            if(next_root.errno() == ERR_FILE_NOT_FOUND) {
+            if(next_root.errno() == ENOENT) {
                 auto root_new = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, part, VNode::DIRECTORY, this);
                 root->f_children.insert({ part, root_new });
                 root = root_new;
@@ -147,7 +147,7 @@ ValueOrError<VNodePtr> DeviceFilesystem::add_dev(const char* path, u16_t major, 
         path_ptr = next_separator + 1;
     }
 
-    if(root->f_children.at(path_ptr)) return ERR_FILE_EXISTS;
+    if(root->f_children.at(path_ptr)) return EEXIST;
 
     auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, path_ptr, VNode::DEVICE, this);
     node->fs_data = new DevFs_DevData(major, minor);
@@ -163,7 +163,7 @@ ValueOrError<VNodePtr> DeviceFilesystem::add_link(const char* path, VNodePtr des
     const char* path_ptr = path;
     const char* next_separator;
     while((next_separator = strchr(path_ptr, '/')) != 0) {
-        if(root->type() != VNode::DIRECTORY) return ERR_NOT_A_DIRECTORY;
+        if(root->type() != VNode::DIRECTORY) return ENOTDIR;
 
         size_t length = next_separator - path_ptr;
         if(length == 0) {
@@ -179,7 +179,7 @@ ValueOrError<VNodePtr> DeviceFilesystem::add_link(const char* path, VNodePtr des
         if(next_root)
             root = *next_root;
         else {
-            if(next_root.errno() == ERR_FILE_NOT_FOUND) {
+            if(next_root.errno() == ENOENT) {
                 auto root_new = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, part, VNode::DIRECTORY, this);
                 root->f_children.insert({ part, root_new });
                 root = root_new;
@@ -190,7 +190,7 @@ ValueOrError<VNodePtr> DeviceFilesystem::add_link(const char* path, VNodePtr des
         path_ptr = next_separator + 1;
     }
 
-    if(root->f_children.at(path_ptr)) return ERR_FILE_EXISTS;
+    if(root->f_children.at(path_ptr)) return EEXIST;
 
     auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, path_ptr, VNode::LINK, this);
     node->fs_data = new DevFs_LinkData(destination);

@@ -12,7 +12,7 @@ DEF_SYSCALL(init_module, modPtr, argv) {
     UNUSED(proc);
 
     if(!modPtr || modPtr >= KERNEL_START)
-        return -ERR_INVALID;
+        return -EINVAL;
 
     auto status = ModuleManager::get().load_module((void*)modPtr, (const char**)argv);
     return status ? *status : status.errno();
@@ -26,7 +26,7 @@ DEF_SYSCALL(uevent_poll, eventPtr, flags) {
     bool block = flags & UEVENT_POLL_FLAG_NO_BLOCK;
 
     if(eventPtr >= KERNEL_START)
-        return -ERR_INVALID;
+        return -EINVAL;
 
     return EventManager::get().uevent_poll((UEvent*)eventPtr, block);
 }
@@ -36,7 +36,7 @@ DEF_SYSCALL(uevent_complete, eventPtr, status) {
 
     // Validate the pointer
     if(!eventPtr || eventPtr >= KERNEL_START)
-        return -ERR_INVALID;
+        return -EINVAL;
 
     EventManager::get().uevent_signal_complete((UEvent*)eventPtr, status);
     return 0;

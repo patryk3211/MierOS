@@ -114,7 +114,7 @@ VNode::Type InitRdFilesystem::get_vnode_type(char typeFlag) {
 }
 
 ValueOrError<VNodePtr> InitRdFilesystem::get_node(VNodePtr root, const char* file) {
-    if(root->type() != VNode::DIRECTORY) return ERR_NOT_A_DIRECTORY;
+    if(root->type() != VNode::DIRECTORY) return ENOTDIR;
 
     if(file[0] == 0 || !strcmp(file, "."))
         return root;
@@ -130,7 +130,7 @@ ValueOrError<VNodePtr> InitRdFilesystem::get_node(VNodePtr root, const char* fil
     if(next_root)
         return *next_root;
     else
-        return ERR_FILE_NOT_FOUND;
+        return ENOENT;
 }
 
 ValueOrError<VNodePtr> InitRdFilesystem::get_file(VNodePtr root, const char* filename, FilesystemFlags) {
@@ -188,8 +188,7 @@ ValueOrError<size_t> InitRdFilesystem::read(FileStream* stream, void* buffer, si
 }
 
 ValueOrError<size_t> InitRdFilesystem::write(FileStream*, const void*, size_t) {
-    /// TODO: [20.01.2023] This should be changed to 'Filesystem Read-only Error'
-    return ERR_UNIMPLEMENTED;
+    return EROFS;
 }
 
 ValueOrError<size_t> InitRdFilesystem::seek(FileStream* stream, size_t position, int mode) {

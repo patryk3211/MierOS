@@ -11,7 +11,7 @@ DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
     /// TODO: This can only happen if FIXED flag is not specified, otherwise if the address is not aligned, this syscall should fail
     ptr = ptr & ~0xFFF;
     if(ptr != 0 && (ptr < MMAP_MIN_ADDR || ptr >= KERNEL_START ||
-        ptr + (page_len << 12) > KERNEL_START || ptr + (page_len << 12) < ptr)) return -ERR_INVALID;
+        ptr + (page_len << 12) > KERNEL_START || ptr + (page_len << 12) < ptr)) return -EINVAL;
 
     virtaddr_t addr = proc.get_free_addr(ptr, page_len);
 
@@ -31,12 +31,12 @@ DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
     auto* stream = proc.get_stream(fd);
     if(stream->type() != STREAM_TYPE_FILE) {
         // The file descriptor has to refer to a file
-        return -ERR_INVALID;
+        return -EINVAL;
     }
 
     if((offset & 0xFFF) != 0) {
         // Offset has to be page aligned
-        return -ERR_INVALID;
+        return -EINVAL;
     }
 
     FileStream* fstream = (FileStream*)stream;
@@ -53,7 +53,7 @@ DEF_SYSCALL(munmap, ptr, length) {
 
     // Validate the pointer
     ptr = ptr & ~0xFFF;
-    if(ptr < MMAP_MIN_ADDR || ptr >= KERNEL_START || ptr + (page_len << 12) > KERNEL_START || ptr + (page_len << 12) < ptr) return -ERR_INVALID;
+    if(ptr < MMAP_MIN_ADDR || ptr >= KERNEL_START || ptr + (page_len << 12) > KERNEL_START || ptr + (page_len << 12) < ptr) return -EINVAL;
 
     proc.unmap_pages(ptr, page_len);
     TRACE("(syscall) Unmapped %d bytes starting at 0x%x16\n", page_len << 12, ptr);

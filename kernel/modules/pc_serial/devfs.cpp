@@ -14,7 +14,7 @@ ValueOrError<void> dev_open(u16_t minor, FileStream* stream, int mode) {
     UNUSED(mode);
 
     if(!((working_ports >> minor) & 1))
-        return ERR_DEVICE_DOES_NOT_EXIST;
+        return ENODEV;
 
     ++device_ports[minor]->openCount;
     return { };
@@ -24,7 +24,7 @@ ValueOrError<void> dev_close(u16_t minor, FileStream* stream) {
     UNUSED(stream);
 
     if(!((working_ports >> minor) & 1))
-        return ERR_DEVICE_DOES_NOT_EXIST;
+        return ENODEV;
 
     --device_ports[minor]->openCount;
     return { };
@@ -34,7 +34,7 @@ ValueOrError<size_t> dev_read(u16_t minor, FileStream* stream, void* buffer, siz
     UNUSED(stream);
 
     if(!((working_ports >> minor) & 1))
-        return ERR_DEVICE_DOES_NOT_EXIST;
+        return ENODEV;
 
     return device_ports[minor]->termiosHelper.stream_read(buffer, length);
 }
@@ -43,7 +43,7 @@ ValueOrError<size_t> dev_write(u16_t minor, FileStream* stream, const void* buff
     UNUSED(stream);
 
     if(!((working_ports >> minor) & 1))
-        return ERR_DEVICE_DOES_NOT_EXIST;
+        return ENODEV;
 
     return device_ports[minor]->termiosHelper.stream_write(buffer, length);
 }

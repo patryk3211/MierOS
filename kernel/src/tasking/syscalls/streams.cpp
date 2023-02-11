@@ -40,7 +40,7 @@ DEF_SYSCALL(close, fd) {
 
 DEF_SYSCALL(read, fd, ptr, length) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -ERR_INVALID;
+    if(stream == 0) return -EINVAL;
 
     /// TODO: [16.04.2022] Check if ptr isn't outside of the program memory
 
@@ -52,7 +52,7 @@ DEF_SYSCALL(read, fd, ptr, length) {
 
 DEF_SYSCALL(write, fd, ptr, length) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -ERR_INVALID;
+    if(stream == 0) return -EINVAL;
 
     /// TODO: [16.04.2022] Check if ptr isn't outside of the program memory
 
@@ -64,7 +64,17 @@ DEF_SYSCALL(write, fd, ptr, length) {
 
 DEF_SYSCALL(seek, fd, position, mode) {
     auto* stream = proc.get_stream(fd);
-    if(stream == 0) return -ERR_INVALID;
+    if(stream == 0) return -EINVAL;
 
     return stream->seek(position, mode);
 }
+
+DEF_SYSCALL(ioctl, fd, request, arg) {
+    auto* stream = proc.get_stream(fd);
+    if(stream == 0) return -EINVAL;
+
+    if(stream->type() != STREAM_TYPE_FILE)
+        return EPIPE;
+}
+
+

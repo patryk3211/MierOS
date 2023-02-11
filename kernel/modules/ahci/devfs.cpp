@@ -15,7 +15,7 @@ extern std::UnorderedMap<u16_t, drive_file> drives;
 
 ValueOrError<u32_t> dev_block_read(u16_t minor, u64_t lba, u32_t sector_count, void* buffer) {
     auto dev = drives.at(minor);
-    if(!dev) return ERR_DEVICE_DOES_NOT_EXIST;
+    if(!dev) return ENODEV;
 
     // Boundary check
     u64_t part_len = dev->partition_end - dev->partition_start + 1;

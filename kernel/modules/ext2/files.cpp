@@ -60,7 +60,7 @@ ValueOrError<VNodePtr> get_file(u16_t minor, VNodePtr root, const char* filename
             return vnode;
         }
     }
-    return ERR_FILE_NOT_FOUND;
+    return ENOENT;
 }
 
 ValueOrError<std::List<VNodePtr>> get_files(u16_t minor, VNodePtr root, FilesystemFlags) {

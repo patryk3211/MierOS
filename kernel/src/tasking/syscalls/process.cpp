@@ -123,24 +123,24 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     Elf64_Header header;
     if(stream.read(&header, sizeof(header)) != sizeof(header)) {
         // Unexpected EOF
-        return ERR_NO_EXEC;
+        return ENOEXEC;
     }
 
     // Validate the header
     if(!memcmp(validElf, &header, 8)) {
         // Invalid header magic
-        return ERR_NO_EXEC;
+        return ENOEXEC;
     }
 
     if(header.type != ET_EXEC && header.type != ET_DYN)
-        return ERR_NO_EXEC;
+        return ENOEXEC;
 
     Elf64_Phdr programHeaders[header.phdr_entry_count];
     stream.seek(header.phdr_offset, SEEK_MODE_BEG);
     size_t readCount = header.phdr_entry_count * sizeof(Elf64_Phdr);
     if(stream.read(programHeaders, readCount) != readCount) {
         // Unexpected EOF
-        return ERR_NO_EXEC;
+        return ENOEXEC;
     }
 
     // No return part starts here

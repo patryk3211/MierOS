@@ -31,7 +31,7 @@ ValueOrError<void> VFS::mount(VNodePtr fsFile, const char* fsType, const char* l
 
         u16_t modMajor = ModuleManager::get().find_module(modName);
         if(modMajor == 0)
-            return ERR_MOUNT_FAILED;
+            return ENOTSUP;
 
         auto* mod = ModuleManager::get().get_module(modMajor);
         auto result = ((FilesystemDriver*)mod->get_symbol_ptr("filesystem_driver"))->mount(fsFile);
@@ -81,7 +81,7 @@ ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, Filesystem
     const char* path_ptr = path;
     const char* next_separator = path;
     while(*next_separator != 0 && ((next_separator = strchr(path_ptr, '/')) != 0 || (next_separator = strchr(path_ptr, 0)))) {
-        if(root->type() != VNode::DIRECTORY) return ERR_NOT_A_DIRECTORY;
+        if(root->type() != VNode::DIRECTORY) return ENOTDIR;
         if(root->type() == VNode::LINK) {
             if(flags.follow_links) {
                 auto linkDest = root->filesystem()->resolve_link(root);
@@ -90,7 +90,7 @@ ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, Filesystem
                 else
                     root = *linkDest;
             } else
-                return ERR_LINK;
+                return ELOOP;
         }
 
         size_t length = next_separator - path_ptr;

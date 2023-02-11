@@ -16,6 +16,6 @@ DEF_SYSCALL(arch_prctl, func, ptr) {
             *((u64_t*)ptr) = Thread::current()->get_fs();
             return 0;
         default:
-            return -ERR_INVALID;
+            return -EINVAL;
     }
 }
