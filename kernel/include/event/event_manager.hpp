@@ -71,28 +71,6 @@ namespace kernel {
         void raise_wait(Event* event);
 
         /**
-         * @brief Raise a userspace event
-         *
-         * This method raises a userspace event which can be polled by a
-         * userspace task to get processed.
-         *
-         * @param uevent The event to be submitted
-         */
-        void raise_uevent(UEvent* uevent);
-
-        /**
-         * @brief Raise and wait for a userspace event
-         *
-         * This method raises a userspace event and waits for it
-         * to be processed. If there are no userspace event handlers this
-         * method will block until one start to process the events.
-         *
-         * @param uevent The event to be submitted
-         * @return Value passed to the uevent_signal_complete method
-         */
-        u64_t raise_wait_uevent(UEvent* uevent);
-
-        /**
          * @brief Register a kernel event handler
          *
          * This method will registers an event handler for the given event
@@ -102,37 +80,6 @@ namespace kernel {
          * @param handler Event handler
          */
         void register_handler(u64_t identifier, event_handler_t* handler);
-
-        /**
-         * @brief Poll for a userspace event
-         *
-         * This method will block (if block is true, otherwise it returns 0 when
-         * no event was received) until it receives a userspace event. If the
-         * event_out argument is null it will only return the size required to store
-         * the received event but not take it off the queue, otherwise the uevent is
-         * taken off the queue and copied into space pointed by event_out. Additionally
-         * the method will only block when event_out is null, otherwise it behaves as if
-         * block is false.
-         *
-         * @param event_out Pointer to store the uevent
-         * @param block If true the method will block, otherwise returns 0 when event was not received
-         * 
-         * @return Size of the received event
-         */
-        size_t uevent_poll(UEvent* event_out = nullptr, bool block = true);
-
-        /**
-         * @brief Signal userspace event complete
-         *
-         * This method will signal the event manager that a userspace event has
-         * been processed. It should be called with the event received from uevent_poll.
-         * An additional status variable can be passed to all threads waiting for the
-         * event to complete.
-         * 
-         * @param uevent Event that was processed
-         * @param status Value to set processed_event->f_status to
-         */
-        void uevent_signal_complete(UEvent* uevent, u64_t status = 0);
 
         static EventManager& get();
 

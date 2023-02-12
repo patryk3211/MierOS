@@ -33,6 +33,10 @@ ValueOrError<void> VFS::mount(VNodePtr fsFile, const char* fsType, const char* l
         if(modMajor == 0)
             return ENOTSUP;
 
+        // TODO: [12.02.2023] This will be changed a bit, filesystem modules will be
+        // calling the VFS::register_filesystem method to register a mount handler and
+        // we will resolve all filesystems with the first part of this method. If the handler
+        // wasn't found then we don't have the module loaded and we fail the mount entirely.
         auto* mod = ModuleManager::get().get_module(modMajor);
         auto result = ((FilesystemDriver*)mod->get_symbol_ptr("filesystem_driver"))->mount(fsFile);
         if(!result)
@@ -75,7 +79,7 @@ ValueOrError<void> VFS::umount(const char* location) {
     panic("umount is unimplemented");
 }
 
-ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, FilesystemFlags flags) {
+ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, FilesystemFlags flags, int depth) {
     if(!root) root = f_rootNode;
 
     const char* path_ptr = path;
@@ -84,7 +88,7 @@ ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, Filesystem
         if(root->type() != VNode::DIRECTORY) return ENOTDIR;
         if(root->type() == VNode::LINK) {
             if(flags.follow_links) {
-                auto linkDest = root->filesystem()->resolve_link(root);
+                auto linkDest = root->filesystem()->resolve_link(root, depth);
                 if(!linkDest)
                     return linkDest.errno();
                 else
@@ -129,7 +133,7 @@ ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, Filesystem
     // We have fully resolved the path, resolve the link if necessary
     if(root->type() == VNode::LINK) {
         if(flags.resolve_link) {
-            auto linkDest = root->filesystem()->resolve_link(root);
+            auto linkDest = root->filesystem()->resolve_link(root, depth);
             if(!linkDest)
                 return linkDest.errno();
             else
@@ -146,6 +150,34 @@ ValueOrError<std::List<VNodePtr>> VFS::get_files(VNodePtr root, const char* path
     VNodePtr ptr = *dir;
 
     return ptr->filesystem()->get_files(ptr, flags);
+}
+
+ValueOrError<std::Pair<VNodePtr, const char*>> VFS::resolve_path(VNodePtr root, const char* path, FilesystemFlags flags) {
+    const char* filename = 0;
+
+    char* lastSeparator = strlchr(path, '/');
+    if(lastSeparator[1] == 0) {
+        // Empty file name
+        return EINVAL;
+    }
+
+    if(lastSeparator == 0) {
+        filename = path;
+    } else {
+        filename = lastSeparator + 1;
+
+        size_t length = strlen(path);
+        char copy[length + 1];
+        memcpy(copy, path, lastSeparator - path);
+        copy[lastSeparator - path] = 0;
+
+        auto res = get_file(root, copy, flags);
+        if(!res)
+            return res.errno();
+        root = *res;
+    }
+
+    return std::Pair(root, filename);
 }
 
 void VFS::register_filesystem(const char* fsType, mount_handler_t* handler) {

@@ -18,20 +18,39 @@ DEF_SYSCALL(init_module, modPtr, argv) {
 
 /// TODO: [30.01.2023] Implement a 'remove_module' syscall
 
-DEF_SYSCALL(uevent_poll, eventPtr, flags) {
-    UNUSED(proc);
-    VALIDATE_PTR(eventPtr);
+DEF_SYSCALL(mount, source, target, fsType, flags, data) {
+    VALIDATE_PTR(fsType);
+    VALIDATE_PTR(target);
 
-    bool block = flags & UEVENT_POLL_FLAG_NO_BLOCK;
+    const char* sourcePath = (const char*)source;
 
-    return EventManager::get().uevent_poll((UEvent*)eventPtr, block);
+    VNodePtr file = nullptr;
+    if(sourcePath != 0) {
+        VALIDATE_PTR(source);
+        if(sourcePath[0] == '/') {
+            auto ret = VFS::instance()->get_file(nullptr, sourcePath, {});
+            if(!ret) return -ret.errno();
+            file = *ret;
+        } else {
+            auto ret = VFS::instance()->get_file(nullptr, (proc.cwd() + sourcePath).c_str(), {});
+            if(!ret) return -ret.errno();
+            file = *ret;
+        }
+    }
+
+    // TODO: [12.02.2023] Use the flags and data arguments
+    auto result = VFS::instance()->mount(file, (char*)fsType, (char*)target);
+    if(result)
+        TRACE("(syscall) Process (pid = %d) mounted filesystem '%s', location '%s'", proc.main_thread()->pid(), fsType, target);
+    return result ? 0 : -result.errno();
 }
 
-DEF_SYSCALL(uevent_complete, eventPtr, status) {
-    UNUSED(proc);
-    VALIDATE_PTR(eventPtr);
+DEF_SYSCALL(umount, target, flags) {
+    VALIDATE_PTR(target);
 
-    EventManager::get().uevent_signal_complete((UEvent*)eventPtr, status);
-    return 0;
+    auto result = VFS::instance()->umount((char*)target);
+    if(result)
+        TRACE("(syscall) Process (pid = %d) unmounted filesystem at '%s'", proc.main_thread()->pid(), target);
+    return result ? 0 : -result.errno();
 }
 

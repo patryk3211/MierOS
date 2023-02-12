@@ -17,26 +17,30 @@ void detect_pci() {
             for(int func = 0; func < 8; ++func) {
                 u16_t vendor_id = pci_read(bus, device, func, 0x00);
                 if(vendor_id != 0xFFFF) {
-                    PCI_Header header {};
+                    PCI_Header header {
+                        .bus = (u8_t)bus,
+                        .device = (u8_t)device,
+                        .function = (u8_t)func,
+                        .zero = 0
+                    };
+
+                    header.vendor_id = vendor_id;
+                    header.device_id = pci_read(bus, device, func, 0x02);
+
+                    u32_t device_type = pci_read(bus, device, func, 0x08);
+                    header.classcode = device_type >> 24;
+                    header.subclass = device_type >> 16;
+                    header.prog_if = device_type >> 8;
+                    header.revision = device_type;
+
                     u8_t header_type = pci_read(bus, device, func, 0x0E);
                     if((header_type & 0x7F) == 0) {
-                        header.vendor_id = vendor_id;
-                        header.device_id = pci_read(bus, device, func, 0x02);
-                        u32_t device_type = pci_read(bus, device, func, 0x08);
-                        header.classcode = device_type >> 24;
-                        if(header.classcode == 0x06) continue; // We don't care about the bridges
-                        header.subclass = device_type >> 16;
-                        header.prog_if = device_type >> 8;
-                        header.revision = device_type;
-
                         header.bar[0] = pci_read(bus, device, func, 0x10);
                         header.bar[1] = pci_read(bus, device, func, 0x14);
                         header.bar[2] = pci_read(bus, device, func, 0x18);
                         header.bar[3] = pci_read(bus, device, func, 0x1C);
                         header.bar[4] = pci_read(bus, device, func, 0x20);
                         header.bar[5] = pci_read(bus, device, func, 0x24);
-
-                        header.claimed = false;
 
                         pci_headers.push_back(header);
                     }

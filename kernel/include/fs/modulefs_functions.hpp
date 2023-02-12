@@ -19,7 +19,7 @@ namespace kernel {
         ValueOrError<VNodePtr> (*get_file)(u16_t minor, VNodePtr root, const char* filename, FilesystemFlags flags);
         ValueOrError<std::List<VNodePtr>> (*get_files)(u16_t minor, VNodePtr root, FilesystemFlags flags);
 
-        ValueOrError<VNodePtr> (*resolve_link)(u16_t minor, VNodePtr link);
+        ValueOrError<VNodePtr> (*resolve_link)(u16_t minor, VNodePtr link, int depth);
 
         ValueOrError<void> (*open)(u16_t minor, FileStream* filestream, int mode);
         ValueOrError<void> (*close)(u16_t minor, FileStream* filestream);

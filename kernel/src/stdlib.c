@@ -137,3 +137,14 @@ void strcpy(char* dst, const char* src) {
     }
 }
 
+char* strlchr(const char* str, char c) {
+    const char* ret = 0;
+    while(*str) {
+        if(*str == c)
+            ret = str;
+        ++str;
+    }
+
+    return (char*)ret;
+}
+

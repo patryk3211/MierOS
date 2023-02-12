@@ -15,7 +15,7 @@ ValueOrError<std::List<VNodePtr>> Filesystem::get_files(VNodePtr, FilesystemFlag
     return ENOTSUP;
 }
 
-ValueOrError<VNodePtr> Filesystem::resolve_link(VNodePtr) {
+ValueOrError<VNodePtr> Filesystem::resolve_link(VNodePtr, int) {
     return ENOTSUP;
 }
 
@@ -51,11 +51,15 @@ ValueOrError<int> Filesystem::ioctl(FileStream*, u64_t, void*) {
     return ENOTSUP;
 }
 
-ValueOrError<VNodePtr> Filesystem::link(VNodePtr, const char*, VNodePtr, bool) {
+// ValueOrError<VNodePtr> Filesystem::link(VNodePtr, const char*, VNodePtr, bool) {
+//     return ENOTSUP;
+// }
+
+ValueOrError<VNodePtr> Filesystem::mkdir(VNodePtr, const char*) {
     return ENOTSUP;
 }
 
-ValueOrError<VNodePtr> Filesystem::mkdir(VNodePtr, const char*) {
+ValueOrError<VNodePtr> Filesystem::symlink(VNodePtr, const char*, const char*) {
     return ENOTSUP;
 }
 

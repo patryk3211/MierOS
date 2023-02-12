@@ -3,5 +3,8 @@
 
 #define TCGETS 0x5601
 
+
+#define TIOCSCTTY 0x5600
+
 #endif
 

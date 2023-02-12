@@ -61,7 +61,7 @@ namespace kernel {
          */
         virtual ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, FilesystemFlags flags);
 
-        virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link);
+        virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link, int depth);
 
         virtual ValueOrError<void> open(FileStream* stream, int mode);
         virtual ValueOrError<void> close(FileStream* stream);
@@ -76,7 +76,8 @@ namespace kernel {
 
         virtual ValueOrError<int> ioctl(FileStream* stream, u64_t request, void* arg);
 
-        virtual ValueOrError<VNodePtr> link(VNodePtr root, const char* name, VNodePtr dest, bool symbolic);
+        virtual ValueOrError<VNodePtr> symlink(VNodePtr root, const char* name, const char* dest);
+        //virtual ValueOrError<VNodePtr> link(VNodePtr root, const char* name, VNodePtr dest);
         virtual ValueOrError<VNodePtr> mkdir(VNodePtr root, const char* name);
     };
 }

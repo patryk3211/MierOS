@@ -21,7 +21,7 @@ namespace kernel {
         ~ModuleManager();
 
         ValueOrError<u16_t> load_module(void* modImage, const char** args);
-        ValueOrError<u16_t> load_module(const std::String<>& name, const char** args);
+        //ValueOrError<u16_t> load_module(const std::String<>& name, const char** args);
         ValueOrError<u16_t> find_module(const std::String<>& name);
 
         Module* get_module(u16_t major);
@@ -31,6 +31,6 @@ namespace kernel {
     private:
         u16_t generate_major();
 
-        static void handle_load_event(Event& event);
+        //static void handle_load_event(Event& event);
     };
 }

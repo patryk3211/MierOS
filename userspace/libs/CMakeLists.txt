@@ -1,6 +1,7 @@
 execute_process(COMMAND meson setup
     "-Dlinux_kernel_headers=${CMAKE_SOURCE_DIR}/kernel/abi/include"
     "-Dprefix=/usr"
+    "-Ddisable_bsd_option=true"
     "--cross-file" "../${ARCH}-mieros.txt"
     "-Ddefault_library=static" build
 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/mlibc)

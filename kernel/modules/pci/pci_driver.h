@@ -12,7 +12,7 @@ extern "C" {
 typedef void add_device_func_t(PCI_Header* header);
 
 struct PCI_Driver {
-    add_device_func_t* add;
+    add_device_func_t* attach;
 } PACKED;
 
 #if defined(__cplusplus)

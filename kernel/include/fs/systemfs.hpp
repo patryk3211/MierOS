@@ -12,6 +12,9 @@ namespace kernel {
         ValueOrError<size_t> (*read_callback)(void* cbArg, FileStream* stream, void* buffer, size_t length);
         ValueOrError<size_t> (*write_callback)(void* cbArg, FileStream* stream, const void* buffer, size_t length);
 
+        // We can store 16 bytes of data for very small entries
+        char small_data[16];
+
         SysFsVNodeData(const VNodePtr& node)
             : node(node) { }
     };

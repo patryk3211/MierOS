@@ -13,7 +13,7 @@ syscall_func_t* syscall_table[64];
 
 // Syscall definitions
 DEF_SYSCALL(exit, exitCode);
-DEF_SYSCALL(open, name, flags);
+DEF_SYSCALL(openat, name, flags, mode, dirfd);
 DEF_SYSCALL(close, fd);
 DEF_SYSCALL(read, fd, ptr, length);
 DEF_SYSCALL(write, fd, ptr, length);
@@ -24,17 +24,20 @@ DEF_SYSCALL(munmap, ptr, length);
 DEF_SYSCALL(execve, filename, argv, envp);
 DEF_SYSCALL(arch_prctl, func, ptr);
 DEF_SYSCALL(init_module, modPtr, argv);
-DEF_SYSCALL(uevent_poll, eventPtr, flags);
-DEF_SYSCALL(uevent_complete, eventPtr, status);
+DEF_SYSCALL(symlinkat, target, dirfd, linkpath);
+
 DEF_SYSCALL(ioctl, fd, request, arg);
 DEF_SYSCALL(getid, id);
 DEF_SYSCALL(dup, oldfd, newfd, flags);
+DEF_SYSCALL(mount, source, target, fsType, flags, data);
+DEF_SYSCALL(umount, target, flags);
+
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
 
     SYSCALL(1,  exit);
-    SYSCALL(2,  open);
+    SYSCALL(2,  openat);
     SYSCALL(3,  close);
     SYSCALL(4,  read);
     SYSCALL(5,  write);
@@ -45,11 +48,13 @@ extern "C" void init_syscalls() {
     SYSCALL(10, execve);
     SYSCALL(11, arch_prctl);
     SYSCALL(12, init_module);
-    SYSCALL(13, uevent_poll);
-    SYSCALL(14, uevent_complete);
+    SYSCALL(13, symlinkat);
+
     SYSCALL(15, ioctl);
     SYSCALL(16, getid);
     SYSCALL(17, dup);
+    SYSCALL(18, mount);
+    SYSCALL(19, umount);
 
     register_syscall_handler(&run_syscall);
 }

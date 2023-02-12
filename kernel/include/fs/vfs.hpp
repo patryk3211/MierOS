@@ -24,8 +24,10 @@ namespace kernel {
         ValueOrError<void> mount(Filesystem* fs, const char* location);
         ValueOrError<void> umount(const char* location);
 
-        ValueOrError<VNodePtr> get_file(VNodePtr root, const char* path, FilesystemFlags flags);
+        ValueOrError<VNodePtr> get_file(VNodePtr root, const char* path, FilesystemFlags flags, int depth = 0);
         ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, const char* path, FilesystemFlags flags);
+
+        ValueOrError<std::Pair<VNodePtr, const char*>> resolve_path(VNodePtr root, const char* path, FilesystemFlags flags);
 
         static VFS* instance() { return s_instance; }
 

@@ -47,7 +47,8 @@ set(KERNEL_SOURCES src/init.cpp
                    src/memory/page/anonpage.cpp
                    src/memory/page/filepage.cpp
                    src/memory/page/memoryfilepage.cpp
-                   src/event/event_manager.cpp)
+                   src/event/event_manager.cpp
+                   src/event/uevent.cpp)
 
 set(TESTS_SOURCES src/tests/test.cpp
                   src/tests/memory.cpp

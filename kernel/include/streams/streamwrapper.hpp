@@ -22,10 +22,10 @@ namespace kernel {
 
         ~StreamWrapper();
 
-        virtual size_t read(void* buffer, size_t length) override;
-        virtual size_t write(const void* buffer, size_t length) override;
+        virtual ValueOrError<size_t> read(void* buffer, size_t length) override;
+        virtual ValueOrError<size_t> write(const void* buffer, size_t length) override;
 
-        virtual size_t seek(size_t position, int mode) override;
+        virtual ValueOrError<size_t> seek(size_t position, int mode) override;
 
         Stream& base();
 

@@ -4,6 +4,7 @@
 #include "../partition/parse.hpp"
 #include <fs/devicefs.hpp>
 #include <memory/physical.h>
+#include <printf.h>
 
 extern u16_t major;
 
@@ -18,7 +19,12 @@ void find_partitions(drive_information* drive, const std::String<>& disk_name, u
             {
                 std::String<> disk_by_id = "block/by-id/";
                 disk_by_id += std::uuid_to_string(gpt->disk_id);
-                kernel::DeviceFilesystem::instance()->add_link(disk_by_id.c_str(), drives[disk_minor].node);
+                auto res = kernel::DeviceFilesystem::instance()->resolve_path(disk_by_id.c_str());
+                if(res) {
+                    char buffer[128];
+                    sprintf(buffer, "../../%s", drives[disk_minor].node->name().c_str());
+                    kernel::DeviceFilesystem::instance()->symlink(res->key, res->value, buffer);
+                }
             }
 
             for(auto& part : *gpt) {
@@ -31,7 +37,12 @@ void find_partitions(drive_information* drive, const std::String<>& disk_name, u
 
                     std::String<> part_by_id = "block/by-id/";
                     part_by_id += std::uuid_to_string(part.part_id);
-                    kernel::DeviceFilesystem::instance()->add_link(part_by_id.c_str(), *file);
+                    auto res = kernel::DeviceFilesystem::instance()->resolve_path(part_by_id.c_str());
+                    if(res) {
+                        char buffer[128];
+                        sprintf(buffer, "../../%s", drives[disk_minor].node->name().c_str());
+                        kernel::DeviceFilesystem::instance()->symlink(res->key, res->value, buffer);
+                    }
                 }
             }
         }

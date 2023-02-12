@@ -22,7 +22,7 @@ namespace kernel {
         virtual ValueOrError<VNodePtr> get_file(VNodePtr root, const char* filename, FilesystemFlags flags);
         virtual ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, FilesystemFlags flags);
 
-        virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link);
+        virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link, int depth);
 
         virtual ValueOrError<void> open(FileStream* stream, int mode);
         virtual ValueOrError<void> close(FileStream* stream);

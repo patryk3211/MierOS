@@ -36,15 +36,15 @@ StreamWrapper::~StreamWrapper() {
     clear();
 }
 
-size_t StreamWrapper::read(void* buffer, size_t length) {
+ValueOrError<size_t> StreamWrapper::read(void* buffer, size_t length) {
     return f_data->f_base->read(buffer, length);
 }
 
-size_t StreamWrapper::write(const void* buffer, size_t length) {
+ValueOrError<size_t> StreamWrapper::write(const void* buffer, size_t length) {
     return f_data->f_base->write(buffer, length);
 }
 
-size_t StreamWrapper::seek(size_t position, int mode) {
+ValueOrError<size_t> StreamWrapper::seek(size_t position, int mode) {
     return f_data->f_base->seek(position, mode);
 }
 

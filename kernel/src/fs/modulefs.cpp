@@ -43,8 +43,8 @@ ValueOrError<std::List<VNodePtr>> ModuleFilesystem::get_files(VNodePtr root, Fil
     RUN_FUNC(get_files, root, flags);
 }
 
-ValueOrError<VNodePtr> ModuleFilesystem::resolve_link(VNodePtr link) {
-    RUN_FUNC(resolve_link, link);
+ValueOrError<VNodePtr> ModuleFilesystem::resolve_link(VNodePtr link, int depth) {
+    RUN_FUNC(resolve_link, link, depth);
 }
 
 ValueOrError<void> ModuleFilesystem::open(FileStream* stream, int mode) {

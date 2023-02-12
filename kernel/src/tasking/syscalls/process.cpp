@@ -1,3 +1,4 @@
+#include <asm/fcntl.h>
 #include <tasking/syscalls/syscall.hpp>
 #include <tasking/scheduler.hpp>
 #include <arch/interrupts.h>
@@ -133,7 +134,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
     // We have opened the file, check if the elf is correct
     Elf64_Header header;
-    if(stream.read(&header, sizeof(header)) != sizeof(header)) {
+    if(*stream.read(&header, sizeof(header)) != sizeof(header)) {
         // Unexpected EOF
         return ENOEXEC;
     }
@@ -150,7 +151,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     Elf64_Phdr programHeaders[header.phdr_entry_count];
     stream.seek(header.phdr_offset, SEEK_MODE_BEG);
     size_t readCount = header.phdr_entry_count * sizeof(Elf64_Phdr);
-    if(stream.read(programHeaders, readCount) != readCount) {
+    if(*stream.read(programHeaders, readCount) != readCount) {
         // Unexpected EOF
         return ENOEXEC;
     }
@@ -334,6 +335,18 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
     f_pager->unlock();
     f_lock.unlock();
+
+    // Close streams which require it
+    std::List<fd_t> toClose;
+    auto iter = f_streams.begin();
+    while(iter != f_streams.end()) {
+        if((*iter).value.flags() & O_CLOEXEC) {
+            toClose.push_back((*iter).key);
+        }
+        ++iter;
+    }
+    for(auto& fd : toClose)
+        close_stream(fd);
 
     // We will now return into our new state
     return { };

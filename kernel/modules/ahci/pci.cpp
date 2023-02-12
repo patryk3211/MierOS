@@ -34,10 +34,8 @@ void init_pci_dev(PCI_Header* header) {
             init_drive(hba, i, pager, support64);
         }
     }
-
-    header->claimed = true;
 }
 
 USED PCI_Driver pci_driver {
-    .add = &init_pci_dev
+    .attach = &init_pci_dev
 };

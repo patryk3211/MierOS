@@ -25,6 +25,7 @@ extern char* strnchrs(const char* str, const char* chars);
 extern void strupper(char* str);
 extern char* strfind(const char* str, const char* find);
 extern void strcpy(char* dst, const char* src);
+extern char* strlchr(const char* str, char c);
 
 #if defined(__cplusplus)
 } // extern "C"

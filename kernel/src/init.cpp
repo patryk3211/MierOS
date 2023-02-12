@@ -138,11 +138,11 @@ public:
 
     }
 
-    virtual size_t read(void*, size_t) {
+    virtual kernel::ValueOrError<size_t> read(void*, size_t) {
         return 0;
     }
 
-    virtual size_t write(const void* buffer, size_t length) {
+    virtual kernel::ValueOrError<size_t> write(const void* buffer, size_t length) {
         char cbuf[length + 1];
         memcpy(cbuf, buffer, length);
         cbuf[length] = 0;

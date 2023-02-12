@@ -39,11 +39,20 @@ ValueOrError<size_t> SystemFilesystem::read(FileStream* stream, void* buffer, si
     if(vnodeData->read_callback) {
         // This node provides a read callback.
         return vnodeData->read_callback(vnodeData->callback_arg, stream, buffer, length);
-    } else {
-        // If the node doesn't provide a read callback it must provide static data
+    } else if(vnodeData->static_data) {
+        // If the node doesn't provide a read callback it can provide static data
         // (or it should have been set as write-only)
-        ASSERT_F(vnodeData->static_data, "A readable node must provide either a read callback or a static data pointer");
         memcpy(buffer, (u8_t*)vnodeData->static_data + streamData->offset, length);
+        streamData->offset += length;
+        return length;
+    } else {
+        // We can also use the small data field
+        if(streamData->offset > sizeof(vnodeData->small_data))
+            return 0;
+        if(length > sizeof(vnodeData->small_data) - streamData->offset)
+            length = sizeof(vnodeData->small_data) - streamData->offset;
+
+        memcpy(buffer, vnodeData->small_data + streamData->offset, length);
         streamData->offset += length;
         return length;
     }

@@ -1,13 +1,19 @@
 #include <fs/vnodefs.hpp>
+#include <fs/vfs.hpp>
 
 using namespace kernel;
 
 struct VNodeFs_LinkData : public VNodeDataStorage {
-    VNodePtr destination;
+    std::String<> destination;
 
-    VNodeFs_LinkData(const VNodePtr& dest)
+    VNodeFs_LinkData(const std::String<>& dest)
         : destination(dest) { }
     virtual ~VNodeFs_LinkData() = default;
+    // VNodePtr destination;
+    //
+    // VNodeFs_LinkData(const VNodePtr& dest)
+    //     : destination(dest) { }
+    // virtual ~VNodeFs_LinkData() = default;
 };
 
 VNodeFilesystem::VNodeFilesystem()
@@ -24,7 +30,8 @@ ValueOrError<VNodePtr> VNodeFilesystem::get_file(VNodePtr root, const char* file
     if(!result) return ENOENT;
 
     auto file = *result;
-    return (file->type() == VNode::LINK && flags.resolve_link) ? static_cast<VNodeFs_LinkData*>(file->fs_data)->destination : file;
+    return file;
+    //return (file->type() == VNode::LINK && flags.resolve_link) ? static_cast<VNodeFs_LinkData*>(file->fs_data)->destination : file;
 }
 
 ValueOrError<std::List<VNodePtr>> VNodeFilesystem::get_files(VNodePtr root, FilesystemFlags flags) {
@@ -38,18 +45,19 @@ ValueOrError<std::List<VNodePtr>> VNodeFilesystem::get_files(VNodePtr root, File
     return nodes;
 }
 
-ValueOrError<VNodePtr> VNodeFilesystem::resolve_link(VNodePtr link) {
+ValueOrError<VNodePtr> VNodeFilesystem::resolve_link(VNodePtr link, int depth) {
     ASSERT_F(link->filesystem() == this, "Using a VNode from a different filesystem");
 
     if(link->type() != VNode::LINK) return ENOLINK;
-    return static_cast<VNodeFs_LinkData*>(link->fs_data)->destination;
+    if(depth >= 128) return ELOOP;
+    return VFS::instance()->get_file(link->f_parent,
+            static_cast<VNodeFs_LinkData*>(link->fs_data)->destination.c_str(),
+            { .resolve_link = true, .follow_links = true }, depth + 1);
 }
 
-ValueOrError<VNodePtr> VNodeFilesystem::link(VNodePtr root, const char* filename, VNodePtr dest, bool symbolic) {
-    if(!symbolic)
-        return ENOTSUP;
-    if(get_file(root, filename, {}))
-        return EEXIST;
+ValueOrError<VNodePtr> VNodeFilesystem::symlink(VNodePtr root, const char* filename, const char* dest) {
+    if(!root) root = f_root;
+    ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
 
     auto node = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, filename, VNode::LINK, this);
     node->fs_data = new VNodeFs_LinkData(dest);
@@ -70,12 +78,38 @@ ValueOrError<VNodePtr> VNodeFilesystem::mkdir(VNodePtr root, const char* filenam
     return node;
 }
 
-ValueOrError<VNodePtr> VNodeFilesystem::add_link(const char* path, VNodePtr dest) {
+/* ValueOrError<VNodePtr> VNodeFilesystem::add_link(const char* path, VNodePtr dest) {
     auto result = resolve_path(path);
     if(!result)
         return result.errno();
 
-    return link(result->key, result->value, dest, true);
+    std::String<>
+
+    return symlink(result->key, result->value, );
+} */
+
+/* ValueOrError<VNodePtr> VNodeFilesystem::add_link(const char* path, const char* dest) {
+    auto pathResult = resolve_path(path);
+    if(!pathResult)
+        return pathResult.errno();
+
+    auto destResult = resolve_path(dest);
+    if(!destResult)
+        return destResult.errno();
+
+    auto destNode = get_file(destResult->key, destResult->value, { });
+    if(!destNode)
+        return destNode.errno();
+
+    return link(pathResult->key, pathResult->value, *destNode, true);
+} */
+
+ValueOrError<VNodePtr> VNodeFilesystem::add_directory(const char* path) {
+    auto result = resolve_path(path);
+    if(!result)
+        return result.errno();
+
+    return mkdir(result->key, result->value);
 }
 
 ValueOrError<std::Pair<VNodePtr, const char*>> VNodeFilesystem::resolve_path(const char* path, bool makeDirs) {

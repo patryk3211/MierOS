@@ -2,10 +2,26 @@
 
 #include <types.h>
 #include <defines.h>
-#include <asm/uevent.h>
 
 namespace kernel {
-    using UEventArg = uevent_arg;
-    using UEvent = uevent;
+    struct UEventArg {
+        const char* name;
+        const char* value;
+    };
+
+    struct UEvent {
+        const char* buffer;
+
+        const char* event_name;
+        
+        size_t argc;
+        UEventArg argv[];
+
+        ~UEvent();
+
+        const char* get_arg(const char* name);
+    };
+
+    UEvent* parse_uevent(const void* data, size_t length);
 }
 

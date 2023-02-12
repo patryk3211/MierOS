@@ -2,12 +2,19 @@
 #define _MIEROS_MODULE_PCI_PCI_HEADER_H
 
 #include <types.h>
+#include <fs/filesystem.hpp>
+#include <fs/vnode.hpp>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 struct PCI_Header {
+    u8_t bus;
+    u8_t device;
+    u8_t function;
+    u8_t zero;
+
     u16_t device_id;
     u16_t vendor_id;
 
@@ -18,7 +25,7 @@ struct PCI_Header {
 
     u32_t bar[6];
 
-    bool claimed;
+    std::List<kernel::VNodePtr> sysfs_nodes;
 };
 
 #if defined(__cplusplus)
