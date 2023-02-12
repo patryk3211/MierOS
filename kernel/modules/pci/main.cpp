@@ -28,9 +28,7 @@ extern "C" int init() {
     dmesg("(PCI) Detecting PCI devices...");
     detect_pci();
 
-    kprintf("[%T] (PCI) Found %d devices.\n", pci_headers.size());
-    for(auto& header : pci_headers)
-        kprintf("[%T] (PCI) Vendor=%x4 DeviceID=%x4 Class=%x2 Subclass=%x2 ProgIf=%x2 Rev=%x2\n", header.vendor_id, header.device_id, header.classcode, header.subclass, header.prog_if, header.revision);
+    dmesg("(PCI) Found %d devices.", pci_headers.size());
 
     char init_signal[] = "PCI-V???\?-D???\?-C??S??P??R??";
     for(auto& header : pci_headers) {
@@ -56,10 +54,13 @@ extern "C" int init() {
         init_signal[26] = lookup[(header.revision >> 4) & 0xF];
         init_signal[27] = lookup[(header.revision >> 0) & 0xF];
 
-        kprintf("[%T] (PCI) Initalizing modules for signal '%s'\n", init_signal);
+        dmesg("(PCI) Vendor=%04x DeviceID=%04x Class=%02x Subclass=%02x ProgIf=%02x Rev=%02x",
+                header.vendor_id, header.device_id, header.classcode, header.subclass, header.prog_if, header.revision);
 
-        kernel::Event* event = new kernel::Event(EVENT_LOAD_MODULE, init_signal, &mod_load_cb, &header, 0);
-        kernel::EventManager::get().raise(event);
+        //dmesg("(PCI) Initalizing modules for signal '%s'", init_signal);
+
+        //kernel::Event* event = new kernel::Event(EVENT_LOAD_MODULE, init_signal, &mod_load_cb, &header, 0);
+        //kernel::EventManager::get().raise(event);
     }
     return 0;
 }

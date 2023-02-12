@@ -11,6 +11,9 @@ namespace kernel {
         void* callback_arg;
         ValueOrError<size_t> (*read_callback)(void* cbArg, FileStream* stream, void* buffer, size_t length);
         ValueOrError<size_t> (*write_callback)(void* cbArg, FileStream* stream, const void* buffer, size_t length);
+
+        SysFsVNodeData(const VNodePtr& node)
+            : node(node) { }
     };
 
     struct SysFsStreamData {

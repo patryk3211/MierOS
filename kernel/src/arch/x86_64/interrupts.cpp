@@ -132,12 +132,12 @@ void trace_stack(void* base_pointer) {
         if(!kernel::Pager::active().getFlags((virtaddr_t)f).present) return;
 
         file_line_pair p = addr_to_line(f->ret_ip);
-        kprintf("Stack frame 0x%x16 Ret: 0x%x16 %s:%d\n", f, f->ret_ip, p.name, p.line);
+        dmesg("Stack frame 0x%016x Ret: 0x%016x %s:%d", f, f->ret_ip, p.name, p.line);
         f = f->next_frame;
 
         // Limit the stack trace to 32 frames
         if(depth++ > 32) {
-            kprintf("...\n");
+            dmesg("...");
             break;
         }
     }
@@ -149,38 +149,38 @@ extern "C" void cpu_state_dump(CPUState* state) {
     asm volatile("mov %%cr2, %0" : "=a"(cr2));
     asm volatile("mov %%cr3, %0" : "=a"(cr3));
 
-    kprintf("+-------- CPU State -------+\n"
-            "| rax = 0x%x16 |\n"
-            "| rbx = 0x%x16 |\n"
-            "| rcx = 0x%x16 |\n"
-            "| rdx = 0x%x16 |\n"
-            "| rsi = 0x%x16 |\n"
-            "| rdi = 0x%x16 |\n"
-            "| rbp = 0x%x16 |\n"
+    dmesg  ("+-------- CPU State -------+\n"
+            "| rax = 0x%016x |\n"
+            "| rbx = 0x%016x |\n"
+            "| rcx = 0x%016x |\n"
+            "| rdx = 0x%016x |\n"
+            "| rsi = 0x%016x |\n"
+            "| rdi = 0x%016x |\n"
+            "| rbp = 0x%016x |\n"
             "+--------------------------+\n"
-            "| r8  = 0x%x16 |\n"
-            "| r9  = 0x%x16 |\n"
-            "| r10 = 0x%x16 |\n"
-            "| r11 = 0x%x16 |\n"
-            "| r12 = 0x%x16 |\n"
-            "| r13 = 0x%x16 |\n"
-            "| r14 = 0x%x16 |\n"
-            "| r15 = 0x%x16 |\n"
+            "| r8  = 0x%016x |\n"
+            "| r9  = 0x%016x |\n"
+            "| r10 = 0x%016x |\n"
+            "| r11 = 0x%016x |\n"
+            "| r12 = 0x%016x |\n"
+            "| r13 = 0x%016x |\n"
+            "| r14 = 0x%016x |\n"
+            "| r15 = 0x%016x |\n"
             "+--------------------------+\n"
-            "| rip = 0x%x16 |\n"
-            "| cs  = 0x%x16 |\n"
-            "| flg = 0x%x16 |\n"
-            "| rsp = 0x%x16 |\n"
-            "| ss  = 0x%x16 |\n"
+            "| rip = 0x%016x |\n"
+            "| cs  = 0x%016x |\n"
+            "| flg = 0x%016x |\n"
+            "| rsp = 0x%016x |\n"
+            "| ss  = 0x%016x |\n"
             "+--------------------------+\n"
-            "| cr0 = 0x%x16 |\n"
-            "| cr2 = 0x%x16 |\n"
-            "| cr3 = 0x%x16 |\n"
+            "| cr0 = 0x%016x |\n"
+            "| cr2 = 0x%016x |\n"
+            "| cr3 = 0x%016x |\n"
             "+--------------------------+\n"
-            "| iec = 0x%x16 |\n"
-            "| fs  = 0x%x16 |\n"
+            "| iec = 0x%016x |\n"
+            "| fs  = 0x%016x |\n"
             "+--------------------------+\n"
-            "state = 0x%x16\n",
+            "state = 0x%016x",
             state->rax, state->rbx, state->rcx, state->rdx, state->rsi, state->rdi, state->rbp, state->r8, state->r9, state->r10,
             state->r11, state->r12, state->r13, state->r14, state->r15, state->rip, state->cs, state->rflags, state->rsp, state->ss,
             cr0, cr2, cr3, state->err_code, state->fs, state);
@@ -190,10 +190,10 @@ static kernel::SpinLock s_except_log_lock;
 NO_EXPORT void handle_exception(CPUState* state) {
     s_except_log_lock.lock();
 
-    kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
+    dmesg("Exception 0x%02x on core %d", state->int_num, current_core());
     cpu_state_dump(state);
     file_line_pair p = addr_to_line(state->rip);
-    kprintf("Line: %s:%d\n", p.name, p.line);
+    dmesg("Line: %s:%d", p.name, p.line);
 
     trace_stack((void*)state->rbp);
 

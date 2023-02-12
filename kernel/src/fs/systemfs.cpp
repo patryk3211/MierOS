@@ -82,8 +82,7 @@ ValueOrError<SysFsVNodeData*> SystemFilesystem::add_node(const char* path) {
 
     auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, result->value, VNode::FILE, this);
 
-    auto* data = new SysFsVNodeData();
-    data->node = node;
+    auto* data = new SysFsVNodeData(node);
     node->fs_data = data;
 
     result->key->add_child(node);

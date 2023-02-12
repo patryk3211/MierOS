@@ -49,7 +49,7 @@ void init_time() {
         u64_t frequency = 1000000000000000 / period;
         u64_t timerValue = frequency / 1000; // 1 ms
 
-        kprintf("[%T] (Kernel) HPET Frequency %d Hz\n", frequency);
+        dmesg("(Kernel) HPET Frequency %d Hz", frequency);
 
         hpet->timers[0].config_and_capabilities = 0b10001001100;
         hpet->timers[0].comparator_value = timerValue;

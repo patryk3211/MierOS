@@ -14,21 +14,21 @@ namespace std {
     struct traced_heap_allocator {
         template<typename T, typename... Args> T* alloc(Args... args) {
             auto* ptr = new T(args...);
-            TRACE("Allocated new ptr: 0x%x16\n", ptr);
+            TRACE("Allocated new ptr: 0x%016x", ptr);
             return ptr;
         }
         template<typename T> T* alloc(size_t length) {
             auto* ptr = new T[length];
-            TRACE("Allocated new array of length %d: 0x%x16\n", length, ptr);
+            TRACE("Allocated new array of length %d: 0x%016x", length, ptr);
             return ptr;
         }
         template<typename T> void free(T* ptr) {
             delete ptr;
-            TRACE("Freed 0x%x16 ptr\n", ptr);
+            TRACE("Freed 0x%016x ptr", ptr);
         }
         template<typename T> void free_array(T* ptr) {
             delete[] ptr;
-            TRACE("Freed 0x%x16 array\n", ptr);
+            TRACE("Freed 0x%016x array", ptr);
         }
     };
 }

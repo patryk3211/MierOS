@@ -36,7 +36,7 @@ bool configure_serial(u16_t port) {
     outb(port + SCRATCH_REGISTER, 0xA5);
     /// This might be a 8250 device
     if(inb(port + SCRATCH_REGISTER) != 0xA5) {
-        TRACE("(Serial) Port 0x%x3 failed scratch register test\n", port);
+        TRACE("(Serial) Port 0x%3x failed scratch register test", port);
         return false;
     }
 
@@ -48,14 +48,14 @@ bool configure_serial(u16_t port) {
 
     outb(port + DATA_REGISTER, 0x55);
     if(inb(port + DATA_REGISTER) != 0x55) {
-        TRACE("(Serial) Port 0x%x3 failed loopback test 1\n", port);
+        TRACE("(Serial) Port 0x%3x failed loopback test 1", port);
         outb(port + MODEM_CTRL_REGISTER, 0);
         return false;
     }
 
     outb(port + DATA_REGISTER, 0xaa);
     if(inb(port + DATA_REGISTER) != 0xaa) {
-        TRACE("(Serial) Port 0x%x3 failed loopback test 2\n", port);
+        TRACE("(Serial) Port 0x%3x failed loopback test 2", port);
         outb(port + MODEM_CTRL_REGISTER, 0);
         return false;
     }
@@ -78,7 +78,7 @@ bool configure_serial(u16_t port) {
     // Enable interrupts (Transmitter Empty and Data Available)
     outb(port + INT_CTRL_REGISTER, 0x03);
 
-    TRACE("(Serial) Port 0x%x3 configured succesfully\n", port);
+    TRACE("(Serial) Port 0x%3x configured succesfully", port);
     return true;
 }
 

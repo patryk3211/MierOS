@@ -126,7 +126,7 @@ void ModuleManager::handle_load_event(Event& event) {
 
     auto major = s_instance->load_module(std::String<>(load_arg), argv);
     if(!major) {
-        kprintf("[%T] (Kernel) Module init failed with code %d\n", major.errno());
+        dmesg("(Kernel) Module init failed with code %d", major.errno());
         event.set_status(major.errno());
         return;
     }

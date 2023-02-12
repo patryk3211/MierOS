@@ -15,6 +15,7 @@ set(KERNEL_SOURCES src/init.cpp
                    src/dmesg.c
                    src/trace.c
                    src/stdlib.c
+                   src/printf.c
                    src/memory/physical.cpp
                    src/memory/liballoc.c
                    src/memory/liballoc_plugs.cpp

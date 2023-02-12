@@ -2,6 +2,7 @@
 #define _MIEROS_KERNEL_STDLIB_H
 
 #include <types.h>
+#include <stdarg.h>
 
 #if defined(__cplusplus)
 extern "C" {

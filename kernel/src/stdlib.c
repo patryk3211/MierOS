@@ -117,7 +117,9 @@ char* strfind(const char* str, const char* find) {
     return 0;
 }
 
-void atexit(void (*exit_handler)()) { }
+void atexit(void (*exit_handler)()) {
+    (void)(exit_handler);
+}
 
 void* memfind(void* ptr, const void* value, size_t valueLength, size_t ptrLength) {
     for(size_t i = 0; i < ptrLength - valueLength; ++i) {

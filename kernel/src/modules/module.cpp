@@ -247,7 +247,7 @@ void Module::print_error(int errCode) {
             dmesg("(Kernel) Undefined symbol in module");
             break;
         default:
-            kprintf("[%T] (Kernel) Unknown module error (code %d)\n", errCode);
+            dmesg("(Kernel) Unknown module error (code %d)", errCode);
             break;
     }
 }
@@ -305,7 +305,7 @@ int Module::link() {
                         *(u64_t*)(f_base_addr + rela[i].addr) = f_base_addr + rela[i].addend;
                         break;
                     } default:
-                        kprintf("[%T] (Kernel) \033[31;1mError!\033[0m Unknown relocation type %d\n", ELF64_REL_TYPE(rela[i].info));
+                        dmesg("(Kernel) \033[31;1mError!\033[0m Unknown relocation type %d", ELF64_REL_TYPE(rela[i].info));
                         break;
                 }
             }

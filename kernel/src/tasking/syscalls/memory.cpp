@@ -17,14 +17,14 @@ DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
 
     if(prot == 0) {
         proc.null_pages(addr, page_len);
-        TRACE("(syscall) Mapped %d bytes starting at 0x%x16 as NULL\n", page_len << 12, addr);
+        TRACE("(syscall) Mapped %d bytes starting at 0x%016x as NULL", page_len << 12, addr);
         return addr;
     }
 
     if(flags & MMAP_FLAG_ANONYMOUS) {
         // No file backing this mapping
         proc.alloc_pages(addr, page_len, flags, prot);
-        TRACE("(syscall) Mapped %d bytes starting at 0x%x16 as ANON\n", page_len << 12, addr);
+        TRACE("(syscall) Mapped %d bytes starting at 0x%016x as ANON", page_len << 12, addr);
         return addr;
     }
 
@@ -43,7 +43,7 @@ DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
     FilePage* page = new FilePage(fstream->node(), addr, offset, (flags & MMAP_FLAG_SHARED), (prot & MMAP_PROT_WRITE), (prot & MMAP_PROT_EXEC));
 
     proc.file_pages(addr, page_len, page);
-    TRACE("(syscall) Mapped %d bytes starting at 0x%x16 to FILE with offset %d\n", page_len << 12, addr, offset);
+    TRACE("(syscall) Mapped %d bytes starting at 0x%016x to FILE with offset %d", page_len << 12, addr, offset);
 
     return addr;
 }
@@ -56,6 +56,6 @@ DEF_SYSCALL(munmap, ptr, length) {
     if(ptr < MMAP_MIN_ADDR || ptr >= KERNEL_START || ptr + (page_len << 12) > KERNEL_START || ptr + (page_len << 12) < ptr) return -EINVAL;
 
     proc.unmap_pages(ptr, page_len);
-    TRACE("(syscall) Unmapped %d bytes starting at 0x%x16\n", page_len << 12, ptr);
+    TRACE("(syscall) Unmapped %d bytes starting at 0x%016x", page_len << 12, ptr);
     return 0;
 }

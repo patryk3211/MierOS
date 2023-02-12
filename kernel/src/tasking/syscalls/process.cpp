@@ -11,7 +11,7 @@
 using namespace kernel;
 
 DEF_SYSCALL(exit, exitCode) {
-    TRACE("(syscall) Process (pid = %d) exited with code %d\n", proc.main_thread()->pid(), exitCode);
+    TRACE("(syscall) Process (pid = %d) exited with code %d", proc.main_thread()->pid(), exitCode);
     proc.die(exitCode);
     return 0;
 }
@@ -20,7 +20,7 @@ DEF_SYSCALL(fork) {
     Process* child = proc.fork();
 
     Scheduler::schedule_process(*child);
-    TRACE("(syscall) New process forked from pid %d (child pid = %d)\n", proc.main_thread()->pid(), child->main_thread()->pid());
+    TRACE("(syscall) New process forked from pid %d (child pid = %d)", proc.main_thread()->pid(), child->main_thread()->pid());
 
     return child->main_thread()->pid();
 }
@@ -39,7 +39,7 @@ DEF_SYSCALL(execve, filename, argv, envp) {
         file = *ret;
     }
 
-    TRACE("(syscall) Process (pid = %d) trying to execute file '%s'\n", proc.main_thread()->pid(), path);
+    TRACE("(syscall) Process (pid = %d) trying to execute file '%s'", proc.main_thread()->pid(), path);
     return proc.execve(file, (char**)argv, (char**)envp);
 }
 

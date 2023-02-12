@@ -143,7 +143,21 @@ public:
     }
 
     virtual size_t write(const void* buffer, size_t length) {
-        dmesgl((char*)buffer, length);
+        char cbuf[length + 1];
+        memcpy(cbuf, buffer, length);
+        cbuf[length] = 0;
+
+        char* ptr = cbuf;
+        for(size_t i = 0; i < length; ++i) {
+            if(cbuf[i] == '\n') {
+                cbuf[i] = 0;
+                if(i != 0) dmesg("%s", ptr);
+                ptr = cbuf + i + 1;
+            }
+        }
+
+        if(*ptr != 0)
+            dmesg("%s", ptr);
         return length;
     }
 };
@@ -202,7 +216,7 @@ void transfer_function() {
 }
 
 TEXT_FREE_AFTER_INIT void stage2_init() {
-    kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
+    dmesg("(Kernel) Multitasking initialized! Now in stage 2");
 
     init_syscalls();
 
