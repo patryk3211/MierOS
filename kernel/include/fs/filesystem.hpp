@@ -75,5 +75,8 @@ namespace kernel {
         virtual void sync_mapping(const MemoryFilePage& mapping);
 
         virtual ValueOrError<int> ioctl(FileStream* stream, u64_t request, void* arg);
+
+        virtual ValueOrError<VNodePtr> link(VNodePtr root, const char* name, VNodePtr dest, bool symbolic);
+        virtual ValueOrError<VNodePtr> mkdir(VNodePtr root, const char* name);
     };
 }

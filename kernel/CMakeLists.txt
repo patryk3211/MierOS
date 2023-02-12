@@ -34,6 +34,8 @@ set(KERNEL_SOURCES src/init.cpp
                    src/fs/vnode.cpp
                    src/fs/vfs.cpp
                    src/fs/initrdfs.cpp
+                   src/fs/systemfs.cpp
+                   src/fs/vnodefs.cpp
                    src/util/crc.c
                    src/util/uuid.cpp
                    src/streams/stream.cpp

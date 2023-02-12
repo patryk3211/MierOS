@@ -18,9 +18,7 @@
 #include <fs/initrdfs.hpp>
 #include <event/kernel_events.hpp>
 #include <util/uuid.h>
-
-#include <fs/modulefs.hpp>
-#include <fs/modulefs_functions.hpp>
+#include <fs/systemfs.hpp>
 
 #ifdef x86_64
 #include <arch/x86_64/acpi.h>
@@ -150,15 +148,6 @@ public:
     }
 };
 
-// TEXT_FREE_AFTER_INIT void init_modules() {
-//     // Initialize the module manager
-//     auto* modMgr = new kernel::ModuleManager();
-//     modMgr->reload_modules();
-//
-//     // Run the modules in modules.init
-//     modMgr->run_init_modules();
-// }
-
 TEXT_FREE_AFTER_INIT void init_filesystems() {
     // Create the VFS
     auto* vfs = new kernel::VFS();
@@ -191,6 +180,13 @@ TEXT_FREE_AFTER_INIT void init_filesystems() {
         [](kernel::VNodePtr) -> kernel::ValueOrError<kernel::Filesystem*> {
             return kernel::DeviceFilesystem::instance();
         });
+
+    // Prepare system filesystem (/sys)
+    new kernel::SystemFilesystem();
+    vfs->register_filesystem("sysfs",
+        [](kernel::VNodePtr) -> kernel::ValueOrError<kernel::Filesystem*> {
+            return kernel::SystemFilesystem::instance();
+        });
 }
 
 void transfer_function() {
@@ -222,12 +218,6 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     // Initialize the module manager
     new kernel::ModuleManager();
 
-//    /// I might want to deffer module loading all the way to the init process
-//    init_modules();
-//
-//    // Wait for all events to be processed
-//    kernel::EventManager::get().wait(EVENT_QUEUE_EMPTY);
-
     auto& thisProc = kernel::Thread::current()->parent();
 
     auto* sstream = new SimpleStream();
@@ -240,92 +230,3 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
     transfer_function();
 }
 
-/// I think all of this should go into the init process
-/*TEXT_FREE_AFTER_INIT kernel::VNodePtr get_fs_device(const char* devLocation) {
-    if(!strcmp(devLocation, "none"))
-        return nullptr;
-
-    if(strfind(devLocation, "UUID") == devLocation || strfind(devLocation, "ID") == devLocation) {
-        // Starts with "UUID" or "ID"
-        const char* idStr = strchr(devLocation, '=') + 1; // Skip the prefix
-
-        auto deviceRes = kernel::VFS::instance()->get_file(nullptr,
-            (std::String("/dev/block/by-id/") + idStr).c_str(),
-            { .resolve_link = true, .follow_links = true });
-
-        return deviceRes ? *deviceRes : nullptr;
-    }
-
-    if(devLocation[0] == '/') {
-        // Starts with "/" so it must be a path
-        auto deviceRes = kernel::VFS::instance()->get_file(nullptr,
-            devLocation,
-            { .resolve_link = true, .follow_links = true });
-
-        return deviceRes ? *deviceRes : nullptr;
-    }
-
-    // Unknown prefix or something...
-    return nullptr;
-}
-
-const char WHITESPACE_CHARS[] = " \t";
-TEXT_FREE_AFTER_INIT void mount_fstab() {
-    auto fstabRes = kernel::VFS::instance()->get_file(nullptr, "/etc/fstab", { .resolve_link = true, .follow_links = true });
-    if(!fstabRes)
-        panic("Filesystem table file not found!");
-
-    auto fstab = *fstabRes;
-    kernel::FileStream stream(fstab);
-    stream.open(FILE_OPEN_MODE_READ);
-
-    size_t fstabSize = fstab->f_size / sizeof(char);
-    char* buffer = new char[fstabSize + 1];
-    stream.read(buffer, fstab->f_size);
-    buffer[fstabSize] = 0;
-
-    char* lineStart = buffer;
-    while(*lineStart != 0) {
-        // Find the next line break
-        char* lineEnd = strchr(lineStart, '\n');
-        // When no line break assume end of file as one
-        if(!lineEnd)
-            lineEnd = buffer + fstabSize;
-        *lineEnd = 0;
-        {
-            // Find comment and "remove" it
-            char* commentStart = strchr(lineStart, '#');
-            if(commentStart)
-                *commentStart = 0;
-
-            // Blank line
-            if(!*lineStart) goto next;
-
-            // Take out the device name first
-            char* whitespace = strchrs(lineStart, WHITESPACE_CHARS);
-            if(!whitespace) goto next; // No whitespace found, skip this line as it's invalid
-            *whitespace = 0;
-            char* fsDev = lineStart;
-
-            char* nextProp = strnchrs(whitespace + 1, WHITESPACE_CHARS);
-            if(!nextProp) goto next; // Unexpected EOL
-
-            whitespace = strchrs(nextProp, WHITESPACE_CHARS);
-            if(!whitespace) goto next;
-            *whitespace = 0;
-            char* location = nextProp;
-
-            nextProp = strnchrs(whitespace + 1, WHITESPACE_CHARS);
-            if(!nextProp) goto next;
-
-            whitespace = strchrs(nextProp, WHITESPACE_CHARS);
-            if(whitespace) *whitespace = 0; // Ignore everything beyond the last property
-            char* fsType = nextProp;
-
-            auto fsDevNode = get_fs_device(fsDev);
-            kernel::VFS::instance()->mount(fsDevNode, fsType, location);
-        }
-    next:
-        lineStart = lineEnd + 1;
-    }
-}*/

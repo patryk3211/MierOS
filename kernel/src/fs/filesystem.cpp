@@ -51,3 +51,11 @@ ValueOrError<int> Filesystem::ioctl(FileStream*, u64_t, void*) {
     return ENOTSUP;
 }
 
+ValueOrError<VNodePtr> Filesystem::link(VNodePtr, const char*, VNodePtr, bool) {
+    return ENOTSUP;
+}
+
+ValueOrError<VNodePtr> Filesystem::mkdir(VNodePtr, const char*) {
+    return ENOTSUP;
+}
+

@@ -24,42 +24,8 @@ struct DevFs_DevData : public VNodeDataStorage {
 
 DeviceFilesystem* DeviceFilesystem::s_instance = 0;
 
-DeviceFilesystem::DeviceFilesystem() 
-    : root(nullptr) {
-    root = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, "", VNode::DIRECTORY, this);
-
+DeviceFilesystem::DeviceFilesystem() {
     s_instance = this;
-}
-
-// We do need this function implemented because we are using it later on
-ValueOrError<VNodePtr> DeviceFilesystem::get_file(VNodePtr root, const char* path, FilesystemFlags flags) {
-    if(!root) root = this->root;
-    ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
-    if(path[0] == 0) return root;
-
-    auto result = root->f_children.at(path);
-    if(!result) return ENOENT;
-
-    auto file = *result;
-    return (file->type() == VNode::LINK && flags.resolve_link) ? static_cast<DevFs_LinkData*>(file->fs_data)->destination : file;
-}
-
-ValueOrError<std::List<VNodePtr>> DeviceFilesystem::get_files(VNodePtr root, FilesystemFlags) {
-    if(!root) root = this->root;
-    ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
-
-    std::List<VNodePtr> nodes;
-    for(auto child : root->f_children)
-        nodes.push_back(child.value);
-
-    return nodes;
-}
-
-ValueOrError<VNodePtr> DeviceFilesystem::resolve_link(VNodePtr link) {
-    ASSERT_F(link->filesystem() == this, "Using a VNode from a different filesystem");
-
-    if(link->type() != VNode::LINK) return ENOLINK;
-    return static_cast<DevFs_LinkData*>(link->fs_data)->destination;
 }
 
 std::Pair<u16_t, DeviceFunctionTable*> DeviceFilesystem::get_function_table(VNodePtr node) {
@@ -115,87 +81,17 @@ ValueOrError<int> DeviceFilesystem::ioctl(FileStream* stream, u64_t request, voi
 ValueOrError<VNodePtr> DeviceFilesystem::add_dev(const char* path, u16_t major, u16_t minor) {
     ASSERT_F(major != 0, "Cannot have a major number of 0");
 
-    VNodePtr root = this->root;
+    auto result = resolve_path(path);
+    if(!result)
+        return result.errno();
 
-    const char* path_ptr = path;
-    const char* next_separator;
-    while((next_separator = strchr(path_ptr, '/')) != 0) {
-        if(root->type() != VNode::DIRECTORY) return ENOTDIR;
+    if(result->key->f_children.at(result->value)) return EEXIST;
 
-        size_t length = next_separator - path_ptr;
-        if(length == 0) {
-            ++path_ptr;
-            continue;
-        }
-
-        char part[length + 1];
-        memcpy(part, path_ptr, length);
-        part[length] = 0;
-
-        auto next_root = get_file(root, part, { 1, 1 });
-        if(next_root)
-            root = *next_root;
-        else {
-            if(next_root.errno() == ENOENT) {
-                auto root_new = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, part, VNode::DIRECTORY, this);
-                root->f_children.insert({ part, root_new });
-                root = root_new;
-            } else
-                return next_root.errno();
-        }
-
-        path_ptr = next_separator + 1;
-    }
-
-    if(root->f_children.at(path_ptr)) return EEXIST;
-
-    auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, path_ptr, VNode::DEVICE, this);
+    auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, result->value, VNode::DEVICE, this);
     node->fs_data = new DevFs_DevData(major, minor);
-    root->add_child(node);
-    node->f_parent = root;
+    result->key->add_child(node);
+    node->f_parent = result->key;
 
     return node;
 }
 
-ValueOrError<VNodePtr> DeviceFilesystem::add_link(const char* path, VNodePtr destination) {
-    VNodePtr root = this->root;
-
-    const char* path_ptr = path;
-    const char* next_separator;
-    while((next_separator = strchr(path_ptr, '/')) != 0) {
-        if(root->type() != VNode::DIRECTORY) return ENOTDIR;
-
-        size_t length = next_separator - path_ptr;
-        if(length == 0) {
-            ++path_ptr;
-            continue;
-        }
-
-        char part[length + 1];
-        memcpy(part, path_ptr, length);
-        part[length] = 0;
-
-        auto next_root = get_file(root, part, { 1, 1 });
-        if(next_root)
-            root = *next_root;
-        else {
-            if(next_root.errno() == ENOENT) {
-                auto root_new = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, part, VNode::DIRECTORY, this);
-                root->f_children.insert({ part, root_new });
-                root = root_new;
-            } else
-                return next_root.errno();
-        }
-
-        path_ptr = next_separator + 1;
-    }
-
-    if(root->f_children.at(path_ptr)) return EEXIST;
-
-    auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, path_ptr, VNode::LINK, this);
-    node->fs_data = new DevFs_LinkData(destination);
-    root->add_child(node);
-    node->f_parent = root;
-
-    return node;
-}

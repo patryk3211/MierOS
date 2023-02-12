@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fs/filesystem.hpp>
+#include <fs/vnodefs.hpp>
 #include <pair.hpp>
 
 namespace kernel {
@@ -19,19 +19,12 @@ namespace kernel {
         ValueOrError<int> (*ioctl)(u16_t minor, u64_t request, void* arg);
     };
 
-    class DeviceFilesystem : public Filesystem {
+    class DeviceFilesystem : public VNodeFilesystem {
         static DeviceFilesystem* s_instance;
-
-        VNodePtr root;
 
     public:
         DeviceFilesystem();
         virtual ~DeviceFilesystem() { }
-
-        virtual ValueOrError<VNodePtr> get_file(VNodePtr root, const char* filename, FilesystemFlags flags);
-        virtual ValueOrError<std::List<VNodePtr>> get_files(VNodePtr root, FilesystemFlags flags);
-
-        virtual ValueOrError<VNodePtr> resolve_link(VNodePtr link);
 
         virtual ValueOrError<void> open(FileStream* stream, int mode);
         virtual ValueOrError<void> close(FileStream* stream);
@@ -47,7 +40,6 @@ namespace kernel {
         ValueOrError<u32_t> block_write(VNodePtr bdev, u64_t lba, u32_t sector_count, const void* buffer);
 
         ValueOrError<VNodePtr> add_dev(const char* path, u16_t major, u16_t minor);
-        ValueOrError<VNodePtr> add_link(const char* path, VNodePtr destination);
 
         static DeviceFilesystem* instance() { return s_instance; }
 
