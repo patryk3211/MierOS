@@ -18,6 +18,9 @@ struct PCI_Header {
     u16_t device_id;
     u16_t vendor_id;
 
+    u16_t subsys_device;
+    u16_t subsys_vendor;
+
     u8_t classcode;
     u8_t subclass;
     u8_t prog_if;

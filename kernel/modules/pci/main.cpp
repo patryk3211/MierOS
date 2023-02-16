@@ -137,6 +137,31 @@ extern "C" int init() {
 
             nodeData->callback_arg = &device;
             nodeData->write_callback = &uevent_dev_attach_wcb;
+
+            device.sysfs_nodes.push_back(nodeData->node);
+        }
+
+        SYSFS_NODE(*deviceDirRes, "uevent") {
+            auto nodeData = *nodeRes;
+            nodeData->node->f_permissions = 0444;
+
+            std::String<> ueventStaticData;
+            ueventStaticData += "BUS_TYPE=pci\n";
+            sprintf(buffer, "PCI_CLASS=%02x%02x%02x\n"
+                            "PCI_ID=%04x:%04x\n"
+                            "PCI_SUBSYS_ID=%04x:%04x\n",
+                            header.classcode, header.subclass, header.prog_if,
+                            header.vendor_id, header.device_id,
+                            header.subsys_vendor, header.subsys_device);
+            ueventStaticData += buffer;
+
+            char* ueventData = new char[ueventStaticData.length() + 1];
+            memcpy(ueventData, ueventStaticData.c_str(), ueventStaticData.length());
+            ueventData[ueventStaticData.length()] = 0;
+            nodeData->static_data = ueventData;
+            nodeData->node->f_size = ueventStaticData.length();
+
+            device.sysfs_nodes.push_back(nodeData->node);
         }
 
         char buffer2[32];

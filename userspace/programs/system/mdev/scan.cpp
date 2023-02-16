@@ -2,6 +2,8 @@
 
 #include <filesystem>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 std::list<std::string> udev::find_busses() {
     std::list<std::string> busList;
@@ -21,6 +23,14 @@ void udev::probe_bus(std::string bus) {
 
     for(auto& device : busIter) {
         std::cout << device.path().filename() << std::endl;
+        std::ifstream ueventStream(device.path() / "uevent");
+
+        if(ueventStream.is_open()) {
+            std::string line;
+            while(std::getline(ueventStream, line)) {
+                std::cout << line << std::endl;
+            }
+        }
     }
 }
 

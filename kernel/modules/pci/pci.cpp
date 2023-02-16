@@ -43,6 +43,10 @@ void detect_pci() {
                         header.bar[4] = pci_read(bus, device, func, 0x20);
                         header.bar[5] = pci_read(bus, device, func, 0x24);
 
+                        u32_t subsys = pci_read(bus, device, func, 0x2C);
+                        header.subsys_device = subsys >> 16;
+                        header.subsys_vendor = subsys;
+
                         pci_devices.push_back({ header });
                     }
                 }
