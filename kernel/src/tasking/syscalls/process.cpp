@@ -77,6 +77,7 @@ DEF_SYSCALL(waitpid, pid, status, options) {
     int statusValue = 0;
 
     // TODO: [15.02.2023] We need to allow for groups of children to be handled.
+    TRACE("(syscall) Wait pid called for to get state of pid = %d, caller pid = %d", pid, proc.pid());
     auto state = thread->get_state(!(options & WNOHANG));
     if(state == DEAD) {
         // Encode status data
@@ -133,14 +134,17 @@ Process* Process::fork() {
                     f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
                 }
 
-                child->f_pager->lock();
                 auto memoryEntry = std::make_shared<MemoryEntry>();
                 memoryEntry->page = new MemoryFilePage(page);
                 memoryEntry->type = MemoryEntry::FILE_MEMORY;
                 memoryEntry->shared = entry.value->shared;
                 child->f_memorymap.insert({ entry.key, memoryEntry });
+
+                child->f_pager->lock();
                 child->f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
                 child->f_pager->unlock();
+
+                page.f_page.ref();
                 break;
             }
         }

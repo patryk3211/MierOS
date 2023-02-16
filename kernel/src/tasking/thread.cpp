@@ -110,8 +110,17 @@ ThreadState Thread::get_state(bool sleep) {
 }
 
 void Thread::change_state(ThreadState newState) {
+    // We can't simply go DEAD (or any other state), we first need to make sure
+    // that all watchers have been informed of the state change before the
+    // scheduler takes us out of the queue. To achieve this we will treat this
+    // code as a critical sections.
+    enter_critical();
     f_state = newState;
+
+    // Thanks to what we do in the SleepQueue::sleep method we don't have to
+    // worry about deadlocks in single processor systems.
     f_state_watchers.wakeup();
+    leave_critical();
 }
 
 void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {

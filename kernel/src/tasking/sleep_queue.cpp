@@ -14,10 +14,16 @@ SleepQueue::~SleepQueue() {
 }
 
 ValueOrError<void> SleepQueue::sleep() {
+    // Treat this whole operation as critical. This will guarantee that
+    // we complete it and release a lock before making a task switch and
+    // later on we won't end up in a deadlock situation when we try to
+    // wake up the waiters as a dying task.
+    enter_critical();
+
+    // The semaphore guarantees atomicity on multiprocessor systems.
     f_access.acquire();
     auto* thread = Thread::current();
 
-    enter_critical();
     thread->sleep(false);
     f_sleeping.push_back(thread->pid());
     f_access.release();
@@ -34,6 +40,7 @@ ValueOrError<size_t> SleepQueue::wakeup(size_t count) {
     while(woke++ < count && f_sleeping.size() > 0) {
         auto tid = f_sleeping.pop_front();
         auto* thread = Thread::get(tid);
+        TRACE("(SleepQueue) Waking up thread (tid = %d), thread ptr = 0x%016x", tid, thread);
         if(thread) thread->wakeup();
     }
 

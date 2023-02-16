@@ -12,12 +12,8 @@ extern void init_serial();
 
 extern void dmesg(const char* format, ...);
 
-//extern void kprintf(const char* format, ...);
-//extern void va_kprintf(const char* format, va_list args);
-
 extern _Noreturn void panic(const char* msg);
 
-#undef DEBUG
 #ifdef DEBUG
 #define TRACE(args...) dmesg("{T} " args)
 #else

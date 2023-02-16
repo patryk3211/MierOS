@@ -52,6 +52,10 @@ void Process::die(u32_t exitCode) {
 
         Scheduler::remove_thread(thread);
         thread->change_state(DEAD);
+
+        // TODO: [16.02.2023] I'm pretty sure we need to cleanup other threads here
+        // and make thisThread the main thread. After that the waitpid syscall will
+        // cleanup the main thread and it's process.
     }
 
     f_exitStatus = exitCode & 0xFF;
@@ -110,15 +114,8 @@ void Process::set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& ent
     Locker lock(f_lock);
 
     auto currentEntryOpt = f_memorymap.at(addr);
-    if(currentEntryOpt) {
-        auto currentEntry = *currentEntryOpt;
-        if(currentEntry->type == MemoryEntry::MEMORY) {
-            f_pager->lock();
-            f_pager->unmap(addr, 1);
-            f_pager->unlock();
-        }
-        f_memorymap.erase(addr);
-    }
+    if(currentEntryOpt)
+        unmap_pages(addr, 1);
     f_memorymap.insert({ addr, entry });
 }
 
@@ -412,6 +409,7 @@ void Process::unmap_pages(virtaddr_t addr, size_t length) {
                 case MemoryEntry::MEMORY: {
                     // Unmap a memory mapping
                     f_pager->unmap(key, 1);
+                    ((PhysicalPage*)entry->page)->unref();
                     break;
                 } case MemoryEntry::FILE_MEMORY: {
                     // Unmap a file memory mapping
