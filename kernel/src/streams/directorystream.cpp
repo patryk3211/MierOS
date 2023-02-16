@@ -6,7 +6,9 @@ using namespace kernel;
 DirectoryStream::DirectoryStream(const VNodePtr& directory)
     : Stream(STREAM_TYPE_DIRECTORY)
     , f_directory(directory)
-    , f_current_entry(f_directories.end()) { }
+    , f_current_entry(f_directories.end()) {
+    f_open = false;
+}
 
 ValueOrError<void> DirectoryStream::open() {
     auto result = VFS::instance()->get_files(f_directory, "", { });
@@ -15,6 +17,7 @@ ValueOrError<void> DirectoryStream::open() {
 
     f_directories = *result;
     f_current_entry = f_directories.begin();
+    f_open = true;
     return { };
 }
 
@@ -37,6 +40,9 @@ struct dirent {
 };
 
 ValueOrError<size_t> DirectoryStream::read(void* buffer, size_t length) {
+    if(!f_open)
+        return EBADF;
+
     size_t readBytes = 0;
     
     u8_t* byteBuffer = (u8_t*)buffer;

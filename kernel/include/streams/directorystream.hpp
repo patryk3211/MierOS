@@ -9,6 +9,7 @@ namespace kernel {
         VNodePtr f_directory;
         std::List<VNodePtr> f_directories;
         std::List<VNodePtr>::iterator f_current_entry;
+        bool f_open;
 
     public:
         DirectoryStream(const VNodePtr& directory);

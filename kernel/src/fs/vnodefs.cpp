@@ -26,7 +26,6 @@ ValueOrError<VNodePtr> VNodeFilesystem::get_file(VNodePtr root, const char* file
 
     auto file = *result;
     return file;
-    //return (file->type() == VNode::LINK && flags.resolve_link) ? static_cast<VNodeFs_LinkData*>(file->fs_data)->destination : file;
 }
 
 ValueOrError<std::List<VNodePtr>> VNodeFilesystem::get_files(VNodePtr root, FilesystemFlags flags) {
@@ -66,6 +65,7 @@ ValueOrError<VNodePtr> VNodeFilesystem::mkdir(VNodePtr root, const char* filenam
     if(get_file(root, filename, {}))
         return EEXIST;
     if(!root) root = f_root;
+    ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
 
     auto node = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, filename, VNode::DIRECTORY, this);
     root->add_child(node);
@@ -84,6 +84,7 @@ ValueOrError<VNodePtr> VNodeFilesystem::add_directory(VNodePtr root, const char*
 
 ValueOrError<std::Pair<VNodePtr, const char*>> VNodeFilesystem::resolve_path(const char* path, VNodePtr root, bool makeDirs) {
     if(!root) root = f_root;
+    ASSERT_F(root->filesystem() == this, "Using a VNode from a different filesystem");
 
     const char* path_ptr = path;
     const char* next_separator;
@@ -104,10 +105,14 @@ ValueOrError<std::Pair<VNodePtr, const char*>> VNodeFilesystem::resolve_path(con
         if(next_root)
             root = *next_root;
         else {
-            if(next_root.errno() == ENOENT && makeDirs)
-                root = *mkdir(root, path);
-            else
+            if(next_root.errno() == ENOENT && makeDirs) {
+                auto result = mkdir(root, part);
+                if(!result)
+                    return result.errno();
+                root = *result;
+            } else {
                 return next_root.errno();
+            }
         }
 
         path_ptr = next_separator + 1;

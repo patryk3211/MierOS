@@ -146,6 +146,8 @@ namespace std {
                 last->next->prev = e;
                 last->next = e;
             }
+
+            return *this;
         }
 
         List(List<T>&& other) {
