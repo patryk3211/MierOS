@@ -1,3 +1,4 @@
+#include "streams/directorystream.hpp"
 #include <fs/vfs.hpp>
 #include <streams/filestream.hpp>
 #include <tasking/syscalls/syscall.hpp>
@@ -29,21 +30,40 @@ DEF_SYSCALL(openat, name, flags, mode, dirfd) {
 
     if(!followLink && (*ret)->type() == VNode::LINK)
         return -ELOOP;
-    if((flags & O_DIRECTORY) && (*ret)->type() != VNode::DIRECTORY)
-        return -ENOTDIR;
 
-    auto* fstream = new FileStream(*ret);
-    fstream->flags() = flags;
+    Stream* stream = 0;
+    if(flags & O_DIRECTORY) {
+        if((*ret)->type() != VNode::DIRECTORY)
+            return -ENOTDIR;
 
-    if(!(flags & O_PATH)) {
-        auto result = fstream->open(dirfd);
-        if(!result) {
-            delete fstream;
-            return -result.errno();
+        auto* dstream = new DirectoryStream(*ret);
+        dstream->flags() = flags;
+
+        if(!(flags & O_PATH)) {
+            auto result = dstream->open();
+            if(!result) {
+                delete dstream;
+                return -result.errno();
+            }
         }
+
+        stream = dstream;
+    } else {
+        auto* fstream = new FileStream(*ret);
+        fstream->flags() = flags;
+
+        if(!(flags & O_PATH)) {
+            auto result = fstream->open(mode);
+            if(!result) {
+                delete fstream;
+                return -result.errno();
+            }
+        }
+
+        stream = fstream;
     }
 
-    fd_t fd = proc.add_stream(fstream);
+    fd_t fd = proc.add_stream(stream);
 
     TRACE("(syscall) Process (pid = %d) opened new fd = %d, file '%s'", proc.main_thread()->pid(), fd, path);
     return fd;

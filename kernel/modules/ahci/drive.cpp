@@ -19,7 +19,7 @@ void find_partitions(drive_information* drive, const std::String<>& disk_name, u
             {
                 std::String<> disk_by_id = "block/by-id/";
                 disk_by_id += std::uuid_to_string(gpt->disk_id);
-                auto res = kernel::DeviceFilesystem::instance()->resolve_path(disk_by_id.c_str());
+                auto res = kernel::DeviceFilesystem::instance()->resolve_path(disk_by_id.c_str(), nullptr);
                 if(res) {
                     char buffer[128];
                     sprintf(buffer, "../../%s", drives[disk_minor].node->name().c_str());
@@ -31,13 +31,13 @@ void find_partitions(drive_information* drive, const std::String<>& disk_name, u
                 u16_t minor = minor_num++;
                 drives.insert({ minor, { drive, part.start_lba, part.end_lba, nullptr } });
 
-                auto file = kernel::DeviceFilesystem::instance()->add_dev((disk_name + "p" + std::num_to_string(minor)).c_str(), major, minor);
+                auto file = kernel::DeviceFilesystem::instance()->add_dev((disk_name + "p" + std::num_to_string(minor)).c_str(), major, minor, kernel::VNode::BLOCK_DEVICE);
                 if(file) {
                     drives[minor].node = *file;
 
                     std::String<> part_by_id = "block/by-id/";
                     part_by_id += std::uuid_to_string(part.part_id);
-                    auto res = kernel::DeviceFilesystem::instance()->resolve_path(part_by_id.c_str());
+                    auto res = kernel::DeviceFilesystem::instance()->resolve_path(part_by_id.c_str(), nullptr);
                     if(res) {
                         char buffer[128];
                         sprintf(buffer, "../../%s", drives[disk_minor].node->name().c_str());
@@ -122,7 +122,7 @@ void init_drive(HBA_MEM* hba, int port_id, kernel::Pager& pager, bool support64)
     std::String<> drive_name = "ahci";
     drive_name += std::num_to_string(drive_count);
 
-    auto ret = kernel::DeviceFilesystem::instance()->add_dev(drive_name.c_str(), major, minor);
+    auto ret = kernel::DeviceFilesystem::instance()->add_dev(drive_name.c_str(), major, minor, kernel::VNode::BLOCK_DEVICE);
     if(ret) {
         drives[minor].node = *ret;
 

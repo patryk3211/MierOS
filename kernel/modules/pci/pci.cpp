@@ -1,4 +1,5 @@
 #include "pci_header.h"
+#include "pci_device.hpp"
 #include <arch/x86_64/ports.h>
 #include <list.hpp>
 
@@ -9,7 +10,7 @@ u32_t pci_read(u8_t bus, u8_t device, u8_t func, u8_t offset) {
     return inl(0xCFC) >> ((offset & 0x3) << 3);
 }
 
-extern std::List<PCI_Header> pci_headers;
+extern std::List<PCI_Device> pci_devices;
 
 void detect_pci() {
     for(int bus = 0; bus < 256; ++bus) {
@@ -42,7 +43,7 @@ void detect_pci() {
                         header.bar[4] = pci_read(bus, device, func, 0x20);
                         header.bar[5] = pci_read(bus, device, func, 0x24);
 
-                        pci_headers.push_back(header);
+                        pci_devices.push_back({ header });
                     }
                 }
             }

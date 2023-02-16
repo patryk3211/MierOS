@@ -103,8 +103,9 @@ VNode::Type InitRdFilesystem::get_vnode_type(char typeFlag) {
         case '2':
             return VNode::LINK;
         case '3':
+            return VNode::CHARACTER_DEVICE;
         case '4':
-            return VNode::DEVICE;
+            return VNode::BLOCK_DEVICE;
         case '5':
             return VNode::DIRECTORY;
     }

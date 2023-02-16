@@ -9,11 +9,6 @@ struct VNodeFs_LinkData : public VNodeDataStorage {
     VNodeFs_LinkData(const std::String<>& dest)
         : destination(dest) { }
     virtual ~VNodeFs_LinkData() = default;
-    // VNodePtr destination;
-    //
-    // VNodeFs_LinkData(const VNodePtr& dest)
-    //     : destination(dest) { }
-    // virtual ~VNodeFs_LinkData() = default;
 };
 
 VNodeFilesystem::VNodeFilesystem()
@@ -70,6 +65,7 @@ ValueOrError<VNodePtr> VNodeFilesystem::symlink(VNodePtr root, const char* filen
 ValueOrError<VNodePtr> VNodeFilesystem::mkdir(VNodePtr root, const char* filename) {
     if(get_file(root, filename, {}))
         return EEXIST;
+    if(!root) root = f_root;
 
     auto node = std::make_shared<VNode>(0777, 0, 0, 0, 0, 0, 0, filename, VNode::DIRECTORY, this);
     root->add_child(node);
@@ -78,42 +74,16 @@ ValueOrError<VNodePtr> VNodeFilesystem::mkdir(VNodePtr root, const char* filenam
     return node;
 }
 
-/* ValueOrError<VNodePtr> VNodeFilesystem::add_link(const char* path, VNodePtr dest) {
-    auto result = resolve_path(path);
-    if(!result)
-        return result.errno();
-
-    std::String<>
-
-    return symlink(result->key, result->value, );
-} */
-
-/* ValueOrError<VNodePtr> VNodeFilesystem::add_link(const char* path, const char* dest) {
-    auto pathResult = resolve_path(path);
-    if(!pathResult)
-        return pathResult.errno();
-
-    auto destResult = resolve_path(dest);
-    if(!destResult)
-        return destResult.errno();
-
-    auto destNode = get_file(destResult->key, destResult->value, { });
-    if(!destNode)
-        return destNode.errno();
-
-    return link(pathResult->key, pathResult->value, *destNode, true);
-} */
-
-ValueOrError<VNodePtr> VNodeFilesystem::add_directory(const char* path) {
-    auto result = resolve_path(path);
+ValueOrError<VNodePtr> VNodeFilesystem::add_directory(VNodePtr root, const char* path) {
+    auto result = resolve_path(path, root);
     if(!result)
         return result.errno();
 
     return mkdir(result->key, result->value);
 }
 
-ValueOrError<std::Pair<VNodePtr, const char*>> VNodeFilesystem::resolve_path(const char* path, bool makeDirs) {
-    VNodePtr root = f_root;
+ValueOrError<std::Pair<VNodePtr, const char*>> VNodeFilesystem::resolve_path(const char* path, VNodePtr root, bool makeDirs) {
+    if(!root) root = f_root;
 
     const char* path_ptr = path;
     const char* next_separator;

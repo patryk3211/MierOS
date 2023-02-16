@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <sys/mount.h>
 
@@ -6,7 +7,8 @@ int cmd(const char* cmd, const char** args) {
     int child = fork();
     if(!child) {
         size_t argc = 0;
-        while(args[argc]) ++argc;
+        if(args != 0)
+            while(args[argc]) ++argc;
 
         char* argCopy[argc + 2];
         argCopy[0] = const_cast<char*>(cmd);
@@ -16,6 +18,8 @@ int cmd(const char* cmd, const char** args) {
 
         execvp(cmd, argCopy);
         exit(-1);
+    } else {
+        waitpid(child, 0, 0);
     }
 
     // TODO: [12.02.2023] Wait for the task to finish
@@ -42,6 +46,9 @@ int main(int argc, char* argv[]) {
 
     const char* args[] = { "-a", "pci", "pc_serial", 0 };
     cmd("modprobe", args);
+
+    /// Test start mdev
+    cmd("mdev", 0);
 
     while(true);
 }

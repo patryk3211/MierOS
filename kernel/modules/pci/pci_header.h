@@ -24,8 +24,6 @@ struct PCI_Header {
     u8_t revision;
 
     u32_t bar[6];
-
-    std::List<kernel::VNodePtr> sysfs_nodes;
 };
 
 #if defined(__cplusplus)

@@ -43,17 +43,24 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process)
 
     f_current_module = 0;
 
-    f_watched = false;
-
     f_next = 0;
     f_state = RUNNABLE;
+
+    s_threads.insert({ f_pid, this });
 }
 
 void Thread::sleep(bool reschedule) {
+    auto prevState = f_state;
+
     f_state = SLEEPING;
     Scheduler::remove_thread(this);
-    if(reschedule && Thread::current() == this)
-        force_task_switch();
+    if(reschedule) {
+        if(Thread::current() == this) {
+            force_task_switch();
+        } else if(prevState == RUNNING) {
+            send_task_switch_irq(f_preferred_core);
+        }
+    }
 }
 
 void Thread::wakeup() {
@@ -68,10 +75,43 @@ Thread* Thread::current() {
     else return Scheduler::scheduler(current_core()).thread();
 }
 
-void Thread::schedule_finalization() {
-    s_finalizable_threads.push_back(f_pid);
-    f_state = DEAD;
-    // At this point, if this thread is the current thread, it can get safely put out of the scheduler list.
+Thread* Thread::get(pid_t tid) {
+    auto thread = s_threads.at(tid);
+    return thread ? *thread : 0;
+}
+
+bool Thread::is_main() {
+    return f_parent.main_thread() == this;
+}
+
+ThreadState Thread::get_state(bool sleep) {
+    auto translateState = [](ThreadState inputState) {
+        switch(inputState) {
+            case RUNNING:
+            case RUNNABLE:
+            case SLEEPING:
+                // This thread is nice and healthy. It is alive.
+                return RUNNING;
+            case DYING:
+            case DEAD:
+                // This thread is dead, it will be cleaned up before returning
+                // from the wait pid syscall.
+                return DEAD;
+        }
+    };
+
+    auto state = translateState(f_state);
+    if(state == RUNNING && sleep) {
+        f_state_watchers.sleep();
+        state = translateState(f_state);
+    }
+
+    return state;
+}
+
+void Thread::change_state(ThreadState newState) {
+    f_state = newState;
+    f_state_watchers.wakeup();
 }
 
 void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
@@ -116,3 +156,4 @@ void Thread::load_fpu_state() {
     auto* memory = f_fpu_state.ptr<uint8_t>();
     asm volatile("fxrstor64 %0" :: "m"(*memory));
 }
+

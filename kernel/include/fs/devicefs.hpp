@@ -39,7 +39,7 @@ namespace kernel {
         ValueOrError<u32_t> block_read(VNodePtr bdev, u64_t lba, u32_t sector_count, void* buffer);
         ValueOrError<u32_t> block_write(VNodePtr bdev, u64_t lba, u32_t sector_count, const void* buffer);
 
-        ValueOrError<VNodePtr> add_dev(const char* path, u16_t major, u16_t minor);
+        ValueOrError<VNodePtr> add_dev(const char* path, u16_t major, u16_t minor, VNode::Type deviceType);
 
         static DeviceFilesystem* instance() { return s_instance; }
 

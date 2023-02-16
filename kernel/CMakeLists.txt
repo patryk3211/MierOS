@@ -25,6 +25,8 @@ set(KERNEL_SOURCES src/init.cpp
                    src/tasking/thread.cpp
                    src/tasking/scheduler.cpp
                    src/tasking/process.cpp
+                   src/tasking/sleep_queue.cpp
+                   src/tasking/futex.cpp
                    src/locking/recursive_mutex.cpp
                    src/locking/semaphore.cpp
                    src/modules/module_manager.cpp
@@ -43,6 +45,7 @@ set(KERNEL_SOURCES src/init.cpp
                    src/streams/filestream.cpp
                    src/streams/termios.cpp
                    src/streams/streamwrapper.cpp
+                   src/streams/directorystream.cpp
                    src/memory/page/unresolvedpage.cpp
                    src/memory/page/anonpage.cpp
                    src/memory/page/filepage.cpp

@@ -22,9 +22,10 @@ namespace kernel {
         enum Type {
             DIRECTORY = 0,
             FILE = 1,
-            DEVICE = 2,
+            BLOCK_DEVICE = 2,
             LINK = 3,
-            MOUNT = 4
+            MOUNT = 4,
+            CHARACTER_DEVICE = 5,
         };
 
         u16_t f_permissions;

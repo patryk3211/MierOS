@@ -78,16 +78,16 @@ ValueOrError<int> DeviceFilesystem::ioctl(FileStream* stream, u64_t request, voi
     RUN_FUNC(stream->node(), ioctl, request, arg);
 }
 
-ValueOrError<VNodePtr> DeviceFilesystem::add_dev(const char* path, u16_t major, u16_t minor) {
+ValueOrError<VNodePtr> DeviceFilesystem::add_dev(const char* path, u16_t major, u16_t minor, VNode::Type deviceType) {
     ASSERT_F(major != 0, "Cannot have a major number of 0");
 
-    auto result = resolve_path(path);
+    auto result = resolve_path(path, nullptr);
     if(!result)
         return result.errno();
 
     if(result->key->f_children.at(result->value)) return EEXIST;
 
-    auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, result->value, VNode::DEVICE, this);
+    auto node = std::make_shared<VNode>(0, 0, 0, 0, 0, 0, 0, result->value, deviceType, this);
     node->fs_data = new DevFs_DevData(major, minor);
     result->key->add_child(node);
     node->f_parent = result->key;

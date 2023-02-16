@@ -141,7 +141,7 @@ extern "C" int init() {
             name[4] = '0' + i;
 
             // Configure a devfs node
-            DeviceFilesystem::instance()->add_dev(name, major, i);
+            DeviceFilesystem::instance()->add_dev(name, major, i, VNode::CHARACTER_DEVICE);
 
             device_ports[i] = new Port(serial_ports[i], 256, &termios_write_callback);
 

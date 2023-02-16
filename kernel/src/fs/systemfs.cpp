@@ -82,8 +82,8 @@ ValueOrError<size_t> SystemFilesystem::seek(FileStream* stream, size_t position,
     return old_offset;
 }
 
-ValueOrError<SysFsVNodeData*> SystemFilesystem::add_node(const char* path) {
-    auto result = resolve_path(path);
+ValueOrError<SysFsVNodeData*> SystemFilesystem::add_node(VNodePtr root, const char* path) {
+    auto result = resolve_path(path, root);
     if(!result)
         return result.errno();
     if(result->key->f_children.at(result->value))

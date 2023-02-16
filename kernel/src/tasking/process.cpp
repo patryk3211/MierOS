@@ -29,6 +29,10 @@ Process* Process::construct_kernel_process(virtaddr_t entry_point) {
     return new Process(entry_point, &Pager::kernel());
 }
 
+pid_t Process::pid() {
+    return main_thread()->pid();
+}
+
 void Process::die(u32_t exitCode) {
     Thread* thisThread = Thread::current();
 
@@ -41,24 +45,20 @@ void Process::die(u32_t exitCode) {
             continue;
         }
 
-        auto current_state = thread->f_state;
-        thread->f_state = DYING;
-
-        if(current_state == RUNNING)
+        if(thread->f_state == RUNNING) {
+            thread->f_state = DYING;
             send_task_switch_irq(thread->f_preferred_core);
+        }
 
         Scheduler::remove_thread(thread);
-
-        if(!thread->f_watched) thread->schedule_finalization();
+        thread->change_state(DEAD);
     }
 
-    f_exitCode = exitCode;
+    f_exitStatus = exitCode & 0xFF;
+    f_signalled = false;
 
     if(suicide) {
-        if(!thisThread->f_watched)
-            thisThread->schedule_finalization();
-        else
-            thisThread->f_state = DYING;
+        thisThread->change_state(DEAD);
 
         // We should not return from an exit syscall.
         f_lock.unlock();

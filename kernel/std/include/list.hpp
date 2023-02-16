@@ -123,9 +123,9 @@ namespace std {
         }
 
         List<T>& operator=(const List<T>& other) {
-            Entry* e = head.next;
+            Entry* e = static_cast<Entry*>(head.next);
             while(e != &tail) {
-                Entry* n = e->next;
+                Entry* n = static_cast<Entry*>(e->next);
                 allocator.free(e);
                 e = n;
             }
@@ -136,8 +136,8 @@ namespace std {
             tail.next = 0;
             length = other.length;
 
-            Entry* last = &head;
-            for(Entry* entry = other.head.next; entry != &other.tail; entry = entry->next) {
+            Entry* last = static_cast<Entry*>(&head);
+            for(Entry* entry = static_cast<Entry*>(other.head.next); entry != &other.tail; entry = static_cast<Entry*>(entry->next)) {
                 Entry* e = allocator.template alloc<Entry>(entry->value);
 
                 e->next = last->next;

@@ -23,7 +23,7 @@ DEF_SYSCALL(fork) {
     Scheduler::schedule_process(*child);
     TRACE("(syscall) New process forked from pid %d (child pid = %d)", proc.main_thread()->pid(), child->main_thread()->pid());
 
-    return child->main_thread()->pid();
+    return child->pid();
 }
 
 DEF_SYSCALL(execve, filename, argv, envp) {
@@ -53,6 +53,43 @@ DEF_SYSCALL(getid, id) {
         default:
             return -EINVAL;
     }
+}
+
+#define WNOHANG 1
+#define WUNTRACED 2
+#define WSTOPPED 2
+#define WEXITED 4
+#define WCONTINUED 8
+
+DEF_SYSCALL(waitpid, pid, status, options) {
+    // TODO: [14.02.2023] We need to make sure that the process at pid is
+    // a child of the calling process.
+    auto* thread = Thread::get(pid);
+    if(!thread)
+        return ECHILD;
+
+    if(!thread->is_main())
+        return EINVAL;
+
+    if(status)
+        VALIDATE_PTR(status);
+
+    int statusValue = 0;
+
+    // TODO: [15.02.2023] We need to allow for groups of children to be handled.
+    auto state = thread->get_state(!(options & WNOHANG));
+    if(state == DEAD) {
+        // Encode status data
+        auto& proc = thread->parent();
+        statusValue |= proc.exit_status() << 8;
+    }
+
+    if(status)
+        *((int*)status) = statusValue;
+
+    // TODO: [15.02.2023] Delete the thread if it died.
+
+    return thread->pid();
 }
 
 Process* Process::fork() {
@@ -167,15 +204,14 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     for(auto* thread : f_threads) {
         if(thread == thisThread) continue;
 
-        auto current_state = thread->f_state;
-        thread->f_state = DYING;
-
-        if(current_state == RUNNING)
+        if(thread->f_state == RUNNING) {
+            thread->f_state = DYING;
             send_task_switch_irq(thread->f_preferred_core);
+        }
 
         Scheduler::remove_thread(thread);
-
-        if(!thread->f_watched) thread->schedule_finalization();
+        thread->change_state(DEAD);
+        // TODO: [15.02.2023] Actually I think we should also delete the threads here
     }
 
     // Only this thread will be left here

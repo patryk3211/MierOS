@@ -32,12 +32,13 @@ UEvent* kernel::parse_uevent(const void* data, size_t length) {
             nextSeparator = dataCopy + length;
         *nextSeparator = 0;
 
-        if(!eventName) {
+        char* valueSeparator = strchr(dataCopy + offset, '=');
+        if(!offset && !valueSeparator) {
+            // Only the first line can be an event name
             eventName = dataCopy;
         } else {
             if(dataCopy[offset] != 0) {
                 // This is not an empty line.
-                char* valueSeparator = strchr(dataCopy + offset, '=');
                 if(valueSeparator != 0) {
                     // This line has a valid key=value pair
                     *valueSeparator = 0;

@@ -10,8 +10,9 @@ extern std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 VNode::Type inode_to_vnode_type(u16_t inode_type) {
     switch(inode_type) {
         case INODE_TYPE_CHARDEV:
+            return VNode::CHARACTER_DEVICE;
         case INODE_TYPE_BLOCKDEV:
-            return VNode::DEVICE;
+            return VNode::BLOCK_DEVICE;
         case INODE_TYPE_DIRECTORY:
             return VNode::DIRECTORY;
         case INODE_TYPE_FILE:

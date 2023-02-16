@@ -53,7 +53,7 @@ namespace kernel {
          * @param makeDirs Should directories which don't exist on the path be created
          * @return Pair of root/filename or error
          */
-        ValueOrError<std::Pair<VNodePtr, const char*>> resolve_path(const char* path, bool makeDirs = true);
+        ValueOrError<std::Pair<VNodePtr, const char*>> resolve_path(const char* path, VNodePtr root, bool makeDirs = true);
     
         /**
          * @brief Create directory at path
@@ -64,7 +64,7 @@ namespace kernel {
          * @param path Path to the directory
          * @return The directory node or error
          */
-        ValueOrError<VNodePtr> add_directory(const char* path);
+        ValueOrError<VNodePtr> add_directory(VNodePtr root, const char* path);
     };
 }
 

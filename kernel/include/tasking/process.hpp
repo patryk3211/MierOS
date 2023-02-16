@@ -16,7 +16,8 @@ namespace kernel {
 
         Pager* f_pager;
 
-        u32_t f_exitCode;
+        u8_t f_exitStatus;
+        bool f_signalled;
 
         std::String<> f_workingDirectory;
 
@@ -52,7 +53,12 @@ namespace kernel {
         Thread* main_thread() { return f_threads.front(); }
         Pager& pager() { return *f_pager; }
 
+        pid_t pid();
+
         std::String<>& cwd() { return f_workingDirectory; }
+
+        bool signalled() { return f_signalled; }
+        u8_t exit_status() { return f_exitStatus; }
 
         fd_t add_stream(Stream* stream, fd_t hint = -1);
         void close_stream(fd_t fd);

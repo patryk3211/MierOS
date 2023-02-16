@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-typedef void add_device_func_t(PCI_Header* header);
+typedef int add_device_func_t(PCI_Header* header);
 
 struct PCI_Driver {
     add_device_func_t* attach;

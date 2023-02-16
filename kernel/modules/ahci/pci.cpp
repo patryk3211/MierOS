@@ -6,7 +6,7 @@
 #include <memory/virtual.hpp>
 #include <locking/locker.hpp>
 
-void init_pci_dev(PCI_Header* header) {
+int init_pci_dev(PCI_Header* header) {
     kernel::Pager& pager = kernel::Pager::kernel();
     kernel::Locker lock(pager);
 
@@ -34,6 +34,8 @@ void init_pci_dev(PCI_Header* header) {
             init_drive(hba, i, pager, support64);
         }
     }
+
+    return 0;
 }
 
 USED PCI_Driver pci_driver {

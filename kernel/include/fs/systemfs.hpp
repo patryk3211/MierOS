@@ -44,7 +44,7 @@ namespace kernel {
 
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
 
-        ValueOrError<SysFsVNodeData*> add_node(const char* path);
+        ValueOrError<SysFsVNodeData*> add_node(VNodePtr root, const char* path);
 
         static SystemFilesystem* instance();
     };

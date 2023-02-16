@@ -25,7 +25,7 @@ DEF_SYSCALL(execve, filename, argv, envp);
 DEF_SYSCALL(arch_prctl, func, ptr);
 DEF_SYSCALL(init_module, modPtr, argv);
 DEF_SYSCALL(symlinkat, target, dirfd, linkpath);
-
+DEF_SYSCALL(waitpid, pid, status, options);
 DEF_SYSCALL(ioctl, fd, request, arg);
 DEF_SYSCALL(getid, id);
 DEF_SYSCALL(dup, oldfd, newfd, flags);
@@ -49,7 +49,7 @@ extern "C" void init_syscalls() {
     SYSCALL(11, arch_prctl);
     SYSCALL(12, init_module);
     SYSCALL(13, symlinkat);
-
+    SYSCALL(14, waitpid);
     SYSCALL(15, ioctl);
     SYSCALL(16, getid);
     SYSCALL(17, dup);
