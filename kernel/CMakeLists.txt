@@ -46,6 +46,7 @@ set(KERNEL_SOURCES src/init.cpp
                    src/streams/termios.cpp
                    src/streams/streamwrapper.cpp
                    src/streams/directorystream.cpp
+                   src/streams/dmesgstream.cpp
                    src/memory/page/unresolvedpage.cpp
                    src/memory/page/anonpage.cpp
                    src/memory/page/filepage.cpp

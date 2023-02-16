@@ -19,6 +19,7 @@
 #include <event/kernel_events.hpp>
 #include <util/uuid.h>
 #include <fs/systemfs.hpp>
+#include <streams/dmesgstream.hpp>
 
 #ifdef x86_64
 #include <arch/x86_64/acpi.h>
@@ -132,36 +133,6 @@ extern "C" void __cxa_pure_virtual() {
     asm("int3");
 }
 
-class SimpleStream : public kernel::Stream {
-public:
-    SimpleStream() : kernel::Stream(0xFF) {
-
-    }
-
-    virtual kernel::ValueOrError<size_t> read(void*, size_t) {
-        return 0;
-    }
-
-    virtual kernel::ValueOrError<size_t> write(const void* buffer, size_t length) {
-        char cbuf[length + 1];
-        memcpy(cbuf, buffer, length);
-        cbuf[length] = 0;
-
-        char* ptr = cbuf;
-        for(size_t i = 0; i < length; ++i) {
-            if(cbuf[i] == '\n') {
-                cbuf[i] = 0;
-                if(i != 0) dmesg("%s", ptr);
-                ptr = cbuf + i + 1;
-            }
-        }
-
-        if(*ptr != 0)
-            dmesg("%s", ptr);
-        return length;
-    }
-};
-
 TEXT_FREE_AFTER_INIT void init_filesystems() {
     // Create the VFS
     auto* vfs = new kernel::VFS();
@@ -234,7 +205,7 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
 
     auto& thisProc = kernel::Thread::current()->parent();
 
-    auto* sstream = new SimpleStream();
+    auto* sstream = new kernel::DMesgStream();
     thisProc.add_stream(sstream);
     thisProc.add_stream(sstream);
     thisProc.add_stream(sstream);
