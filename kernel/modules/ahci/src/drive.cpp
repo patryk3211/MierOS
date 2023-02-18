@@ -1,7 +1,7 @@
 #include "drive.hpp"
 
 #include "ata.hpp"
-#include "../partition/parse.hpp"
+#include "../../partition/parse.hpp"
 #include <fs/devicefs.hpp>
 #include <memory/physical.h>
 #include <printf.h>

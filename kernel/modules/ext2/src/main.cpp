@@ -8,12 +8,6 @@
 
 using namespace kernel;
 
-MODULE_HEADER static module_header header {
-    .magic = MODULE_HEADER_MAGIC,
-    .mod_name = "ext2",
-    .dependencies = 0
-};
-
 FilesystemDriver filesystem_driver {
     .mount = &mount,
 

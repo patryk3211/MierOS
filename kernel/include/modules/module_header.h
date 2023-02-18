@@ -14,7 +14,7 @@ struct module_header {
     char magic[8]; // magic = "\0177MODHDR1"
     char mod_name[128];
     char** dependencies;
-    char** init_on;
+    char** aliases;
 } PACKED;
 
 #if defined(__cplusplus)

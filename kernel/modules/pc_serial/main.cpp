@@ -11,12 +11,6 @@
 
 using namespace kernel;
 
-MODULE_HEADER static module_header header {
-    .magic = MODULE_HEADER_MAGIC,
-    .mod_name = "pc_serial",
-    .dependencies = 0
-};
-
 static const u16_t serial_ports[] = {
     0x3F8, // COM1
     0x2F8, // COM2

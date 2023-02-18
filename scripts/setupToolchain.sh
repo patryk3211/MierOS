@@ -51,6 +51,9 @@ scripts/toolchain/limine.sh $ACTION
 # Build debug symbol exporter
 scripts/toolchain/debug_exporter.sh $ACTION
 
+# Build module header generator
+scripts/toolchain/module_header_gen.sh $ACTION
+
 mkdir -p sysroot/dev
 mkdir -p sysroot/sys
 

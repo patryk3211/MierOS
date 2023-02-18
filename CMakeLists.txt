@@ -13,7 +13,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(ARCH "x86_64" CACHE STRING "Set the kernel's target architecture")
-set(DEBUG true CACHE BOOL "Set if build should include some debugging features")
+set(DEBUG OFF CACHE BOOL "Set if build should include some debugging features")
 option(TESTING "Enable kernel and module testing" ON)
 
 set(CROSS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cross")
@@ -35,7 +35,8 @@ set(INITRD_MODULES kernel/modules/pci/pci.mod
                    kernel/modules/pc_serial/pc_serial.mod)
 
 set(INITRD_BINARIES userspace/programs/init/init
-                    userspace/programs/system/modprobe/modprobe)
+                    userspace/programs/system/modprobe/modprobe
+                    userspace/programs/system/mdev/mdev)
 
 set(INITRD_MAPPINGS
 # Misc files

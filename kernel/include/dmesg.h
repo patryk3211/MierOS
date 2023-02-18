@@ -14,7 +14,6 @@ extern void dmesg(const char* format, ...);
 
 extern _Noreturn void panic(const char* msg);
 
-//#undef DEBUG
 #ifdef DEBUG
 #define TRACE(args...) dmesg("{T} " args)
 #else

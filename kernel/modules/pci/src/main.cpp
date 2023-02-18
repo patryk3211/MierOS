@@ -14,12 +14,6 @@
 #include <printf.h>
 #include <event/uevent.hpp>
 
-MODULE_HEADER static module_header header {
-    .magic = MODULE_HEADER_MAGIC,
-    .mod_name = "pci",
-    .dependencies = 0
-};
-
 std::List<PCI_Device> pci_devices;
 
 extern void detect_pci();
@@ -153,6 +147,10 @@ extern "C" int init() {
                             header.classcode, header.subclass, header.prog_if,
                             header.vendor_id, header.device_id,
                             header.subsys_vendor, header.subsys_device);
+            ueventStaticData += buffer;
+            sprintf(buffer, "MODALIAS=pci:v%04xd%04xsv%04xsd%04xbc%02xsc%02xi%02x\n",
+                            header.vendor_id, header.device_id, header.subsys_vendor, header.subsys_device,
+                            header.classcode, header.subclass, header.prog_if);
             ueventStaticData += buffer;
 
             char* ueventData = new char[ueventStaticData.length() + 1];

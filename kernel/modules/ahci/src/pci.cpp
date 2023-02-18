@@ -1,5 +1,8 @@
-#include "../pci/pci_header.h"
-#include "../pci/pci_driver.h"
+//#include "pci_header.h"
+//#include "pci_driver.h"
+#include <pci_header.h>
+#include <pci_driver.h>
+
 #include "structures.hpp"
 #include "drive.hpp"
 #include <defines.h>

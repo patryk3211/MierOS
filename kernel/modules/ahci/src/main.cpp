@@ -12,18 +12,6 @@
 #include <tasking/thread.hpp>
 #include <unordered_map.hpp>
 
-MODULE_HEADER static char __header_dep_pci[] = "pci";
-MODULE_HEADER static char* __header_dependencies[] = {
-    __header_dep_pci,
-    0
-};
-
-MODULE_HEADER static module_header header {
-    .magic = MODULE_HEADER_MAGIC,
-    .mod_name = "ahci",
-    .dependencies = __header_dependencies
-};
-
 extern u16_t major;
 
 extern "C" int init() {
