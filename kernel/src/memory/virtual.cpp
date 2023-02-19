@@ -301,6 +301,7 @@ void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags
         entry.structured.execute_disable = !flags.executable;
         entry.structured.global = flags.global;
         entry.structured.cache_disabled = flags.cache_disable;
+        entry.structured.dirty = flags.dirty;
     }
     REFRESH_TLB;
 
@@ -331,6 +332,7 @@ void Pager::flags(virtaddr_t virt, size_t length, PageFlags flags) {
         entry.structured.execute_disable = !flags.executable;
         entry.structured.global = flags.global;
         entry.structured.cache_disabled = flags.cache_disable;
+        entry.structured.dirty = flags.dirty;
     }
     REFRESH_TLB;
 
@@ -407,6 +409,7 @@ PageFlags Pager::getFlags(virtaddr_t virt) {
         flags.executable = !entry.structured.execute_disable;
         flags.global = entry.structured.global;
         flags.cache_disable = entry.structured.cache_disabled;
+        flags.dirty = entry.structured.dirty;
     }
     return flags;
 }

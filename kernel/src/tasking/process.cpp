@@ -12,7 +12,7 @@ using namespace kernel;
 Process::Process(virtaddr_t entry_point, Pager* pager)
     : f_pager(pager)
     , f_workingDirectory("/") {
-    f_threads.push_back(new Thread(entry_point, true, *this));
+    f_threads.push_back(new Thread(entry_point, true, this));
     f_next_fd = 0;
     f_first_free = MMAP_MIN_ADDR;
 }
@@ -20,7 +20,7 @@ Process::Process(virtaddr_t entry_point, Pager* pager)
 Process::Process(virtaddr_t entry_point)
     : f_pager(new Pager())
     , f_workingDirectory("/") {
-    f_threads.push_back(new Thread(entry_point, false, *this));
+    f_threads.push_back(new Thread(entry_point, false, this));
     f_next_fd = 0;
     f_first_free = MMAP_MIN_ADDR;
 }
@@ -34,11 +34,29 @@ pid_t Process::pid() {
 }
 
 void Process::die(u32_t exitCode) {
-    Thread* thisThread = Thread::current();
+    f_lock.lock();
+
+    f_exitStatus = exitCode & 0xFF;
+    f_signalled = false;
+
+    // Reduce the memory footprint of this process
+    bool suicide = minimize();
+
+    if(suicide) {
+        auto* thisThread = Thread::current();
+        thisThread->change_state(DEAD);
+
+        // We should not return from an exit syscall.
+        f_lock.unlock();
+        while(true) force_task_switch();
+    }
+}
+
+bool Process::minimize() {
+    auto* thisThread = Thread::current();
 
     bool suicide = false;
 
-    f_lock.lock();
     for(auto* thread : f_threads) {
         if(thread == thisThread) {
             suicide = true;
@@ -52,22 +70,73 @@ void Process::die(u32_t exitCode) {
 
         Scheduler::remove_thread(thread);
         thread->change_state(DEAD);
-
-        // TODO: [16.02.2023] I'm pretty sure we need to cleanup other threads here
-        // and make thisThread the main thread. After that the waitpid syscall will
-        // cleanup the main thread and it's process.
     }
 
-    f_exitStatus = exitCode & 0xFF;
-    f_signalled = false;
+    // Get rid of memory mappings
+    f_pager->lock();
+    for(auto [key, entry] : f_memorymap) {
+        if(entry->type == MemoryEntry::FILE_MEMORY && entry->shared) {
+            // Flush to file
+            auto resolved_mapping = (MemoryFilePage*)entry->page;
+            // Transfer the dirty flag
+            auto flags = f_pager->getFlags(key);
+            resolved_mapping->f_dirty = flags.dirty;
+            // Sync a file mapping
+            resolved_mapping->f_file->filesystem()->sync_mapping(*resolved_mapping);
+        }
+    }
+    f_pager->unlock();
+    f_memorymap.clear();
 
     if(suicide) {
-        thisThread->change_state(DEAD);
+        if(main_thread() != thisThread) {
+            // Swap the PIDs
+            Thread* mainThread = main_thread();
+            Thread::s_threads.erase(mainThread->f_pid);
+            Thread::s_threads.erase(thisThread->f_pid);
+            
+            pid_t temp = thisThread->f_pid;
+            thisThread->f_pid = mainThread->f_pid;
+            mainThread->f_pid = temp;
+        
+            Thread::s_threads.insert({ mainThread->f_pid, mainThread });
+            Thread::s_threads.insert({ thisThread->f_pid, thisThread });
+        }
 
-        // We should not return from an exit syscall.
-        f_lock.unlock();
-        while(true) force_task_switch();
+        // Keep only this thread for a PID reference
+        for(auto* thread : f_threads) {
+            if(thread != thisThread)
+                delete thread;
+        }
+
+        f_threads.clear();
+        f_threads.push_back(thisThread);
+
+        // We can delete the pager but we need to activate the kernel pager
+        enter_critical();
+        Pager::kernel().enable();
+        delete f_pager;
+        f_pager = &Pager::kernel();
+        leave_critical();
+    } else {
+        // Keep only the main thread for a PID reference
+        for(auto* thread : f_threads) {
+            if(thread != main_thread())
+                delete thread;
+        }
+
+        auto* main = main_thread();
+        f_threads.clear();
+        f_threads.push_back(main);
+
+        // If this is not a suicide we can delete the pager
+        delete f_pager;
     }
+
+    // Delete streams
+    f_streams.clear();
+
+    return suicide;
 }
 
 fd_t Process::add_stream(Stream* stream, fd_t hint) {
@@ -108,6 +177,26 @@ Stream* Process::get_stream(fd_t fd) {
 
     if(!val) return 0;
     return &val->base();
+}
+
+ValueOrError<fd_t> Process::dup_stream(fd_t oldFd, fd_t newFd) {
+    Locker lock(f_lock);
+
+    auto val = f_streams.at(oldFd);
+    if(!val)
+        return EBADF;
+
+    if(newFd != -1) {
+        if(f_streams.at(newFd))
+            f_streams.erase(newFd);
+    } else {
+        newFd = f_next_fd;
+        while(f_streams.find(newFd) != f_streams.end())
+            ++newFd;
+    }
+
+    f_streams.insert({ newFd, *val });
+    return newFd;
 }
 
 void Process::set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry) {

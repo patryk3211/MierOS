@@ -44,6 +44,7 @@ namespace kernel {
 
         void set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry);
 
+        bool minimize();
     public:
         Process(virtaddr_t entry_point);
         ~Process();
@@ -63,6 +64,7 @@ namespace kernel {
         fd_t add_stream(Stream* stream, fd_t hint = -1);
         void close_stream(fd_t fd);
         Stream* get_stream(fd_t fd);
+        ValueOrError<fd_t> dup_stream(fd_t oldFd, fd_t newFd);
 
         Process* fork();
         ValueOrError<void> execve(const VNodePtr& file, char* argv[], char* envp[]);

@@ -26,6 +26,12 @@ ValueOrError<size_t> FileStream::read(void* buffer, size_t length) {
     return f_file->filesystem()->read(this, buffer, length);
 }
 
+ValueOrError<size_t> FileStream::write(const void *buffer, size_t length) {
+    if(!f_open)
+        return EBADF;
+    return f_file->filesystem()->write(this, buffer, length);
+}
+
 ValueOrError<size_t> FileStream::seek(size_t position, int mode) {
     if(!f_open)
         return EBADF;

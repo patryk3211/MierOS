@@ -380,7 +380,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     std::List<fd_t> toClose;
     auto iter = f_streams.begin();
     while(iter != f_streams.end()) {
-        if((*iter).value.flags() & O_CLOEXEC) {
+        if((*iter).value.base().flags() & O_CLOEXEC) {
             toClose.push_back((*iter).key);
         }
         ++iter;

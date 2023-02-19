@@ -22,13 +22,12 @@ int cmd(const char* cmd, const char** args) {
         waitpid(child, 0, 0);
     }
 
-    // TODO: [12.02.2023] Wait for the task to finish
     return 0;
 }
 
 int main(int argc, char* argv[]) {
     if(getpid() != 1) {
-        std::cerr << "This process can only be started by the kernel!\n";
+        std::cerr << "This process can only be started by the kernel!" << std::endl;
         return -1;
     }
 
@@ -40,9 +39,9 @@ int main(int argc, char* argv[]) {
 
     // Mount kernel filesystems (/dev, /sys) on initrd
     if(mount(0, "/dev", "devfs", 0, 0))
-        std::cerr << "Failed to mount /dev\n";
+        std::cerr << "Failed to mount /dev" << std::endl;
     if(mount(0, "/sys", "sysfs", 0, 0))
-        std::cerr << "Failed to mount /sys\n";
+        std::cerr << "Failed to mount /sys" << std::endl;
 
     const char* args[] = { "-a", "pci", "pc_serial", 0 };
     cmd("modprobe", args);

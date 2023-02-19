@@ -9,7 +9,6 @@ namespace kernel {
             Stream* f_base;
             std::Atomic<int> f_referenceCount;
         } *f_data;
-        Stream* f_base;
 
     public:
         StreamWrapper(Stream* base);

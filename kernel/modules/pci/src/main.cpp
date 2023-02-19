@@ -60,11 +60,11 @@ kernel::ValueOrError<size_t> uevent_dev_attach_wcb(void* arg, kernel::FileStream
     TRACE("(pci) Attach called for device %02x:%02x.%01x to module '%s'",
             pciHeader->bus, pciHeader->device, pciHeader->function, uevent->event_name);
 
-    auto major = kernel::ModuleManager::get().find_module(uevent->event_name);
-    if(!major)
+    auto modMajor = kernel::ModuleManager::get().find_module(uevent->event_name);
+    if(!modMajor)
         return ENOEXEC;
 
-    auto* mod = kernel::ModuleManager::get().get_module(major);
+    auto* mod = kernel::ModuleManager::get().get_module(*modMajor);
     PCI_Driver* driver = static_cast<PCI_Driver*>(mod->get_symbol_ptr("pci_driver"));
     int ret = driver->attach(pciHeader);
     if(ret)

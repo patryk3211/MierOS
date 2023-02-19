@@ -44,7 +44,7 @@ namespace kernel {
         ThreadState f_state;
         SleepQueue f_state_watchers;
 
-        Process& f_parent;
+        Process* f_parent;
 
         pid_t f_pid;
 
@@ -55,7 +55,7 @@ namespace kernel {
 
         int f_preferred_core;
 
-        Thread(u64_t ip, bool isKernel, Process& process);
+        Thread(u64_t ip, bool isKernel, Process* process);
         ~Thread();
 
         /**
@@ -77,7 +77,7 @@ namespace kernel {
 
         pid_t pid() { return f_pid; }
 
-        Process& parent() { return f_parent; }
+        Process& parent() { return *f_parent; }
         bool is_main();
 
         void make_ks(virtaddr_t ip, virtaddr_t sp);
@@ -90,6 +90,8 @@ namespace kernel {
 
         void change_state(ThreadState newState);
         ThreadState get_state(bool sleep);
+
+        void minimize();
 
         static Thread* current();
         static Thread* get(pid_t tid);

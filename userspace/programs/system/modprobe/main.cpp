@@ -14,6 +14,8 @@ struct Module {
     std::list<std::string> f_dependencies;
 };
 
+static bool dryrun = false;
+
 static std::string module_directory;
 static std::unordered_map<std::string, Module> module_map;
 
@@ -185,7 +187,7 @@ int insmod(const std::string& modFile, const std::string& modName) {
     char* buffer = new char[fileSize];
     file.read(buffer, fileSize);
 
-    return syscall(SYS_init_module, buffer, 0);
+    return !dryrun ? syscall(SYS_init_module, buffer, 0) : 0;
 }
 
 void print_usage(char* progName) {
@@ -199,6 +201,8 @@ void print_usage(char* progName) {
         "  -v, --verbose - Verbose output\n"
         "  -a, --all - Consider all non-arguments to be a module name\n"
         "  -m, --major - Print major number this module was loaded at\n"
+        "  -n, --dryrun - Perform everything except the actual init module syscall\n"
+        "  -R, --resolve - Print the resolved module name\n"
     , progName, progName);
 }
 
@@ -206,7 +210,8 @@ static const option options[] = {
     { 'h', "help", 0 },
     { 'v', "verbose", 0 },
     { 'a', "all", 0 },
-    { 'm', "major", 0 },
+    { 'n', "dryrun", 0 },
+    { 'R', "resolve", 0 },
     { 0, 0, 0 }
 };
 
@@ -219,7 +224,7 @@ int main(int argc, char* argv[]) {
     module_directory = "/lib/modules";
     bool verbose = false;
     bool allModules = false;
-    bool printMajor = false;
+    bool printName = false;
     
     char opt;
     while((opt = get_next_option(apc)) != -1) {
@@ -236,8 +241,11 @@ int main(int argc, char* argv[]) {
             case 'a':
                 allModules = true;
                 break;
-            case 'm':
-                printMajor = true;
+            case 'n':
+                dryrun = true;
+                break;
+            case 'R':
+                printName = true;
                 break;
             case 'h':
             default:
@@ -264,6 +272,8 @@ int main(int argc, char* argv[]) {
     // Handle the dependencies of modules
     for(auto iter = orderedModules.begin(); iter != orderedModules.end(); ++iter) {
         Module* mod = *iter;
+        if(printName)
+            std::cout << mod->f_moduleName << std::endl;
         handle_dependencies(mod, orderedModules, iter);
     }
 
@@ -273,14 +283,7 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "insmod '%s'\n", mod->f_moduleFile.c_str());
 
         /// TODO: [02.02.2023] This will also handle arguments later.
-        int major = insmod(mod->f_moduleFile, mod->f_moduleName);
-        if(printMajor) {
-            if(major > 0) {
-                std::cout << mod->f_moduleName << "=" << major << std::endl;
-            } else {
-                std::cout << mod->f_moduleName << "=0" << std::endl;
-            }
-        }
+        insmod(mod->f_moduleFile, mod->f_moduleName);
     }
 
     return 0;

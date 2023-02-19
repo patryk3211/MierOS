@@ -51,6 +51,7 @@ ValueOrError<u16_t> ModuleManager::load_module(void* modImage, const char** args
     if(result) return (err_t)result;
 
     f_module_cache.insert({ mod->name(), mod->major() });
+    f_module_map.insert({ mod->major(), mod });
     return mod->major();
 }
 

@@ -23,7 +23,7 @@ pid_t Thread::generate_pid() {
     }
 }
 
-Thread::Thread(u64_t ip, bool isKernel, Process& process)
+Thread::Thread(u64_t ip, bool isKernel, Process* process)
     : f_kernel_stack(KERNEL_STACK_SIZE)
     , f_fpu_state(512)
     , f_parent(process)
@@ -32,7 +32,7 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process)
     f_ksp = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 
     memset(f_ksp, 0, sizeof(CPUState));
-    f_ksp->cr3 = process.pager().cr3();
+    f_ksp->cr3 = process->pager().cr3();
     f_ksp->rip = ip;
     f_ksp->rflags = 0x202;
 
@@ -47,6 +47,12 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process)
     f_state = RUNNABLE;
 
     s_threads.insert({ f_pid, this });
+}
+
+Thread::~Thread() {
+    ASSERT_F(f_state == DEAD, "When deleting a thread it should be dead");
+
+    s_threads.erase(f_pid);
 }
 
 void Thread::sleep(bool reschedule) {
@@ -81,7 +87,7 @@ Thread* Thread::get(pid_t tid) {
 }
 
 bool Thread::is_main() {
-    return f_parent.main_thread() == this;
+    return f_parent->main_thread() == this;
 }
 
 ThreadState Thread::get_state(bool sleep) {
@@ -123,6 +129,16 @@ void Thread::change_state(ThreadState newState) {
     leave_critical();
 }
 
+void Thread::minimize() {
+    ASSERT_F(f_state == DEAD, "Cannot minimize a living process");
+
+    f_kernel_stack.clear();
+    f_fpu_state.clear();
+
+    f_ksp = 0;
+    f_syscall_state = 0;
+}
+
 void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
     f_syscall_state = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 
@@ -130,7 +146,7 @@ void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
 
     // Some of this stuff is architecture specific
     // and should be moved to the appropriate place
-    f_syscall_state->cr3 = f_parent.pager().cr3();
+    f_syscall_state->cr3 = f_parent->pager().cr3();
     f_syscall_state->rip = ip;
     f_syscall_state->rflags = 0x202;
     f_syscall_state->rsp = sp;

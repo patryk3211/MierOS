@@ -87,3 +87,9 @@ ValueOrError<size_t> DirectoryStream::read(void* buffer, size_t length) {
     return readBytes;
 }
 
+ValueOrError<size_t> DirectoryStream::seek(size_t, int) {
+    // For now the dirstream is a pipelike interface,
+    // I will implement the seeking later
+    return ESPIPE;
+}
+

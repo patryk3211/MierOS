@@ -85,7 +85,6 @@ ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, Filesystem
     const char* path_ptr = path;
     const char* next_separator = path;
     while(*next_separator != 0 && ((next_separator = strchr(path_ptr, '/')) != 0 || (next_separator = strchr(path_ptr, 0)))) {
-        if(root->type() != VNode::DIRECTORY) return ENOTDIR;
         if(root->type() == VNode::LINK) {
             if(flags.follow_links) {
                 auto linkDest = root->filesystem()->resolve_link(root, depth);
@@ -96,6 +95,9 @@ ValueOrError<VNodePtr> VFS::get_file(VNodePtr root, const char* path, Filesystem
             } else
                 return ELOOP;
         }
+
+        if(root->type() != VNode::DIRECTORY)
+            return ENOTDIR;
 
         size_t length = next_separator - path_ptr;
         if(length == 0) {

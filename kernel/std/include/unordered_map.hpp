@@ -255,6 +255,7 @@ namespace std {
                     else
                         prev->next = entry->next;
                     allocator.free(entry);
+                    --f_size;
                     return;
                 }
                 prev = entry;

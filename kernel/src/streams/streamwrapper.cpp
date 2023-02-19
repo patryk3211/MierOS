@@ -1,4 +1,5 @@
 #include <streams/streamwrapper.hpp>
+#include <assert.h>
 
 using namespace kernel;
 
@@ -52,8 +53,11 @@ Stream& StreamWrapper::base() {
     return *f_data->f_base;
 }
 
+/// I think we are defining multiple StreamWrapper on one streams
 void StreamWrapper::clear() {
-    if(f_data->f_referenceCount.fetch_sub(1) == 1) {
+    int refCount = f_data->f_referenceCount.fetch_sub(1);
+    ASSERT_F(refCount >= 1, "Clearing a StreamWrapper after all references have been deleted");
+    if(refCount == 1) {
         // Last reference
         delete f_data->f_base;
         delete f_data;

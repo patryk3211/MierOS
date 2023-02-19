@@ -99,3 +99,17 @@ void KBuffer::resize(size_t new_size) {
         pager.free((virtaddr_t)old_ptr, old_size);
     }
 }
+
+void KBuffer::clear() {
+    if(!raw_ptr)
+        return;
+
+    auto& pager = Pager::active();
+    Locker locker(pager);
+
+    pager.free((virtaddr_t)raw_ptr, page_size);
+
+    raw_ptr = 0;
+    page_size = 0;
+}
+

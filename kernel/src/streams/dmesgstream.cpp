@@ -47,3 +47,7 @@ ValueOrError<size_t> DMesgStream::write(const void *buffer, size_t length) {
     return length;
 }
 
+ValueOrError<size_t> DMesgStream::seek(size_t, int) {
+    return ESPIPE;
+}
+

@@ -21,6 +21,7 @@ namespace kernel {
         ValueOrError<void> open(int mode);
 
         virtual ValueOrError<size_t> read(void* buffer, size_t length) override;
+        virtual ValueOrError<size_t> write(const void *buffer, size_t length) override;
 
         virtual ValueOrError<size_t> seek(size_t position, int mode) override;
 

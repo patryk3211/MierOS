@@ -7,7 +7,7 @@ if [ -e "build" ]; then
 fi
 
 # Prepare for a headers only build of mlibc
-meson setup -Dprefix=/usr -Dheaders_only=true --cross-file='../x86_64-mieros.txt' build
+meson setup -Dlinux_kernel_headers=../../../kernel/abi/include -Dprefix=/usr -Dheaders_only=true --cross-file='../x86_64-mieros.txt' build
 pushd build
 # Install the headers in our sysroot
 meson install --destdir ../../../../sysroot --only-changed

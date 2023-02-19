@@ -217,7 +217,8 @@ Elf64_Symbol* Module::get_symbol(const char* name) {
 }
 
 void* Module::get_symbol_ptr(const char* name) {
-    return (void*)(get_symbol(name)->addr + f_base_addr);
+    auto* symbol = get_symbol(name);
+    return symbol ? (void*)(symbol->addr + f_base_addr) : 0;
 }
 
 u16_t Module::major() {
@@ -353,6 +354,8 @@ int Module::preinit() {
     // Initialize all dependencies
     for(auto& dep : f_dependencies) {
         auto* mod = ModuleManager::get().get_module(dep);
+        if(!mod)
+            return -1;
         if(!mod->is_initialized())
             mod->init();
     }

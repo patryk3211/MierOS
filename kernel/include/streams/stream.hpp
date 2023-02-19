@@ -14,7 +14,9 @@ namespace kernel {
 
     protected:
         Stream(unsigned char type)
-            : f_type(type) { }
+            : f_type(type) {
+            f_flags = 0;
+        }
 
         void set_type(unsigned char type) {
             f_type = type;

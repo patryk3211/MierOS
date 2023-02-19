@@ -1,4 +1,5 @@
-#include "streams/directorystream.hpp"
+#include <streams/directorystream.hpp>
+#include <streams/pipestream.hpp>
 #include <fs/vfs.hpp>
 #include <streams/filestream.hpp>
 #include <tasking/syscalls/syscall.hpp>
@@ -65,7 +66,7 @@ DEF_SYSCALL(openat, name, flags, mode, dirfd) {
 
     fd_t fd = proc.add_stream(stream);
 
-    TRACE("(syscall) Process (pid = %d) opened new fd = %d, file '%s'", proc.main_thread()->pid(), fd, path);
+    TRACE("(syscall) Process (pid = %d) opened new fd = %d, file '%s'", proc.pid(), fd, path);
     return fd;
 }
 
@@ -118,7 +119,7 @@ DEF_SYSCALL(ioctl, fd, request, arg) {
     if(stream == 0) return -EBADF;
 
     if(stream->type() != STREAM_TYPE_FILE)
-        return EPIPE;
+        return -EPIPE;
 
     auto* fstream = (FileStream*)stream;
     auto result = fstream->ioctl(request, (void*)arg);
@@ -131,11 +132,9 @@ DEF_SYSCALL(ioctl, fd, request, arg) {
 }
 
 DEF_SYSCALL(dup, oldfd, newfd, flags) {
-    auto* stream = proc.get_stream(oldfd);
-    if(stream == 0) return -EBADF;
+    auto result = proc.dup_stream(oldfd, newfd);
 
-    auto result = proc.add_stream(stream, newfd);
-    return result;
+    return result ? *result : -result.errno();
 }
 
 DEF_SYSCALL(symlinkat, target, dirfd, linkpath) {
@@ -166,5 +165,19 @@ DEF_SYSCALL(symlinkat, target, dirfd, linkpath) {
     auto result = resolved->key->filesystem()->symlink(resolved->key, resolved->value, (char*)linkpath);
 
     return result ? 0 : -result.errno();
+}
+
+DEF_SYSCALL(pipe, pipeStorage, flags) {
+    VALIDATE_PTR(pipeStorage);
+
+    auto result = PipeStream::make_pair();
+    result.key->flags() = flags;
+    result.value->flags() = flags;
+
+    int* ptr = reinterpret_cast<int*>(pipeStorage);
+    ptr[0] = proc.add_stream(result.key);
+    ptr[1] = proc.add_stream(result.value);
+
+    return 0;
 }
 

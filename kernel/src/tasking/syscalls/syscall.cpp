@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <tasking/syscalls/syscall.hpp>
 
+#include <arch/time.h>
+#include <dmesg.h>
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 
@@ -31,7 +34,7 @@ DEF_SYSCALL(getid, id);
 DEF_SYSCALL(dup, oldfd, newfd, flags);
 DEF_SYSCALL(mount, source, target, fsType, flags, data);
 DEF_SYSCALL(umount, target, flags);
-
+DEF_SYSCALL(pipe, pipeStorage, flags);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
@@ -55,11 +58,29 @@ extern "C" void init_syscalls() {
     SYSCALL(17, dup);
     SYSCALL(18, mount);
     SYSCALL(19, umount);
+    SYSCALL(20, pipe);
 
     register_syscall_handler(&run_syscall);
 }
 
+struct MeasureTime {
+    time_t start;
+
+    MeasureTime() {
+        start = get_uptime();
+    }
+
+    ~MeasureTime() {
+        time_t end = get_uptime();
+        time_t duration = end - start;
+        if(duration > 5)
+            dmesg("(profile) Syscall took %dms", duration);
+    }
+};
+
 extern "C" syscall_arg_t run_syscall(syscall_arg_t call, syscall_arg_t arg1, syscall_arg_t arg2, syscall_arg_t arg3, syscall_arg_t arg4, syscall_arg_t arg5, syscall_arg_t arg6) {
+    MeasureTime profiler;
+
     if(syscall_table[call] != 0)
         return syscall_table[call](Thread::current()->parent(), arg1, arg2, arg3, arg4, arg5, arg6);
     else
