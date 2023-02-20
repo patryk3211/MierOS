@@ -18,9 +18,7 @@ namespace std {
 
     public:
         SharedPtr() {
-            data = new DataStorage();
-            data->ref_count.store(1);
-            new(data->storage) T();
+            data = 0;
         }
 
         SharedPtr(const T& value, std::Optional<std::Function<void(T&)>> destructor = std::Optional<std::Function<void(T&)>>()) {

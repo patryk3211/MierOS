@@ -451,13 +451,15 @@ virtaddr_t Pager::getFreeRange(virtaddr_t start, size_t length) {
         virtaddr_t offset;
         for(offset = 0; offset < (length << 12); offset += 0x1000) {
             if(getFlags(addr + offset).present) {
+                if(addr == first_potential_page)
+                    first_potential_page = addr + offset + (1 << 12);
+                if(addr == first_potential_kernel_page)
+                    first_potential_kernel_page = addr + offset + (1 << 12);
                 found = false;
                 break;
             }
         }
-        if(found) {
-            if(addr == first_potential_page) first_potential_page = addr + (length << 12);
-            if(addr == first_potential_kernel_page) first_potential_kernel_page = addr + (length << 12);
+        if(found) { 
             if(kernel) kernel_locker.unlock();
             return addr;
         }
