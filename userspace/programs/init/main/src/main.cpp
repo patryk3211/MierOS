@@ -49,6 +49,7 @@ int main(int argc, char* argv[]) {
     /// Test start mdev
     cmd("mdev", 0);
 
-    while(true);
+    while(true)
+        asm volatile("rep nop");
 }
 

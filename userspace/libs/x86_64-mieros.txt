@@ -1,6 +1,10 @@
 [constants]
 toolchain_location = '/home/patryk/Projects/MierOS/cross/host-llvm/bin'
 
+[properties]
+c_flags = '-O1'
+cpp_flags = '-O1'
+
 [binaries]
 c = toolchain_location / 'clang'
 cpp = toolchain_location / 'clang++'
