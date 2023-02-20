@@ -10,12 +10,17 @@ SYSROOT_PATH=$(realpath ./sysroot)
 if [ ! -e "cross/host-llvm" -o "$1" == "rebuild" ]; then
     scripts/toolchain/download_llvm.sh llvm-src
 
+    CMAKE_FRESH=""
+    if [ "$1" == "rebuild" ]; then
+        CMAKE_FRESH="--fresh"
+    fi
+
     echo "Building LLVM..."
     pushd cross
     cmake -S llvm-src/llvm -B llvm-hosted-build -G Ninja \
         -DCROSS_PATH="$CROSS_PATH" \
         -DSYSROOT_PATH="$SYSROOT_PATH" \
-        -C ../scripts/toolchain/cmake/llvm-hosted.cmake
+        -C ../scripts/toolchain/cmake/llvm-hosted.cmake $CMAKE_FRESH
 
     pushd llvm-hosted-build
     if ninja clang lld; then
