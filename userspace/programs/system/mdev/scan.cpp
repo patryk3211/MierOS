@@ -27,6 +27,8 @@ int modprobe(const std::string& module, std::string& resolvedModuleName) {
         close(stdoutPipePair[0]);
         // Close the other write end of the pipe
         close(stdoutPipePair[1]);
+        /// Between close and execvp there is a half second delay for some reason
+        /// I guess stream closing is inefficient or something
 
         execvp("modprobe", const_cast<char**>(args));
         exit(-1);

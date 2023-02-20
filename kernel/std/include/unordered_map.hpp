@@ -207,7 +207,9 @@ namespace std {
                 last->next = entry;
             }
             ++f_size;
-            /// TODO: [22.01.2022] Implement rehashing.
+
+            if(f_size >= f_capacity * 2)
+                rehash();
             return true;
         }
 
@@ -278,6 +280,38 @@ namespace std {
             f_bucket.resize(initial_bucket_size, nullptr);
             f_capacity = initial_bucket_size;
             f_size = 0;
+        }
+
+    private:
+        void rehash() {
+            // Adjust capacity to nearest multiple of 64
+            size_t newCap = f_size;
+            if(newCap & 0x3F)
+                newCap = (newCap | 0x3F) + 1;
+
+            std::Vector<Entry*> newBucket(newCap, nullptr);
+            for(size_t i = 0; i < f_capacity; ++i) {
+                Entry* e = f_bucket[i];
+                while(e != 0) {
+                    Entry* next = e->next;
+                    e->next = 0;
+                    
+                    size_t bucketPos = Hasher{}(e->key) % newCap;
+                    if(newBucket[bucketPos]) {
+                        Entry* last = newBucket[bucketPos];
+                        while(last->next != 0)
+                            last = last->next;
+                        last->next = e;
+                    } else {
+                        newBucket[bucketPos] = e;
+                    }
+
+                    e = next;
+                }
+            }
+
+            f_bucket = std::move(newBucket);
+            f_capacity = newCap;
         }
     };
 }

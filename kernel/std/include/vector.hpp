@@ -50,6 +50,8 @@ namespace std {
 
             this->f_elements = alloc.template alloc<T>(this->f_capacity);
             memcpy(this->f_elements, vector.f_elements, this->f_size);
+
+            return *this;
         }
 
         Vector(Vector<T>&& vector) {
@@ -67,6 +69,8 @@ namespace std {
 
             this->f_elements = vector.f_elements;
             vector.f_elements = 0;
+
+            return *this;
         }
 
         ~Vector() {
