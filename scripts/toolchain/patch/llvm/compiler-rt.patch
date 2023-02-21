@@ -1,0 +1,20 @@
+--- a/compiler-rt/cmake/crt-config-ix.cmake	2022-11-29 11:05:58.000000000 +0100
++++ b/compiler-rt/cmake/crt-config-ix.cmake	2023-02-02 18:10:54.700786230 +0100
+@@ -14,6 +14,8 @@
+ 
+ if(ANDROID)
+   set(OS_NAME "Android")
++elseif(MIEROS)
++  set(OS_NAME "MierOS")
+ else()
+   set(OS_NAME "${CMAKE_SYSTEM_NAME}")
+ endif()
+@@ -43,7 +45,7 @@
+   message(STATUS "Supported architectures for crt: ${CRT_SUPPORTED_ARCH}")
+ endif()
+ 
+-if (CRT_SUPPORTED_ARCH AND OS_NAME MATCHES "Linux" AND NOT LLVM_USE_SANITIZER)
++if (CRT_SUPPORTED_ARCH AND OS_NAME MATCHES "Linux|MierOS" AND NOT LLVM_USE_SANITIZER)
+   set(COMPILER_RT_HAS_CRT TRUE)
+ else()
+   set(COMPILER_RT_HAS_CRT FALSE)

@@ -2,25 +2,20 @@
 #define _MIEROS_KERNEL_MODULES_MODULE_HEADER_H
 
 #include <types.h>
+#include <defines.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
+#define MODULE_HEADER_MAGIC { 0x7F, 'M', 'O', 'D', 'H', 'D', 'R', '1' }
+
 struct module_header {
-    u8_t header_version;
-    u8_t reserved1;
-    u16_t preferred_major;
-    /**
-     * @brief Flags that specify the module's properties
-     * bit 0 = Fallback module - The module will only be loaded if no other module has responded on the init signal
-     */
-    u16_t flags;
-    u16_t reserved2;
-    u64_t dependencies_ptr;
-    u64_t name_ptr;
-    u64_t init_on_ptr;
-};
+    char magic[8]; // magic = "\0177MODHDR1"
+    char mod_name[128];
+    char** dependencies;
+    char** aliases;
+} PACKED;
 
 #if defined(__cplusplus)
 } // extern "C"

@@ -156,53 +156,52 @@ namespace std {
 
     inline std::String<> uuid_to_string(uuid_t uuid) {
         const char lookup[] = "0123456789abcdef";
-        u8_t* as_bytes = (u8_t*)&uuid;
 
         char buffer[37];
-        buffer[0] = lookup[as_bytes[0] >> 4];
-        buffer[1] = lookup[as_bytes[0] & 15];
-        buffer[2] = lookup[as_bytes[1] >> 4];
-        buffer[3] = lookup[as_bytes[1] & 15];
-        buffer[4] = lookup[as_bytes[2] >> 4];
-        buffer[5] = lookup[as_bytes[2] & 15];
-        buffer[6] = lookup[as_bytes[3] >> 4];
-        buffer[7] = lookup[as_bytes[3] & 15];
+        buffer[0] = lookup[uuid.bytes[0] >> 4];
+        buffer[1] = lookup[uuid.bytes[0] & 15];
+        buffer[2] = lookup[uuid.bytes[1] >> 4];
+        buffer[3] = lookup[uuid.bytes[1] & 15];
+        buffer[4] = lookup[uuid.bytes[2] >> 4];
+        buffer[5] = lookup[uuid.bytes[2] & 15];
+        buffer[6] = lookup[uuid.bytes[3] >> 4];
+        buffer[7] = lookup[uuid.bytes[3] & 15];
 
         buffer[8] = '-';
 
-        buffer[9] = lookup[as_bytes[4] >> 4];
-        buffer[10] = lookup[as_bytes[4] & 15];
-        buffer[11] = lookup[as_bytes[5] >> 4];
-        buffer[12] = lookup[as_bytes[5] & 15];
+        buffer[9] = lookup[uuid.bytes[4] >> 4];
+        buffer[10] = lookup[uuid.bytes[4] & 15];
+        buffer[11] = lookup[uuid.bytes[5] >> 4];
+        buffer[12] = lookup[uuid.bytes[5] & 15];
 
         buffer[13] = '-';
 
-        buffer[14] = lookup[as_bytes[6] >> 4];
-        buffer[15] = lookup[as_bytes[6] & 15];
-        buffer[16] = lookup[as_bytes[7] >> 4];
-        buffer[17] = lookup[as_bytes[7] & 15];
+        buffer[14] = lookup[uuid.bytes[6] >> 4];
+        buffer[15] = lookup[uuid.bytes[6] & 15];
+        buffer[16] = lookup[uuid.bytes[7] >> 4];
+        buffer[17] = lookup[uuid.bytes[7] & 15];
 
         buffer[18] = '-';
 
-        buffer[19] = lookup[as_bytes[8] >> 4];
-        buffer[20] = lookup[as_bytes[8] & 15];
-        buffer[21] = lookup[as_bytes[9] >> 4];
-        buffer[22] = lookup[as_bytes[9] & 15];
+        buffer[19] = lookup[uuid.bytes[8] >> 4];
+        buffer[20] = lookup[uuid.bytes[8] & 15];
+        buffer[21] = lookup[uuid.bytes[9] >> 4];
+        buffer[22] = lookup[uuid.bytes[9] & 15];
 
         buffer[23] = '-';
 
-        buffer[24] = lookup[as_bytes[10] >> 4];
-        buffer[25] = lookup[as_bytes[10] & 15];
-        buffer[26] = lookup[as_bytes[11] >> 4];
-        buffer[27] = lookup[as_bytes[11] & 15];
-        buffer[28] = lookup[as_bytes[12] >> 4];
-        buffer[29] = lookup[as_bytes[12] & 15];
-        buffer[30] = lookup[as_bytes[13] >> 4];
-        buffer[31] = lookup[as_bytes[13] & 15];
-        buffer[32] = lookup[as_bytes[14] >> 4];
-        buffer[33] = lookup[as_bytes[14] & 15];
-        buffer[34] = lookup[as_bytes[15] >> 4];
-        buffer[35] = lookup[as_bytes[15] & 15];
+        buffer[24] = lookup[uuid.bytes[10] >> 4];
+        buffer[25] = lookup[uuid.bytes[10] & 15];
+        buffer[26] = lookup[uuid.bytes[11] >> 4];
+        buffer[27] = lookup[uuid.bytes[11] & 15];
+        buffer[28] = lookup[uuid.bytes[12] >> 4];
+        buffer[29] = lookup[uuid.bytes[12] & 15];
+        buffer[30] = lookup[uuid.bytes[13] >> 4];
+        buffer[31] = lookup[uuid.bytes[13] & 15];
+        buffer[32] = lookup[uuid.bytes[14] >> 4];
+        buffer[33] = lookup[uuid.bytes[14] & 15];
+        buffer[34] = lookup[uuid.bytes[15] >> 4];
+        buffer[35] = lookup[uuid.bytes[15] & 15];
 
         buffer[36] = 0;
 

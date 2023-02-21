@@ -15,8 +15,7 @@ set(KERNEL_SOURCES src/init.cpp
                    src/dmesg.c
                    src/trace.c
                    src/stdlib.c
-                   src/initrd.cpp
-                   src/debug.cpp
+                   src/printf.c
                    src/memory/physical.cpp
                    src/memory/liballoc.c
                    src/memory/liballoc_plugs.cpp
@@ -26,6 +25,8 @@ set(KERNEL_SOURCES src/init.cpp
                    src/tasking/thread.cpp
                    src/tasking/scheduler.cpp
                    src/tasking/process.cpp
+                   src/tasking/sleep_queue.cpp
+                   src/tasking/futex.cpp
                    src/locking/recursive_mutex.cpp
                    src/locking/semaphore.cpp
                    src/modules/module_manager.cpp
@@ -35,13 +36,24 @@ set(KERNEL_SOURCES src/init.cpp
                    src/fs/devicefs.cpp
                    src/fs/vnode.cpp
                    src/fs/vfs.cpp
+                   src/fs/initrdfs.cpp
+                   src/fs/systemfs.cpp
+                   src/fs/vnodefs.cpp
                    src/util/crc.c
+                   src/util/uuid.cpp
                    src/streams/stream.cpp
                    src/streams/filestream.cpp
+                   src/streams/termios.cpp
+                   src/streams/streamwrapper.cpp
+                   src/streams/directorystream.cpp
+                   src/streams/dmesgstream.cpp
+                   src/streams/pipestream.cpp
                    src/memory/page/unresolvedpage.cpp
                    src/memory/page/anonpage.cpp
                    src/memory/page/filepage.cpp
-                   src/memory/page/memoryfilepage.cpp)
+                   src/memory/page/memoryfilepage.cpp
+                   src/event/event_manager.cpp
+                   src/event/uevent.cpp)
 
 set(TESTS_SOURCES src/tests/test.cpp
                   src/tests/memory.cpp
@@ -91,10 +103,13 @@ if(${DEBUG})
 endif()
 
 target_link_options(kernel.bin PRIVATE -T${CMAKE_CURRENT_SOURCE_DIR}/linker.ld -z max-page-size=0x1000 -pie -Wl,-export-dynamic ${CMAKE_CURRENT_BINARY_DIR}/ap_starter.o -Wl,--no-dynamic-linker)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/std/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/std/include ${CMAKE_CURRENT_SOURCE_DIR}/abi/include)
 
 install(TARGETS kernel.bin DESTINATION ${SYSROOT_DIR}/)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/kernel.map DESTINATION ${SYSROOT_DIR}/)
+
+# Install kernel headers
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/abi/include/asm DESTINATION ${SYSROOT_DIR}/usr/include)
 
 add_subdirectory(modules)
 

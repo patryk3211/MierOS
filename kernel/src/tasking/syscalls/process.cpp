@@ -1,3 +1,4 @@
+#include <asm/fcntl.h>
 #include <tasking/syscalls/syscall.hpp>
 #include <tasking/scheduler.hpp>
 #include <arch/interrupts.h>
@@ -5,10 +6,13 @@
 #include <tasking/syscalls/map.hpp>
 #include <fs/vfs.hpp>
 #include <vector.hpp>
+#include <elf.h>
+#include <asm/procid.h>
 
 using namespace kernel;
 
 DEF_SYSCALL(exit, exitCode) {
+    TRACE("(syscall) Process (pid = %d) exited with code %d", proc.main_thread()->pid(), exitCode);
     proc.die(exitCode);
     return 0;
 }
@@ -17,14 +21,15 @@ DEF_SYSCALL(fork) {
     Process* child = proc.fork();
 
     Scheduler::schedule_process(*child);
+    TRACE("(syscall) New process forked from pid %d (child pid = %d)", proc.main_thread()->pid(), child->main_thread()->pid());
 
-    return child->main_thread()->pid();
+    return child->pid();
 }
 
 DEF_SYSCALL(execve, filename, argv, envp) {
     const char* path = (const char*)filename;
 
-    VNodePtr file;
+    VNodePtr file = nullptr;
     if(path[0] == '/') {
         auto ret = VFS::instance()->get_file(nullptr, path, {});
         if(!ret) return -ret.errno();
@@ -35,7 +40,57 @@ DEF_SYSCALL(execve, filename, argv, envp) {
         file = *ret;
     }
 
+    TRACE("(syscall) Process (pid = %d) trying to execute file '%s'", proc.main_thread()->pid(), path);
     return proc.execve(file, (char**)argv, (char**)envp);
+}
+
+DEF_SYSCALL(getid, id) {
+    switch(id) {
+        case PROCID_PID:
+            return proc.main_thread()->pid();
+        case PROCID_TID:
+            return Thread::current()->pid();
+        default:
+            return -EINVAL;
+    }
+}
+
+#define WNOHANG 1
+#define WUNTRACED 2
+#define WSTOPPED 2
+#define WEXITED 4
+#define WCONTINUED 8
+
+DEF_SYSCALL(waitpid, pid, status, options) {
+    // TODO: [14.02.2023] We need to make sure that the process at pid is
+    // a child of the calling process.
+    auto* thread = Thread::get(pid);
+    if(!thread)
+        return ECHILD;
+
+    if(!thread->is_main())
+        return EINVAL;
+
+    if(status)
+        VALIDATE_PTR(status);
+
+    int statusValue = 0;
+
+    // TODO: [15.02.2023] We need to allow for groups of children to be handled.
+    TRACE("(syscall) Wait pid called for to get state of pid = %d, caller pid = %d", pid, proc.pid());
+    auto state = thread->get_state(!(options & WNOHANG));
+    if(state == DEAD) {
+        // Encode status data
+        auto& proc = thread->parent();
+        statusValue |= proc.exit_status() << 8;
+    }
+
+    if(status)
+        *((int*)status) = statusValue;
+
+    // TODO: [15.02.2023] Delete the thread if it died.
+
+    return thread->pid();
 }
 
 Process* Process::fork() {
@@ -46,6 +101,7 @@ Process* Process::fork() {
     Process* child = new Process(CPUSTATE_IP(caller->f_syscall_state));
     memcpy(child->main_thread()->f_ksp, caller->f_syscall_state, sizeof(CPUState));
     CPUSTATE_RET(child->main_thread()->f_ksp) = 0;
+    child->main_thread()->f_ksp->cr3 = child->f_pager->cr3();
 
     // Copy the memory space
     f_pager->lock();
@@ -68,7 +124,7 @@ Process* Process::fork() {
             case MemoryEntry::EMPTY:
             case MemoryEntry::ANONYMOUS:
                 // Copy the memory entries
-                child->f_memorymap[entry.key] = entry.value;
+                child->f_memorymap.insert({ entry.key, entry.value });
                 break;
             case MemoryEntry::FILE_MEMORY: {
                 MemoryFilePage& page = *(MemoryFilePage*)entry.value->page;
@@ -78,12 +134,17 @@ Process* Process::fork() {
                     f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
                 }
 
-                child->f_pager->lock();
-                auto memoryEntry = std::make_shared<MemoryEntry>(*entry.value);
+                auto memoryEntry = std::make_shared<MemoryEntry>();
                 memoryEntry->page = new MemoryFilePage(page);
-                child->f_memorymap[entry.key] = memoryEntry;
+                memoryEntry->type = MemoryEntry::FILE_MEMORY;
+                memoryEntry->shared = entry.value->shared;
+                child->f_memorymap.insert({ entry.key, memoryEntry });
+
+                child->f_pager->lock();
                 child->f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
                 child->f_pager->unlock();
+
+                page.f_page.ref();
                 break;
             }
         }
@@ -114,23 +175,26 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
     // We have opened the file, check if the elf is correct
     Elf64_Header header;
-    if(stream.read(&header, sizeof(header)) != sizeof(header)) {
+    if(*stream.read(&header, sizeof(header)) != sizeof(header)) {
         // Unexpected EOF
-        return ERR_NO_EXEC;
+        return ENOEXEC;
     }
 
     // Validate the header
     if(!memcmp(validElf, &header, 8)) {
         // Invalid header magic
-        return ERR_NO_EXEC;
+        return ENOEXEC;
     }
+
+    if(header.type != ET_EXEC && header.type != ET_DYN)
+        return ENOEXEC;
 
     Elf64_Phdr programHeaders[header.phdr_entry_count];
     stream.seek(header.phdr_offset, SEEK_MODE_BEG);
     size_t readCount = header.phdr_entry_count * sizeof(Elf64_Phdr);
-    if(stream.read(programHeaders, readCount) != readCount) {
+    if(*stream.read(programHeaders, readCount) != readCount) {
         // Unexpected EOF
-        return ERR_NO_EXEC;
+        return ENOEXEC;
     }
 
     // No return part starts here
@@ -144,15 +208,14 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     for(auto* thread : f_threads) {
         if(thread == thisThread) continue;
 
-        auto current_state = thread->f_state;
-        thread->f_state = DYING;
-
-        if(current_state == RUNNING)
+        if(thread->f_state == RUNNING) {
+            thread->f_state = DYING;
             send_task_switch_irq(thread->f_preferred_core);
+        }
 
         Scheduler::remove_thread(thread);
-
-        if(!thread->f_watched) thread->schedule_finalization();
+        thread->change_state(DEAD);
+        // TODO: [15.02.2023] Actually I think we should also delete the threads here
     }
 
     // Only this thread will be left here
@@ -205,8 +268,13 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     }
     f_memorymap.clear();
 
-    virtaddr_t start = ~0;
-    virtaddr_t end = 0;
+    virtaddr_t base = 0;
+    if(header.type == ET_DYN) {
+        // Find a suitable base address for a PIE.
+        // For now we just set it to a hardcoded value
+        // but in the future we might randomize this address.
+        base = PIE_START;
+    }
 
     // Process headers
     for(int i = 0; i < header.phdr_entry_count; ++i) {
@@ -225,15 +293,15 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
                 if(filePages > 0) {
                     // Map a file segment here
-                    FilePage* page = new FilePage(file, header.vaddr & ~0xFFF, header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
+                    FilePage* page = new FilePage(file, base + (header.vaddr & ~0xFFF), header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
 
-                    file_pages(header.vaddr & ~0xFFF, filePages, page);
+                    file_pages(base + (header.vaddr & ~0xFFF), filePages, page);
 
                     // We need this since the .bss section will likely intersect
                     // with some data and we need to guarantee that it is cleared
-                    if(alignedMemSize > alignedFileSize) {
+                    if(alignedMemSize > alignedFileSize && ((header.vaddr + header.file_size) & 0xFFF)) {
                         // We need to zero out some memory
-                        memset((void*)(header.vaddr + header.file_size), 0, 4096 - ((header.vaddr + header.file_size) & 0xFFF));
+                        memset((void*)(base + header.vaddr + header.file_size), 0, 4096 - ((header.vaddr + header.file_size) & 0xFFF));
                     }
                 }
 
@@ -243,11 +311,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     int prot = 1;
                     prot |= (header.flags & 2) ? MMAP_PROT_WRITE : 0;
                     prot |= (header.flags & 1) ? MMAP_PROT_EXEC : 0;
-                    alloc_pages((header.vaddr + (filePages << 12)) & ~0xFFF, pagesLeft, MMAP_FLAG_ZERO, prot);
+                    alloc_pages(base + ((header.vaddr + (filePages << 12)) & ~0xFFF), pagesLeft, MMAP_FLAG_ZERO, prot);
                 }
-
-                if(start > header.vaddr) start = header.vaddr;
-                if(end < header.vaddr + (pageCount << 12)) end = header.vaddr + (pageCount << 12);
 
                 break;
             }
@@ -284,7 +349,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     execStack[stackOffset++] = argStore.size();
 
     /// TODO: [10.01.2023] Will also need to take aux vector size into account
-    virtaddr_t infoBlock = (4 + argStore.size() + envStore.size()) * sizeof(u64_t);
+    virtaddr_t infoBlock = (virtaddr_t)execStack + (4 + argStore.size() + envStore.size()) * sizeof(u64_t);
 
     // argv
     for(auto& arg : argStore) {
@@ -305,11 +370,24 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     // null aux vector
     execStack[stackOffset++] = 0;
 
-    thisThread->make_ks(header.entry_point, (virtaddr_t)execStack);
+    thisThread->make_ks(base + header.entry_point, (virtaddr_t)execStack);
+    f_first_free = MMAP_MIN_ADDR;
 
     f_pager->unlock();
     f_lock.unlock();
 
+    // Close streams which require it
+    std::List<fd_t> toClose;
+    auto iter = f_streams.begin();
+    while(iter != f_streams.end()) {
+        if((*iter).value.base().flags() & O_CLOEXEC) {
+            toClose.push_back((*iter).key);
+        }
+        ++iter;
+    }
+    for(auto& fd : toClose)
+        close_stream(fd);
+
     // We will now return into our new state
-    return 0;
+    return { };
 }

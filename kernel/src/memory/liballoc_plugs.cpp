@@ -29,7 +29,9 @@ NO_EXPORT SECTION(".heap") u8_t initial_heap[HEAP_SIZE];
 
 inline bool is_page_used(u32_t page_idx) {
     ASSERT_F(page_idx < HEAP_PAGE_SIZE, "\033[1;37mpage_idx\033[0m points outside of the \033[1;37minitial_heap\033[0m");
-    return (heap_usage_bitmap[page_idx >> 3] >> (page_idx & 0x7)) & 1;
+    u8_t usageByte = heap_usage_bitmap[page_idx >> 3];
+    u8_t usageMask = 1 << (page_idx & 7);
+    return usageByte & usageMask;
 }
 
 inline void set_page_used(u32_t page_idx, bool status) {
@@ -52,32 +54,48 @@ extern "C" void* liballoc_alloc(size_t page_count) {
         for(u32_t page = heap_first_potential_page; page < HEAP_PAGE_SIZE; ++page) {
             bool found_block = true;
             for(u32_t i = 0; i < page_count; ++i) {
-                if(i + page >= HEAP_PAGE_SIZE) goto fail;
-                if(is_page_used(page + i)) {
-                    page += i - 1;
+                // We have exhausted the heap.
+                if(i + page >= HEAP_PAGE_SIZE) {
+                    page = HEAP_PAGE_SIZE;
                     found_block = false;
                     break;
                 }
+                // This block is used, skip to next possibly free block.
+                if(is_page_used(page + i)) {
+                    found_block = false;
+                    page += i;
+                    break;
+                }
             }
-            if(!found_block) continue;
-            heap_first_potential_page = page + page_count;
-            for(u32_t i = 0; i < page_count; ++i) set_page_used(page + i, true);
+            // Block not found, continue searching
+            if(!found_block)
+                continue;
+            // Move first potentially free page
+            if(heap_first_potential_page == page)
+                heap_first_potential_page = page + page_count;
+            // Mark pages as used
+            for(u32_t i = 0; i < page_count; ++i)
+                set_page_used(page + i, true);
+            // Return the allocated pointer
             return initial_heap + (page << 12);
         }
-    fail:;
     }
-    return (void*)Pager::active().kalloc(page_count);
+    Pager pager = Pager::active();
+    Locker lock(pager);
+    return (void*)pager.kalloc(page_count);
 }
 
 extern "C" int liballoc_free(void* ptr, size_t page_count) {
-    if(ptr >= initial_heap && ptr < initial_heap + HEAP_PAGE_SIZE) {
+    if(ptr >= initial_heap && ptr < initial_heap + HEAP_SIZE) {
         // Free on local heap.
-        u32_t page = ((u64_t)ptr - (u64_t)heap_usage_bitmap) >> 12;
+        u32_t page = ((u8_t*)ptr - initial_heap) >> 12;
         for(u32_t i = 0; i < page_count; ++i) set_page_used(page + i, 0);
         if(page < heap_first_potential_page) heap_first_potential_page = page;
         return 0;
     }
-    Pager::active().free((virtaddr_t)ptr, page_count);
+    Pager pager = Pager::active();
+    Locker lock(pager);
+    pager.free((virtaddr_t)ptr, page_count);
     return 0;
 }
 

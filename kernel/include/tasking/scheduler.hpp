@@ -7,7 +7,6 @@
 
 namespace kernel {
     class Scheduler {
-        static ThreadQueue wait_queue;
         static ThreadQueue runnable_queue;
         static Scheduler* schedulers;
         static SpinLock queue_lock;
@@ -33,6 +32,7 @@ namespace kernel {
         static Scheduler& scheduler(int core);
 
         static void schedule_process(Process& proc);
+        static void schedule_thread(Thread* thread);
         static void remove_thread(Thread* thread);
 
         static void pre_syscall(CPUState* current_state);

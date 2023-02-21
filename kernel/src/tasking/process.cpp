@@ -12,7 +12,7 @@ using namespace kernel;
 Process::Process(virtaddr_t entry_point, Pager* pager)
     : f_pager(pager)
     , f_workingDirectory("/") {
-    f_threads.push_back(new Thread(entry_point, true, *this));
+    f_threads.push_back(new Thread(entry_point, true, this));
     f_next_fd = 0;
     f_first_free = MMAP_MIN_ADDR;
 }
@@ -20,7 +20,7 @@ Process::Process(virtaddr_t entry_point, Pager* pager)
 Process::Process(virtaddr_t entry_point)
     : f_pager(new Pager())
     , f_workingDirectory("/") {
-    f_threads.push_back(new Thread(entry_point, false, *this));
+    f_threads.push_back(new Thread(entry_point, false, this));
     f_next_fd = 0;
     f_first_free = MMAP_MIN_ADDR;
 }
@@ -29,36 +29,22 @@ Process* Process::construct_kernel_process(virtaddr_t entry_point) {
     return new Process(entry_point, &Pager::kernel());
 }
 
+pid_t Process::pid() {
+    return main_thread()->pid();
+}
+
 void Process::die(u32_t exitCode) {
-    Thread* thisThread = Thread::current();
-
-    bool suicide = false;
-
     f_lock.lock();
-    for(auto* thread : f_threads) {
-        if(thread == thisThread) {
-            suicide = true;
-            continue;
-        }
 
-        auto current_state = thread->f_state;
-        thread->f_state = DYING;
+    f_exitStatus = exitCode & 0xFF;
+    f_signalled = false;
 
-        if(current_state == RUNNING)
-            send_task_switch_irq(thread->f_preferred_core);
-
-        Scheduler::remove_thread(thread);
-
-        if(!thread->f_watched) thread->schedule_finalization();
-    }
-
-    f_exitCode = exitCode;
+    // Reduce the memory footprint of this process
+    bool suicide = minimize();
 
     if(suicide) {
-        if(!thisThread->f_watched)
-            thisThread->schedule_finalization();
-        else
-            thisThread->f_state = DYING;
+        auto* thisThread = Thread::current();
+        thisThread->change_state(DEAD);
 
         // We should not return from an exit syscall.
         f_lock.unlock();
@@ -66,21 +52,120 @@ void Process::die(u32_t exitCode) {
     }
 }
 
-fd_t Process::add_stream(Stream* stream) {
-    f_lock.lock();
-    fd_t fd = f_next_fd++;
-    f_streams.insert({ fd, stream });
+bool Process::minimize() {
+    auto* thisThread = Thread::current();
 
-    f_lock.unlock();
-    return fd;
+    bool suicide = false;
+
+    for(auto* thread : f_threads) {
+        if(thread == thisThread) {
+            suicide = true;
+            continue;
+        }
+
+        if(thread->f_state == RUNNING) {
+            thread->f_state = DYING;
+            send_task_switch_irq(thread->f_preferred_core);
+        }
+
+        Scheduler::remove_thread(thread);
+        thread->change_state(DEAD);
+    }
+
+    // Get rid of memory mappings
+    f_pager->lock();
+    for(auto [key, entry] : f_memorymap) {
+        if(entry->type == MemoryEntry::FILE_MEMORY && entry->shared) {
+            // Flush to file
+            auto resolved_mapping = (MemoryFilePage*)entry->page;
+            // Transfer the dirty flag
+            auto flags = f_pager->getFlags(key);
+            resolved_mapping->f_dirty = flags.dirty;
+            // Sync a file mapping
+            resolved_mapping->f_file->filesystem()->sync_mapping(*resolved_mapping);
+        }
+    }
+    f_pager->unlock();
+    f_memorymap.clear();
+
+    if(suicide) {
+        if(main_thread() != thisThread) {
+            // Swap the PIDs
+            Thread* mainThread = main_thread();
+            Thread::s_threads.erase(mainThread->f_pid);
+            Thread::s_threads.erase(thisThread->f_pid);
+            
+            pid_t temp = thisThread->f_pid;
+            thisThread->f_pid = mainThread->f_pid;
+            mainThread->f_pid = temp;
+        
+            Thread::s_threads.insert({ mainThread->f_pid, mainThread });
+            Thread::s_threads.insert({ thisThread->f_pid, thisThread });
+        }
+
+        // Keep only this thread for a PID reference
+        for(auto* thread : f_threads) {
+            if(thread != thisThread)
+                delete thread;
+        }
+
+        f_threads.clear();
+        f_threads.push_back(thisThread);
+
+        // We can delete the pager but we need to activate the kernel pager
+        enter_critical();
+        Pager::kernel().enable();
+        delete f_pager;
+        f_pager = &Pager::kernel();
+        leave_critical();
+    } else {
+        // Keep only the main thread for a PID reference
+        for(auto* thread : f_threads) {
+            if(thread != main_thread())
+                delete thread;
+        }
+
+        auto* main = main_thread();
+        f_threads.clear();
+        f_threads.push_back(main);
+
+        // If this is not a suicide we can delete the pager
+        delete f_pager;
+    }
+
+    // Delete streams
+    f_streams.clear();
+
+    return suicide;
+}
+
+fd_t Process::add_stream(Stream* stream, fd_t hint) {
+    Locker lock(f_lock);
+
+    if(hint != -1) {
+        auto current = f_streams.at(hint);
+        if(current)
+            f_streams.erase(hint);
+        f_streams.insert({ hint, stream });
+        return hint;
+    } else {
+        fd_t fd = f_next_fd;
+        while(f_streams.find(fd) != f_streams.end())
+            ++fd;
+
+        f_streams.insert({ fd, stream });
+        if(fd == f_next_fd)
+            f_next_fd = fd + 1;
+        return fd;
+    }
 }
 
 void Process::close_stream(fd_t fd) {
-    f_lock.lock();
+    Locker lock(f_lock);
 
     f_streams.erase(fd);
-
-    f_lock.unlock();
+    if(fd < f_next_fd)
+        f_next_fd = fd;
 }
 
 Stream* Process::get_stream(fd_t fd) {
@@ -91,24 +176,40 @@ Stream* Process::get_stream(fd_t fd) {
     f_lock.unlock();
 
     if(!val) return 0;
-    return *val;
+    return &val->base();
+}
+
+ValueOrError<fd_t> Process::dup_stream(fd_t oldFd, fd_t newFd) {
+    Locker lock(f_lock);
+
+    auto val = f_streams.at(oldFd);
+    if(!val)
+        return EBADF;
+
+    if(newFd != -1) {
+        if(f_streams.at(newFd))
+            f_streams.erase(newFd);
+    } else {
+        newFd = f_next_fd;
+        while(f_streams.find(newFd) != f_streams.end())
+            ++newFd;
+    }
+
+    f_streams.insert({ newFd, *val });
+    return newFd;
 }
 
 void Process::set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry) {
+    Locker lock(f_lock);
+
     auto currentEntryOpt = f_memorymap.at(addr);
-    if(currentEntryOpt) {
-        auto currentEntry = *currentEntryOpt;
-        if(currentEntry->type == MemoryEntry::MEMORY) {
-            f_pager->lock();
-            f_pager->unmap(addr, 1);
-            f_pager->unlock();
-        }
-    }
-    f_memorymap[addr] = entry;
+    if(currentEntryOpt)
+        unmap_pages(addr, 1);
+    f_memorymap.insert({ addr, entry });
 }
 
 void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared) {
-    f_lock.lock();
+    Locker lock(f_lock);
     f_pager->lock();
 
     page.ref();
@@ -122,11 +223,12 @@ void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared) {
     f_pager->unlock();
     set_page_mapping(addr, ptr);
 
-    f_lock.unlock();
+    if(f_first_free == addr)
+        f_first_free = addr + 4096;
 }
 
 void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
-    f_lock.lock();
+    Locker lock(f_lock);
 
     if((flags & MMAP_FLAG_SHARED) && prot != 0) {
         // Shared mapping
@@ -150,11 +252,12 @@ void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
             set_page_mapping(addr + (i << 12), ptr);
     }
 
-    f_lock.unlock();
+    if(f_first_free == addr)
+        f_first_free = addr + (length << 12);
 }
 
 void Process::null_pages(virtaddr_t addr, size_t length) {
-    f_lock.lock();
+    Locker lock(f_lock);
 
     auto ptr = std::make_shared<MemoryEntry>();
 
@@ -165,11 +268,12 @@ void Process::null_pages(virtaddr_t addr, size_t length) {
     for(size_t i = 0; i < length; ++i)
         set_page_mapping(addr + (i << 12), ptr);
 
-    f_lock.unlock();
+    if(f_first_free == addr)
+        f_first_free = addr + (length << 12);
 }
 
 void Process::file_pages(virtaddr_t addr, size_t length, FilePage* page) {
-    f_lock.lock();
+    Locker lock(f_lock);
 
     auto ptr = std::make_shared<MemoryEntry>();
     ptr->type = MemoryEntry::FILE;
@@ -179,7 +283,8 @@ void Process::file_pages(virtaddr_t addr, size_t length, FilePage* page) {
     for(size_t i = 0; i < length; ++i)
         set_page_mapping(addr + (i << 12), ptr);
 
-    f_lock.unlock();
+    if(f_first_free == addr)
+        f_first_free = addr + (length << 12);
 }
 
 bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
@@ -207,7 +312,7 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
                     f_pager->lock();
                     auto vaddr = f_pager->kmap(new_page.addr(), 1, PageFlags(1, 1, 0, 0, 1, 0));
 
-                    memcpy((void*)vaddr, (void*)(fault_address & !0xFFF), 4096);
+                    memcpy((void*)vaddr, (void*)(fault_address & ~0xFFF), 4096);
 
                     // Remap our new page
                     new_page.ref();
@@ -253,11 +358,8 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
             auto page = ((UnresolvedPage*)mapping->page)->resolve(fault_address);
             if(!page) return false;
 
-            /// TODO: IMPLEMENT A RECURSIVE LOCK
-            f_lock.unlock();
             map_page(fault_address & ~0xFFF, page, mapping->shared);
             memset((void*)(fault_address & ~0xFFF), 0, 4096);
-            f_lock.lock();
             return true;
         }
         case MemoryEntry::FILE: {
@@ -384,8 +486,8 @@ virtaddr_t Process::get_free_addr(virtaddr_t hint, size_t length) {
 }
 
 void Process::unmap_pages(virtaddr_t addr, size_t length) {
-    f_lock.lock();
-    f_pager->lock();
+    Locker lock(f_lock);
+    Locker pager_lock(*f_pager);
 
     for(size_t i = 0; i < length; ++i) {
         virtaddr_t key = addr + (i << 12);
@@ -396,6 +498,7 @@ void Process::unmap_pages(virtaddr_t addr, size_t length) {
                 case MemoryEntry::MEMORY: {
                     // Unmap a memory mapping
                     f_pager->unmap(key, 1);
+                    ((PhysicalPage*)entry->page)->unref();
                     break;
                 } case MemoryEntry::FILE_MEMORY: {
                     // Unmap a file memory mapping
@@ -412,7 +515,4 @@ void Process::unmap_pages(virtaddr_t addr, size_t length) {
             f_memorymap.erase(key);
         }
     }
-
-    f_pager->unlock();
-    f_lock.unlock();
 }

@@ -56,7 +56,7 @@ extern "C" void send_ipi(u8_t vector, u8_t mode, u8_t destination) {
     write_lapic(0x300, vector | ((mode & 7) << 8) | (1 << 14));
     while(read_lapic(0x300) & (1 << 12)) {
         u32_t err = read_lapic(0x280);
-        if(err != 0) kprintf("%x8\n", err);
+        if(err != 0) dmesg("%08x\n", err);
     }
 }
 
@@ -108,7 +108,7 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                 u8_t acpi_id = record->rest[0];
                 u8_t apic_id = record->rest[1];
                 u8_t flags = record->rest[2];
-                kprintf("[%T] (Kernel) LAPIC ACPI_ID=%x2 APIC_ID=%x2 FLAGS=%x2\n", acpi_id, apic_id, flags);
+                dmesg("(Kernel) LAPIC ACPI_ID=%02x APIC_ID=%02x FLAGS=%02x", acpi_id, apic_id, flags);
                 if(flags & 0x03) {
                     // This CPU can be enabled so we put it into our core map.
                     core_map.insert({ apic_id, static_cast<u32_t>(core_map.size()) });
@@ -119,7 +119,7 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                 u8_t apic_id = record->rest[0];
                 u32_t apic_addr = ((u32_t*)(record->rest + 2))[0];
                 u32_t global_system_interrupt_base = ((u32_t*)(record->rest + 2))[1];
-                kprintf("[%T] (Kernel) I/O APIC ID=%x2 ADDR=%x8 INT_BASE=%x8\n", apic_id, apic_addr, global_system_interrupt_base);
+                dmesg("(Kernel) I/O APIC ID=%02x ADDR=%08x INT_BASE=%08x", apic_id, apic_addr, global_system_interrupt_base);
 
                 // This should probably be a recursive lock or something.
                 pager.unlock();
@@ -132,7 +132,7 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                 u8_t interrupt = record->rest[1];
                 u32_t gsi = *((u32_t*)(record->rest + 2));
                 u16_t flags = *((u16_t*)(record->rest + 6));
-                kprintf("[%T] (Kernel) Int Source Override BUS=%x2 INT=%x2 GLOBAL=%x8 FLAGS=%x4\n", bus, interrupt, gsi, flags);
+                dmesg("(Kernel) Int Source Override BUS=%02x INT=%02x GLOBAL=%08x FLAGS=%04x", bus, interrupt, gsi, flags);
 
                 pager.unlock();
                 add_ioapic_intentry(interrupt + 0x20, gsi, flags & 8, flags & 2, 0);
@@ -143,7 +143,7 @@ TEXT_FREE_AFTER_INIT void parse_madt() {
                 u8_t nmi = record->rest[0];
                 u16_t flags = *((u16_t*)(record->rest + 2));
                 u32_t gsi = *((u32_t*)record->rest + 4);
-                kprintf("[%T] (Kernel) NMI Source Override NMI=%x2 GLOBAL=%x8 FLAGS=%x4\n", nmi, gsi, flags);
+                dmesg("(Kernel) NMI Source Override NMI=%02x GLOBAL=%08x FLAGS=%04x", nmi, gsi, flags);
 
                 break;
             }
@@ -356,13 +356,13 @@ TEXT_FREE_AFTER_INIT void measure_lapic_timer() {
     crude_delay_1msec();
     lapic_timer_ticks = 0xFFFFFFFF - read_lapic(0x390);
     write_lapic(0x380, 0);
-    kprintf("[%T] (Kernel) 1 ms took %d Local APIC timer ticks\n", lapic_timer_ticks);
+    dmesg("(Kernel) 1 ms took %d Local APIC timer ticks", lapic_timer_ticks);
 }
 
 extern void init_time();
 
 extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
-    kprintf("[%T] (Kernel) Initializing CPU\n");
+    dmesg("(Kernel) Initializing CPU");
 
     parse_madt();
 
@@ -397,7 +397,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_cpu() {
     for(auto item : core_map) {
         *((u64_t*)0x2000) = 0;
         if(item.value != 0) {
-            kprintf("[%T] (Kernel) Starting core %d...\n", item.value);
+            dmesg("(Kernel) Starting core %d...", item.value);
             send_ipi(0x00, 0x5, item.key);
             for(int i = 0; i < 10; ++i) crude_delay_1msec();
 

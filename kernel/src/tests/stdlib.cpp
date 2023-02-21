@@ -115,9 +115,9 @@ bool kernel::tests::stdlib_test() {
 
     { // ValueOrError test
         ValueOrError<char> value = 'c';
-        ValueOrError<char> value2 = ERR_UNIMPLEMENTED;
+        ValueOrError<char> value2 = ENOTSUP;
 
-        TEST(value && !value2 && *value == 'c' && value2.errno() == ERR_UNIMPLEMENTED, "(SL7.1) ValueOrError test failed");
+        TEST(value && !value2 && *value == 'c' && value2.errno() == ENOTSUP, "(SL7.1) ValueOrError test failed");
     }
 
     { // Optional test

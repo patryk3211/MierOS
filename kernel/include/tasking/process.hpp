@@ -1,7 +1,7 @@
 #pragma once
 
 #include <list.hpp>
-#include <streams/stream.hpp>
+#include <streams/streamwrapper.hpp>
 #include <string.hpp>
 #include <tasking/thread.hpp>
 #include <unordered_map.hpp>
@@ -16,12 +16,13 @@ namespace kernel {
 
         Pager* f_pager;
 
-        u32_t f_exitCode;
+        u8_t f_exitStatus;
+        bool f_signalled;
 
         std::String<> f_workingDirectory;
 
         fd_t f_next_fd;
-        std::UnorderedMap<fd_t, Stream*> f_streams;
+        std::UnorderedMap<fd_t, StreamWrapper> f_streams;
 
         struct MemoryEntry {
             enum Type {
@@ -34,6 +35,7 @@ namespace kernel {
         };
 
         virtaddr_t f_first_free;
+        /// TODO: [07.02.2023] Change from UnorderedMap to RangeMap (to be implemented)
         std::UnorderedMap<virtaddr_t, std::SharedPtr<MemoryEntry>> f_memorymap;
 
         RecursiveMutex f_lock;
@@ -42,6 +44,7 @@ namespace kernel {
 
         void set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry);
 
+        bool minimize();
     public:
         Process(virtaddr_t entry_point);
         ~Process();
@@ -51,11 +54,17 @@ namespace kernel {
         Thread* main_thread() { return f_threads.front(); }
         Pager& pager() { return *f_pager; }
 
+        pid_t pid();
+
         std::String<>& cwd() { return f_workingDirectory; }
 
-        fd_t add_stream(Stream* stream);
+        bool signalled() { return f_signalled; }
+        u8_t exit_status() { return f_exitStatus; }
+
+        fd_t add_stream(Stream* stream, fd_t hint = -1);
         void close_stream(fd_t fd);
         Stream* get_stream(fd_t fd);
+        ValueOrError<fd_t> dup_stream(fd_t oldFd, fd_t newFd);
 
         Process* fork();
         ValueOrError<void> execve(const VNodePtr& file, char* argv[], char* envp[]);

@@ -20,18 +20,31 @@ ValueOrError<void> FileStream::open(int mode) {
     return val;
 }
 
-size_t FileStream::read(void* buffer, size_t length) {
-    auto val = f_file->filesystem()->read(this, buffer, length);
-    if(val)
-        return *val;
-    else
-        return -1;
+ValueOrError<size_t> FileStream::read(void* buffer, size_t length) {
+    if(!f_open)
+        return EBADF;
+    return f_file->filesystem()->read(this, buffer, length);
 }
 
-size_t FileStream::seek(size_t position, int mode) {
-    auto val = f_file->filesystem()->seek(this, position, mode);
-    if(val)
-        return *val;
-    else
-        return -1;
+ValueOrError<size_t> FileStream::write(const void *buffer, size_t length) {
+    if(!f_open)
+        return EBADF;
+    return f_file->filesystem()->write(this, buffer, length);
 }
+
+ValueOrError<size_t> FileStream::seek(size_t position, int mode) {
+    if(!f_open)
+        return EBADF;
+    return f_file->filesystem()->seek(this, position, mode);
+}
+
+ValueOrError<int> FileStream::ioctl(unsigned long request, void* arg) {
+    if(!f_open)
+        return EBADF;
+    return f_file->filesystem()->ioctl(this, request, arg);
+}
+
+bool FileStream::is_open() {
+    return f_open;
+}
+

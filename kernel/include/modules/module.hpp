@@ -1,81 +1,86 @@
 #pragma once
 
-#include <elf.h>
-#include <locking/spinlock.hpp>
-#include <optional.hpp>
-#include <range_list.hpp>
+#include <types.h>
+#include <unordered_map.hpp>
 #include <string.hpp>
-#include <vector.hpp>
+#include <list.hpp>
+#include <elf.h>
+#include <errno.h>
 
 namespace kernel {
     class Module {
-    public:
         struct Section {
-            std::String<> name;
-            u64_t address;
-            u64_t size;
-            u32_t type;
-            u32_t flags;
-            u32_t entry_size;
+            std::String<> f_name;
+            void* f_ptr;
+            size_t f_size;
+            u64_t f_flags;
+            u32_t f_type;
+            u64_t f_entry_size;
         };
 
-    private:
-        struct ThreadModuleSetter {
-            Module* old_mod;
-            ThreadModuleSetter(Module* mod);
-            ~ThreadModuleSetter();
-        };
+        u16_t f_major_num;
 
-        u16_t major_num;
+        virtaddr_t f_base_addr;
+        size_t f_page_count;
 
-        std::Vector<Section> sections;
-        std::RangeList<virtaddr_t> allocated_ranges;
+        std::UnorderedMap<std::String<>, Section> f_section_map;
 
-        virtaddr_t address_base;
+        size_t f_symbol_count;
+        Elf64_Symbol* f_symbols;
+        char* f_symbol_names;
 
-        Section* symbol_table;
-        Section* symbol_names;
+        std::String<> f_name;
 
-        char* init_signals;
-        u16_t f_flags;
-        bool initialized;
+        // List of major numbers of dependency modules
+        std::List<u16_t> f_dependencies;
 
-        SpinLock locker;
+        bool f_loaded;
+        bool f_initialized;
 
     public:
-        Module(void* elf_file, u16_t major_num);
+        Module(u16_t major);
         ~Module();
 
-        int init(void* init_struct);
-        bool is_appropriate(const char* init_signal);
+        ValueOrError<void> load(void* file);
+        bool is_loaded();
 
-        void lock() { locker.lock(); }
-        void unlock() { locker.unlock(); }
+        u16_t major();
 
-        u16_t flags() { return f_flags; }
+        int preinit();
+        template<typename... Args> int init(Args... args) {
+            if(f_initialized)
+                return 0;
+            f_initialized = true;
+            int status = preinit();
+            if(status)
+                return status;
+            return run_function<int>("init", args...);
+        }
+        bool is_initialized();
 
-        virtaddr_t base() { return address_base; }
-
-        template<typename Ret, typename... Args> Ret run_function(const char* func_name, Args... args) {
-            ThreadModuleSetter setter(this);
-            return ((Ret(*)(Args...))(address_base + get_symbol(func_name)->addr))(args...);
+        template<typename Ret, typename... Args> Ret run_function(const char* name, Args... args) {
+            void* sym = get_symbol_ptr(name);
+            return ((Ret(*)(Args...))sym)(args...);
         }
 
-        virtaddr_t get_symbol_addr(const char* name) {
-            return address_base + get_symbol(name)->addr;
-        }
+        Elf64_Symbol* get_symbol(size_t index);
+        Elf64_Symbol* get_symbol(const char* name);
 
-        u16_t major() { return major_num; }
+        void* get_symbol_ptr(const char* name);
+
+        const std::String<>& name() const;
 
     private:
-        void link();
-        void run_ctors();
-        void run_dtors();
+        int link();
 
-        std::OptionalRef<Section> get_section(const char* name);
-        std::OptionalRef<Elf64_Symbol> get_symbol(const char* name);
-        std::OptionalRef<Elf64_Symbol> get_symbol(size_t index);
+        int load_symbols();
 
-        friend u16_t add_preloaded_module(void* file);
+        int parse_module_header();
+        int parse_module_header_v1(void* headerPtr, size_t size);
+
+        void print_error(int errCode);
+
+        void constructors();
+        void destructors();
     };
 }

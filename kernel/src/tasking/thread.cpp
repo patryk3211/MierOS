@@ -1,5 +1,6 @@
 #include <arch/cpu.h>
 #include <arch/interrupts.h>
+#include <assert.h>
 #include <locking/locker.hpp>
 #include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
@@ -22,7 +23,7 @@ pid_t Thread::generate_pid() {
     }
 }
 
-Thread::Thread(u64_t ip, bool isKernel, Process& process)
+Thread::Thread(u64_t ip, bool isKernel, Process* process)
     : f_kernel_stack(KERNEL_STACK_SIZE)
     , f_fpu_state(512)
     , f_parent(process)
@@ -31,7 +32,7 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process)
     f_ksp = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 
     memset(f_ksp, 0, sizeof(CPUState));
-    f_ksp->cr3 = process.pager().cr3();
+    f_ksp->cr3 = process->pager().cr3();
     f_ksp->rip = ip;
     f_ksp->rflags = 0x202;
 
@@ -42,33 +43,37 @@ Thread::Thread(u64_t ip, bool isKernel, Process& process)
 
     f_current_module = 0;
 
-    f_watched = false;
-
     f_next = 0;
     f_state = RUNNABLE;
+
+    s_threads.insert({ f_pid, this });
 }
 
-void Thread::sleep(std::Function<bool()>& until) {
-    f_blockers.push_back(until);
+Thread::~Thread() {
+    ASSERT_F(f_state == DEAD, "When deleting a thread it should be dead");
+
+    s_threads.erase(f_pid);
+}
+
+void Thread::sleep(bool reschedule) {
+    auto prevState = f_state;
+
     f_state = SLEEPING;
-    if(Thread::current() == this) {
-        force_task_switch();
+    Scheduler::remove_thread(this);
+    if(reschedule) {
+        if(Thread::current() == this) {
+            force_task_switch();
+        } else if(prevState == RUNNING) {
+            send_task_switch_irq(f_preferred_core);
+        }
     }
 }
 
-bool Thread::try_wakeup() {
-    auto iter = f_blockers.begin();
-    while(iter != f_blockers.end()) {
-        if((*iter)()) {
-            iter = f_blockers.erase(iter);
-        } else
-            ++iter;
-    }
-    if(f_blockers.empty()) {
-        f_state = RUNNABLE;
-        return true;
-    } else
-        return false;
+void Thread::wakeup() {
+    ASSERT_F(f_state == SLEEPING, "Cannot wake up a thread that's not sleeping");
+    f_state = RUNNABLE;
+    
+    Scheduler::schedule_thread(this);
 }
 
 Thread* Thread::current() {
@@ -76,10 +81,62 @@ Thread* Thread::current() {
     else return Scheduler::scheduler(current_core()).thread();
 }
 
-void Thread::schedule_finalization() {
-    s_finalizable_threads.push_back(f_pid);
-    f_state = DEAD;
-    // At this point, if this thread is the current thread, it can get safely put out of the scheduler list.
+Thread* Thread::get(pid_t tid) {
+    auto thread = s_threads.at(tid);
+    return thread ? *thread : 0;
+}
+
+bool Thread::is_main() {
+    return f_parent->main_thread() == this;
+}
+
+ThreadState Thread::get_state(bool sleep) {
+    auto translateState = [](ThreadState inputState) {
+        switch(inputState) {
+            case RUNNING:
+            case RUNNABLE:
+            case SLEEPING:
+                // This thread is nice and healthy. It is alive.
+                return RUNNING;
+            case DYING:
+            case DEAD:
+                // This thread is dead, it will be cleaned up before returning
+                // from the wait pid syscall.
+                return DEAD;
+        }
+    };
+
+    auto state = translateState(f_state);
+    if(state == RUNNING && sleep) {
+        f_state_watchers.sleep();
+        state = translateState(f_state);
+    }
+
+    return state;
+}
+
+void Thread::change_state(ThreadState newState) {
+    // We can't simply go DEAD (or any other state), we first need to make sure
+    // that all watchers have been informed of the state change before the
+    // scheduler takes us out of the queue. To achieve this we will treat this
+    // code as a critical sections.
+    enter_critical();
+    f_state = newState;
+
+    // Thanks to what we do in the SleepQueue::sleep method we don't have to
+    // worry about deadlocks in single processor systems.
+    f_state_watchers.wakeup();
+    leave_critical();
+}
+
+void Thread::minimize() {
+    ASSERT_F(f_state == DEAD, "Cannot minimize a living process");
+
+    f_kernel_stack.clear();
+    f_fpu_state.clear();
+
+    f_ksp = 0;
+    f_syscall_state = 0;
 }
 
 void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
@@ -89,7 +146,7 @@ void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
 
     // Some of this stuff is architecture specific
     // and should be moved to the appropriate place
-    f_syscall_state->cr3 = f_parent.pager().cr3();
+    f_syscall_state->cr3 = f_parent->pager().cr3();
     f_syscall_state->rip = ip;
     f_syscall_state->rflags = 0x202;
     f_syscall_state->rsp = sp;
@@ -124,3 +181,4 @@ void Thread::load_fpu_state() {
     auto* memory = f_fpu_state.ptr<uint8_t>();
     asm volatile("fxrstor64 %0" :: "m"(*memory));
 }
+

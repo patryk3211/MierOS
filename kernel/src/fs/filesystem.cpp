@@ -4,39 +4,39 @@
 using namespace kernel;
 
 ValueOrError<void> Filesystem::umount() {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
-ValueOrError<std::SharedPtr<VNode>> Filesystem::get_file(std::SharedPtr<VNode>, const char*, FilesystemFlags) {
-    return ERR_UNIMPLEMENTED;
+ValueOrError<VNodePtr> Filesystem::get_file(VNodePtr, const char*, FilesystemFlags) {
+    return ENOTSUP;
 }
 
-ValueOrError<std::List<std::SharedPtr<VNode>>> Filesystem::get_files(std::SharedPtr<VNode>, const char*, FilesystemFlags) {
-    return ERR_UNIMPLEMENTED;
+ValueOrError<std::List<VNodePtr>> Filesystem::get_files(VNodePtr, FilesystemFlags) {
+    return ENOTSUP;
 }
 
-ValueOrError<VNodePtr> Filesystem::resolve_link(VNodePtr) {
-    return ERR_UNIMPLEMENTED;
+ValueOrError<VNodePtr> Filesystem::resolve_link(VNodePtr, int) {
+    return ENOTSUP;
 }
 
 ValueOrError<void> Filesystem::open(FileStream*, int) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<void> Filesystem::close(FileStream*) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<size_t> Filesystem::read(FileStream*, void*, size_t) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<size_t> Filesystem::write(FileStream*, const void*, size_t) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 ValueOrError<size_t> Filesystem::seek(FileStream*, size_t, int) {
-    return ERR_UNIMPLEMENTED;
+    return ENOTSUP;
 }
 
 PhysicalPage Filesystem::resolve_mapping(const FilePage&, virtaddr_t) {
@@ -46,3 +46,20 @@ PhysicalPage Filesystem::resolve_mapping(const FilePage&, virtaddr_t) {
 void Filesystem::sync_mapping(const MemoryFilePage&) {
 
 }
+
+ValueOrError<int> Filesystem::ioctl(FileStream*, u64_t, void*) {
+    return ENOTSUP;
+}
+
+// ValueOrError<VNodePtr> Filesystem::link(VNodePtr, const char*, VNodePtr, bool) {
+//     return ENOTSUP;
+// }
+
+ValueOrError<VNodePtr> Filesystem::mkdir(VNodePtr, const char*) {
+    return ENOTSUP;
+}
+
+ValueOrError<VNodePtr> Filesystem::symlink(VNodePtr, const char*, const char*) {
+    return ENOTSUP;
+}
+

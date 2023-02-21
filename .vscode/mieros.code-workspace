@@ -10,6 +10,14 @@
 			"**/cross/**": true,
 			"**/limine/**": true
 		},
-		"cmake.generator": "Unix Makefiles"
+		"cmake.generator": "Unix Makefiles",
+		"files.associations": {
+			"memory_resource": "cpp",
+			"sstream": "cpp",
+			"regex": "cpp",
+			"tuple": "cpp",
+			"*.ipp": "cpp",
+			"*.tcc": "cpp"
+		}
 	}
 }

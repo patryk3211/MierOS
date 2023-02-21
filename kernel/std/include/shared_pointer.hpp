@@ -95,10 +95,10 @@ namespace std {
     };
 
     template<typename C, typename... Args> SharedPtr<C> make_shared(Args... args) {
-        auto ptr = SharedPtr<C>();
+        auto ptr = SharedPtr<C>(nullptr);
         ptr.data = new typename SharedPtr<C>::DataStorage();
-        new(ptr.data->storage) C(args...);
         ptr.data->ref_count.store(1);
+        new(ptr.data->storage) C(args...);
         return ptr;
     }
 }

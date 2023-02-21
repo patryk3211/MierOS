@@ -3,6 +3,7 @@
 #include <dmesg.h>
 #include <memory/liballoc.h>
 #include <memory/physical.h>
+#include <memory/virtual.hpp>
 #include <stdlib.h>
 
 #include <locking/locker.hpp>
@@ -39,10 +40,11 @@ NO_EXPORT std::RangeList<physaddr_t>* freeable_mem;
 extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) {
     ASSERT_F(memory_map != 0, "\033[1;37mmemory_map\033[0m is null");
     // Output the memory map on serial and count how much 4 GB pages there are.
-    kprintf("[%T] (Kernel) Memory Map:\n[%T] (Kernel) Base             Length           Type    \n");
+    dmesg("(Kernel) Memory Map:");
+    dmesg("(Kernel) Base             Length           Type    ");
     physaddr_t max_address = 0;
     for(u64_t i = 0; i < memory_map->entry_count; ++i) {
-        kprintf("[%T] (Kernel) %x16 %x16 %x8\n", memory_map->entries[i].base, memory_map->entries[i].length, memory_map->entries[i].type);
+        dmesg("(Kernel) %016x %016x %08x", memory_map->entries[i].base, memory_map->entries[i].length, memory_map->entries[i].type);
         if(max_address < memory_map->entries[i].base && memory_map->entries[i].type != STIVALE2_MEMMAP_TYPE_RESERVED) max_address = memory_map->entries[i].base;
     }
     u32_t gb_page_count = (max_address >> 32) + ((max_address & 0xFFFFFFFF) == 0 ? 0 : 1);
@@ -76,9 +78,10 @@ extern "C" TEXT_FREE_AFTER_INIT void init_pmm(stivale2_stag_memmap* memory_map) 
 
     // Mark the first MiB as used since it could be utilized in the startup of AP cores.
     for(u64_t page = 0; page < 1024 * 1024; page += 4096) set_page_status(page, 1);
+    /// This is very much incorrect since there are some peripherals in the first MiB
     freeable_mem->add(0, 1024 * 1024);
 
-    kprintf("[%T] (Kernel) Found %d KiB of free memory\n", free_mem / 1024);
+    dmesg("(Kernel) Found %d KiB of free memory", free_mem / 1024);
 
     pmm_lock = SpinLock();
 }
@@ -94,7 +97,32 @@ extern "C" void pmm_release_bootloader_resources() {
         pfree(iter->start, (iter->end - iter->start) >> 12);
     }
     delete freeable_mem;
-    kprintf("[%T] (Kernel) Freed %d KiB of bootloader memory\n", freed_mem / 1024);
+    dmesg("(Kernel) Freed %d KiB of bootloader memory", freed_mem / 1024);
+}
+
+extern u8_t _init_text_start;
+extern u8_t _init_text_end;
+extern u8_t _init_data_start;
+extern u8_t _init_data_end;
+
+extern "C" void pmm_release_init_resources() {
+    size_t text_length = &_init_text_end - &_init_text_start;
+    size_t page_text_length = (text_length >> 12) + ((text_length & 0xFFF) == 0 ? 0 : 1);
+
+    size_t data_length = &_init_data_end - &_init_data_start;
+    size_t page_data_length = (data_length >> 12) + ((data_length & 0xFFF) == 0 ? 0 : 1);
+
+    auto& pager = Pager::active();
+    Locker lock(pager);
+
+    auto phys = pager.unmap((virtaddr_t)&_init_text_start, page_text_length);
+    // I think the bootloader guarantees us a linear physical memory location
+    pfree(phys, page_text_length);
+
+    phys = pager.unmap((virtaddr_t)&_init_data_start, page_data_length);
+    pfree(phys, page_data_length);
+
+    dmesg("(Kernel) Freed %d KiB of init resources", (page_text_length + page_data_length) * 4);
 }
 
 extern "C" physaddr_t palloc(size_t page_count) {

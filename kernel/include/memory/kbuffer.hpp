@@ -21,6 +21,7 @@ namespace kernel {
         KBuffer& operator=(const KBuffer& other);
 
         void resize(size_t new_size);
+        void clear();
 
         template<typename T = void> T* ptr() { return static_cast<T*>(raw_ptr); }
         template<typename T = void> const T* ptr() const { return static_cast<const T*>(raw_ptr); }

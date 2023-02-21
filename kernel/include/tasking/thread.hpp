@@ -9,6 +9,7 @@
 #include <tasking/cpu_state.h>
 #include <types.h>
 #include <unordered_map.hpp>
+#include <tasking/sleep_queue.hpp>
 
 namespace kernel {
     enum ThreadState {
@@ -18,7 +19,7 @@ namespace kernel {
         RUNNABLE,
         // This thread is waiting for something to happen
         SLEEPING,
-        // This thread is in the process of being deleted, a different task may be scheduled to check it's state
+        // This thread is in the process of being deleted
         DYING,
         // This thread has been deleted but not finalized yet
         DEAD
@@ -33,18 +34,17 @@ namespace kernel {
 
         KBuffer f_kernel_stack;
         KBuffer f_fpu_state;
+
         // Kernel Stack Pointer
         CPUState* f_ksp;
-
         CPUState* f_syscall_state;
 
         SpinLock f_lock;
 
-        std::List<std::Function<bool()>> f_blockers;
-
         ThreadState f_state;
+        SleepQueue f_state_watchers;
 
-        Process& f_parent;
+        Process* f_parent;
 
         pid_t f_pid;
 
@@ -55,31 +55,30 @@ namespace kernel {
 
         int f_preferred_core;
 
-        bool f_watched;
-
-        Thread(u64_t ip, bool isKernel, Process& process);
+        Thread(u64_t ip, bool isKernel, Process* process);
         ~Thread();
 
         /**
-         * @brief Puts the thread into SLEEPING state.
+         * @brief Put the thread to sleep.
          *
-         * @param until Wakes the thread up when true is returned.
-         **/
-        void sleep(std::Function<bool()>& until);
+         * This function will transition a thread into the SLEEPING state.
+         * If this thread is the current thread it will force a task switch and the
+         * thread will not execute until it is put back into the running queue.
+         */
+        void sleep(bool schedule = true);
 
         /**
-         * @brief Transitions the thread back into RUNNABLE state.
+         * @brief Wake thread up from sleep.
          *
-         * @return true - The thread is now RUNNABLE,
-         *         false - The thread is still SLEEPING
+         * This function will transition a thread into the RUNNABLE state
+         * from the SLEEPING state. It will also put it back on the scheduler queue.
          */
-        bool try_wakeup();
-
-        void schedule_finalization();
+        void wakeup();
 
         pid_t pid() { return f_pid; }
 
-        Process& parent() { return f_parent; }
+        Process& parent() { return *f_parent; }
+        bool is_main();
 
         void make_ks(virtaddr_t ip, virtaddr_t sp);
 
@@ -89,7 +88,13 @@ namespace kernel {
         void save_fpu_state();
         void load_fpu_state();
 
+        void change_state(ThreadState newState);
+        ThreadState get_state(bool sleep);
+
+        void minimize();
+
         static Thread* current();
+        static Thread* get(pid_t tid);
 
         friend class Scheduler;
         friend class Process;

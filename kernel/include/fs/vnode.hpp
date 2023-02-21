@@ -22,9 +22,10 @@ namespace kernel {
         enum Type {
             DIRECTORY = 0,
             FILE = 1,
-            DEVICE = 2,
+            BLOCK_DEVICE = 2,
             LINK = 3,
-            MOUNT = 4
+            MOUNT = 4,
+            CHARACTER_DEVICE = 5,
         };
 
         u16_t f_permissions;
@@ -63,6 +64,10 @@ namespace kernel {
         Type type() { return f_type; }
 
         const std::String<>& name() const { return f_name; }
+
+        void add_child(VNodePtr child);
+
+        void mount(VNodePtr location);
     };
 
     typedef std::SharedPtr<VNode> VNodePtr;

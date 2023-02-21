@@ -22,13 +22,9 @@ PhysicalPage::~PhysicalPage() {
             data->f_addr = 0;
         }
         delete data;
+        // Just so we don't accidentally use after free
+        data = 0;
     }
-
-    /*if(data->f_ref_count.load() == 0 && data->f_addr != 0) {
-        pfree(data->f_addr, 1);
-        data->f_addr = 0;
-    }
-    if(data->f_obj_ref_count.fetch_sub(1) == 1) delete data;*/
 }
 
 PhysicalPage::PhysicalPage(std::nullptr_t) {

@@ -3,6 +3,7 @@
 #include <defines.h>
 #include <dmesg.h>
 #include <types.h>
+#include <printf.h>
 
 #define IO_PORT 0x3F8
 
@@ -23,20 +24,35 @@ TEXT_FREE_AFTER_INIT void init_serial() {
     outb(IO_PORT + 4, 0b00001011);
 }
 
-void write_serial(char c) {
+void _putchar(char c) {
     // Do CRLF because serial
-    if(c == '\n') write_serial('\r');
+    if(c == '\n') _putchar('\r');
 
     while(!(inb(IO_PORT + 5) & 0x20))
         ;
     outb(IO_PORT, c);
 }
 
-void raw_dmesg(const char* msg) {
-    while(*msg != 0) write_serial(*msg++);
+void dmesg(const char* format, ...) {
+    // Timestamp
+    time_t uptime = get_uptime();
+    time_t seconds = uptime / 1000;
+    time_t millis = uptime % 1000;
+    kprintf("[%d.%03d] ", seconds, millis);
+
+    va_list list;
+    va_start(list, format);
+    vprintf(format, list);
+    va_end(list);
+
+    _putchar('\n');
 }
 
-void dmesg(const char* msg) {
+/* void raw_dmesg(const char* msg) {
+    while(*msg != 0) write_serial(*msg++);
+} */
+
+/* void dmesg(const char* msg) {
     kprintf("[%T] %s\n", msg);
 }
 
@@ -49,14 +65,14 @@ void kprintf(const char* format, ...) {
     va_start(list, format);
     va_kprintf(format, list);
     va_end(list);
-}
+} */
 
 void panic(const char* msg) {
-    kprintf("\033[1;31mKERNEL PANIC! %s\n", msg);
+    dmesg("\033[1;31mKERNEL PANIC! %s", msg);
     while(1) asm volatile("cli; hlt");
 }
 
-const char lookup_lower[] = "0123456789abcdef";
+/* const char lookup_lower[] = "0123456789abcdef";
 const char lookup_upper[] = "0123456789ABCDEF";
 
 void va_kprintf(const char* format, va_list args) {
@@ -83,6 +99,7 @@ void va_kprintf(const char* format, va_list args) {
                 case 'd': {
                     int n = va_arg(args, int);
                     int neg = n < 0;
+                    if(neg) n = -n;
                     char buffer[80];
                     int index = 0;
                     do {
@@ -159,4 +176,4 @@ void va_kprintf(const char* format, va_list args) {
             dwOffset = i;
     }
     if(dwOffset != -1) dmesgl(format + dwOffset, i - dwOffset);
-}
+} */

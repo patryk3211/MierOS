@@ -71,7 +71,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
             acpi_tables.insert({ sign, addr });
             pager.unmap((virtaddr_t)header, 1);
 
-            kprintf("[%T] (Kernel) ACPI Table (Signature '%s') found at 0x%x16\n", sign, addr);
+            dmesg("(Kernel) ACPI Table (Signature '%s') found at 0x%016x", sign, addr);
         }
 
         pager.unmap((virtaddr_t)xsdt, page_size);
@@ -97,7 +97,7 @@ extern "C" TEXT_FREE_AFTER_INIT void init_acpi(physaddr_t rsdp) {
             acpi_tables.insert({ sign, addr });
             pager.unmap((virtaddr_t)header, 1);
 
-            kprintf("[%T] (Kernel) ACPI Table (Signature '%s') found at 0x%x8\n", sign, addr);
+            dmesg("(Kernel) ACPI Table (Signature '%s') found at 0x%08x", sign, addr);
         }
 
         pager.unmap((virtaddr_t)rsdt, page_size);

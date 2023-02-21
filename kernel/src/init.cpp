@@ -4,7 +4,6 @@
 #include <fs/devicefs.hpp>
 #include <fs/vfs.hpp>
 #include <fs/vnode.hpp>
-#include <initrd.h>
 #include <memory/liballoc.h>
 #include <memory/physical.h>
 #include <memory/virtual.hpp>
@@ -15,10 +14,12 @@
 #include <tasking/syscall.h>
 #include <tests/test.hpp>
 #include <trace.h>
-#include <debug.h>
-
-#include <fs/modulefs.hpp>
-#include <fs/modulefs_functions.hpp>
+#include <event/event_manager.hpp>
+#include <fs/initrdfs.hpp>
+#include <event/kernel_events.hpp>
+#include <util/uuid.h>
+#include <fs/systemfs.hpp>
+#include <streams/dmesgstream.hpp>
 
 #ifdef x86_64
 #include <arch/x86_64/acpi.h>
@@ -132,32 +133,11 @@ extern "C" void __cxa_pure_virtual() {
     asm("int3");
 }
 
-class SimpleStream : public kernel::Stream {
-public:
-    SimpleStream() : kernel::Stream(0xFF) {
+TEXT_FREE_AFTER_INIT void init_filesystems() {
+    // Create the VFS
+    auto* vfs = new kernel::VFS();
 
-    }
-
-    virtual size_t read(void*, size_t) {
-        return 0;
-    }
-
-    virtual size_t write(const void* buffer, size_t length) {
-        dmesgl((char*)buffer, length);
-        return length;
-    }
-};
-
-TEXT_FREE_AFTER_INIT void stage2_init() {
-    kprintf("[%T] (Kernel) Multitasking initialized! Now in stage 2\n");
-
-    init_debug();
-
-    init_syscalls();
-
-    kernel::tests::do_tests();
-
-    {
+    { // Find initrd loaded by bootloader
         physaddr_t mod_phys_start = mod.start & 0x7FFFFFFFFFFF;
         physaddr_t mod_phys_end = mod.end & 0x7FFFFFFFFFFF;
         size_t length = mod_phys_end - mod_phys_start;
@@ -174,65 +154,64 @@ TEXT_FREE_AFTER_INIT void stage2_init() {
         kernel::Pager::kernel().unlock();
 
         set_line_map((void*)map_start);
-        set_initrd((void*)mod_start);
+
+        auto* initrdfs = new kernel::InitRdFilesystem((void*)mod_start);
+        vfs->mount(initrdfs, "/");
     }
 
-    void** files = get_files("*.mod");
-    for(size_t i = 0; files[i] != 0; ++i) {
-        kernel::add_preloaded_module(files[i]);
-    }
-
+    // Prepare device filesystem (/dev)
     new kernel::DeviceFilesystem();
+    vfs->register_filesystem("devfs",
+        [](kernel::VNodePtr) -> kernel::ValueOrError<kernel::Filesystem*> {
+            return kernel::DeviceFilesystem::instance();
+        });
 
-    kernel::init_modules("INIT", 0);
+    // Prepare system filesystem (/sys)
+    new kernel::SystemFilesystem();
+    vfs->register_filesystem("sysfs",
+        [](kernel::VNodePtr) -> kernel::ValueOrError<kernel::Filesystem*> {
+            return kernel::SystemFilesystem::instance();
+        });
+}
 
-    {
-        auto devices = kernel::DeviceFilesystem::instance()->get_files(nullptr, "", { .resolve_link = 0, .follow_links = 1 });
-        for(auto& dev : *devices) {
-            kprintf(dev->name().c_str());
-            kprintf(" ");
-        }
-        kprintf("\nBy ID:\n");
-        devices = kernel::DeviceFilesystem::instance()->get_files(nullptr, "block/by-id", { .resolve_link = 0, .follow_links = 1 });
-        for(auto& dev : *devices) {
-            kprintf(dev->name().c_str());
-            kprintf(" ");
-        }
-        kprintf("\n");
-    }
+void transfer_function() {
+    // At this stage all of the init modules should be set up
+    // and we should be ready to launch the init process.
+    // But first we need to free the init code and data
+    pmm_release_init_resources();
 
-    kernel::VFS* vfs = new kernel::VFS();
+    const char* execFile = "/sbin/init";
+    asm volatile("mov $10, %%rax; mov $0, %%rcx; mov $0, %%rdx; int $0x8F" :: "b"(execFile));
 
-    u16_t fs_mod = kernel::init_modules("FS-ext2", 0);
-    kernel::Thread::current()->f_current_module = kernel::get_module(fs_mod);
-    auto* fs_mount = kernel::get_module_symbol<kernel::fs_function_table>(fs_mod, "fs_func_tab")->mount;
-    u16_t minor = *fs_mount(*kernel::DeviceFilesystem::instance()->get_file(nullptr, "ahci0p1", {}));
-    kernel::ModuleFilesystem* mfs = new kernel::ModuleFilesystem(fs_mod, minor);
+    panic("Failed to execute /sbin/init");
+}
 
-    vfs->mount(mfs, "/");
+TEXT_FREE_AFTER_INIT void stage2_init() {
+    dmesg("(Kernel) Multitasking initialized! Now in stage 2");
 
-    auto result = vfs->get_files(nullptr, "", {});
-    if(result) {
-        auto nodes = *result;
-        for(auto& node : nodes) {
-            kprintf("%s ", node->name().c_str());
-        }
-        kprintf("\n");
-    }
-    kernel::Thread::current()->f_current_module = 0;
+    init_syscalls();
 
-    TRACE("Test\n");
+    // Initialize the event system
+    new kernel::EventManager();
 
-    const char* execFile = "/test_user";
+    /// TODO: [22.01.2023] Move tests into a module
+    kernel::tests::do_tests();
+
+    // Initialize the filesystems
+    init_filesystems();
+
+    // Initialize the module manager
+    new kernel::ModuleManager();
 
     auto& thisProc = kernel::Thread::current()->parent();
 
-    auto* sstream = new SimpleStream();
+    auto* sstream = new kernel::DMesgStream();
     thisProc.add_stream(sstream);
     thisProc.add_stream(sstream);
     thisProc.add_stream(sstream);
 
-    asm volatile("mov $10, %%rax; mov $0, %%rcx; mov $0, %%rdx; int $0x8F" :: "b"(execFile));
-
-    while(true) asm volatile("hlt");
+    // We need the transfer function because we
+    // will be freeing this one
+    transfer_function();
 }
+

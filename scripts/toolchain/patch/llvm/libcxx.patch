@@ -1,0 +1,116 @@
+--- a/libcxx/include/locale	2022-11-29 11:05:58.000000000 +0100
++++ b/libcxx/include/locale	2023-02-03 10:18:58.067424547 +0100
+@@ -217,7 +217,7 @@
+ 
+ #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+ // Most unix variants have catopen.  These are the specific ones that don't.
+-#  if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
++#  if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__) && !defined(__mieros__)
+ #    define _LIBCPP_HAS_CATOPEN 1
+ #    include <nl_types.h>
+ #  endif
+--- a/libcxx/include/__support/mieros/xlocale.h	1970-01-01 01:00:00.000000000 +0100
++++ b/libcxx/include/__support/mieros/xlocale.h	2023-02-03 10:50:27.937461682 +0100
+@@ -0,0 +1,49 @@
++#ifndef _LIBCPP_SUPPORT_MIEROS_XLOCALE_H
++#define _LIBCPP_SUPPORT_MIEROS_XLOCALE_H
++
++#if defined(__mieros__)
++
++#include <cstdlib>
++#include <clocale>
++#include <cwctype>
++#include <ctype.h>
++//#include <__support/xlocale/__nop_locale_mgmt.h>
++//#include <__support/xlocale/__posix_l_fallback.h>
++//#include <__support/xlocale/__strtonum_fallback.h>
++
++// Bring in some stuff from __support/xlocale
++inline _LIBCPP_HIDE_FROM_ABI size_t
++strftime_l(char *__s, size_t __max, const char *__format, const struct tm *__tm,
++           locale_t) {
++  return ::strftime(__s, __max, __format, __tm);
++}
++
++inline _LIBCPP_HIDE_FROM_ABI size_t
++wcsxfrm_l(wchar_t *__dest, const wchar_t *__src, size_t __n, locale_t) {
++  return ::wcsxfrm(__dest, __src, __n);
++}
++
++inline _LIBCPP_HIDE_FROM_ABI int
++wcscoll_l(const wchar_t *__ws1, const wchar_t *__ws2, locale_t) {
++  return ::wcscoll(__ws1, __ws2);
++}
++
++inline _LIBCPP_HIDE_FROM_ABI size_t
++strxfrm_l(char *__dest, const char *__src, size_t __n, locale_t) {
++  return ::strxfrm(__dest, __src, __n);
++}
++
++inline _LIBCPP_HIDE_FROM_ABI long long
++strtoll_l(const char *__nptr, char **__endptr, int __base, locale_t) {
++  return ::strtoll(__nptr, __endptr, __base);
++}
++
++inline _LIBCPP_HIDE_FROM_ABI unsigned long long
++strtoull_l(const char *__nptr, char **__endptr, int __base, locale_t) {
++  return ::strtoull(__nptr, __endptr, __base);
++}
++
++#endif // __mieros__
++
++#endif
++
+--- a/libcxx/include/__locale	2022-11-29 11:05:58.000000000 +0100
++++ b/libcxx/include/__locale	2023-02-03 10:15:53.775341218 +0100
+@@ -42,6 +42,8 @@
+ # include <__support/musl/xlocale.h>
+ #elif defined(_LIBCPP_HAS_MUSL_LIBC)
+ # include <__support/musl/xlocale.h>
++#elif defined(__mieros__)
++# include <__support/mieros/xlocale.h>
+ #endif
+ 
+ #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+--- a/libcxx/include/__config	2022-11-29 11:05:58.000000000 +0100
++++ b/libcxx/include/__config	2023-02-03 10:15:05.892561049 +0100
+@@ -912,7 +912,8 @@
+         defined(__sun__) ||                                                                                            \
+         defined(__MVS__) ||                                                                                            \
+         defined(_AIX) ||                                                                                               \
+-        defined(__EMSCRIPTEN__)
++        defined(__EMSCRIPTEN__) ||                                                                                     \
++        defined(__mieros__)
+ // clang-format on
+ #      define _LIBCPP_HAS_THREAD_API_PTHREAD
+ #    elif defined(__Fuchsia__)
+@@ -990,7 +991,7 @@
+ #  endif
+ 
+ #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
+-      defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
++      defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__) || defined(__mieros__)
+ #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
+ #  endif
+ 
+--- a/libcxx/include/CMakeLists.txt	2022-11-29 11:05:58.000000000 +0100
++++ b/libcxx/include/CMakeLists.txt	2023-02-03 10:22:24.968294377 +0100
+@@ -492,6 +492,7 @@
+   __support/ibm/locale_mgmt_zos.h
+   __support/ibm/nanosleep.h
+   __support/ibm/xlocale.h
++  __support/mieros/xlocale.h
+   __support/musl/xlocale.h
+   __support/newlib/xlocale.h
+   __support/openbsd/xlocale.h
+--- a/libcxx/src/include/config_elast.h	2022-11-29 11:05:58.000000000 +0100
++++ b/libcxx/src/include/config_elast.h	2023-02-03 10:19:51.316142361 +0100
+@@ -37,6 +37,8 @@
+ // No _LIBCPP_ELAST needed on Apple
+ #elif defined(__sun__)
+ #define _LIBCPP_ELAST ESTALE
++#elif defined(__mieros__)
++// No _LIBCPP_ELAST needed on MierOS
+ #elif defined(__MVS__)
+ #define _LIBCPP_ELAST 1160
+ #elif defined(_LIBCPP_MSVCRT_LIKE)

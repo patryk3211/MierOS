@@ -1,21 +1,36 @@
 #pragma once
 
 #include <modules/module.hpp>
+#include <locking/spinlock.hpp>
 #include <types.h>
+#include <event/event.hpp>
+#include <fs/vfs.hpp>
 
 namespace kernel {
-    u16_t add_preloaded_module(void* file);
+    class ModuleManager {
+        static ModuleManager* s_instance;
 
-    u16_t init_modules(const char* init_signal, void* init_struct);
-    int init_module(u16_t major, void* init_struct);
+        u16_t f_next_major;
+        SpinLock f_lock;
 
-    Module* get_module(u16_t major);
+        std::UnorderedMap<u16_t, Module*> f_module_map;
+        std::UnorderedMap<std::String<>, u16_t> f_module_cache;
 
-    template<typename Ret, typename... Args> Ret run_module_func(u16_t major, const char* func_name, Args... args) {
-        return get_module(major)->run_function(func_name, args...);
-    }
+    public:
+        ModuleManager();
+        ~ModuleManager();
 
-    template<typename T> T* get_module_symbol(u16_t major, const char* name) {
-        return (T*)get_module(major)->get_symbol_addr(name);
-    }
+        ValueOrError<u16_t> load_module(void* modImage, const char** args);
+        //ValueOrError<u16_t> load_module(const std::String<>& name, const char** args);
+        ValueOrError<u16_t> find_module(const std::String<>& name);
+
+        Module* get_module(u16_t major);
+
+        static ModuleManager& get();
+
+    private:
+        u16_t generate_major();
+
+        //static void handle_load_event(Event& event);
+    };
 }

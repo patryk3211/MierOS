@@ -1,0 +1,28 @@
+--- a/llvm/include/llvm/ADT/Triple.h	2022-11-29 11:05:58.000000000 +0100
++++ b/llvm/include/llvm/ADT/Triple.h	2023-01-27 15:34:07.359484716 +0100
+@@ -192,6 +192,7 @@
+     Linux,
+     Lv2,        // PS3
+     MacOSX,
++    MierOS,
+     NetBSD,
+     OpenBSD,
+     Solaris,
+--- a/llvm/lib/Support/Triple.cpp	2022-11-29 11:05:58.000000000 +0100
++++ b/llvm/lib/Support/Triple.cpp	2023-01-27 15:36:00.755681498 +0100
+@@ -224,6 +224,7 @@
+   case Linux: return "linux";
+   case Lv2: return "lv2";
+   case MacOSX: return "macosx";
++  case MierOS: return "mieros";
+   case Mesa3D: return "mesa3d";
+   case Minix: return "minix";
+   case NVCL: return "nvcl";
+@@ -559,6 +560,7 @@
+     .StartsWith("linux", Triple::Linux)
+     .StartsWith("lv2", Triple::Lv2)
+     .StartsWith("macos", Triple::MacOSX)
++    .StartsWith("mieros", Triple::MierOS)
+     .StartsWith("netbsd", Triple::NetBSD)
+     .StartsWith("openbsd", Triple::OpenBSD)
+     .StartsWith("solaris", Triple::Solaris)

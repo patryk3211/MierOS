@@ -9,6 +9,7 @@ extern "C" {
 
 extern void init_pmm(struct stivale2_stag_memmap* memory_map);
 extern void pmm_release_bootloader_resources();
+extern void pmm_release_init_resources();
 
 extern physaddr_t palloc(size_t page_count);
 extern void pfree(physaddr_t addr, size_t page_count);

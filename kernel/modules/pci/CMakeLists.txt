@@ -1,3 +1,5 @@
-set(SOURCES main.cpp pci.cpp)
+set(SOURCES src/main.cpp src/pci.cpp)
 
-add_kernel_module(pci ${SOURCES})
+add_kernel_module(pci bus ${SOURCES})
+target_include_directories(pci.mod PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+

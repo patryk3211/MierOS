@@ -1,11 +1,15 @@
 [constants]
-toolchain_location = '/home/patryk/Projects/MierOS/cross/host/bin'
+toolchain_location = '/home/patryk/Projects/MierOS/cross/host-llvm/bin'
+
+[properties]
+c_flags = '-O1'
+cpp_flags = '-O1'
 
 [binaries]
-c = toolchain_location / 'x86_64-mieros-gcc'
-cpp = toolchain_location / 'x86_64-mieros-g++'
-ar = toolchain_location / 'x86_64-mieros-ar'
-strip = toolchain_location / 'x86_64-mieros-strip'
+c = toolchain_location / 'clang'
+cpp = toolchain_location / 'clang++'
+ar = toolchain_location / 'llvm-ar'
+strip = toolchain_location / 'llvm-strip'
 
 [host_machine]
 system = 'mieros'

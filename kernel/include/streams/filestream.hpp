@@ -20,9 +20,14 @@ namespace kernel {
 
         ValueOrError<void> open(int mode);
 
-        virtual size_t read(void* buffer, size_t length);
+        virtual ValueOrError<size_t> read(void* buffer, size_t length) override;
+        virtual ValueOrError<size_t> write(const void *buffer, size_t length) override;
 
-        virtual size_t seek(size_t position, int mode);
+        virtual ValueOrError<size_t> seek(size_t position, int mode) override;
+
+        ValueOrError<int> ioctl(unsigned long request, void* arg);
+
+        bool is_open();
 
         std::SharedPtr<VNode>& node() { return f_file; }
     };

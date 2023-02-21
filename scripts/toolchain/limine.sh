@@ -15,3 +15,4 @@ cd ..
 
 mkdir -p sysroot/boot
 cp -v limine/limine.sys sysroot/boot/
+

@@ -126,13 +126,20 @@ void trace_stack(void* base_pointer) {
         u64_t ret_ip;
     };
 
+    u64_t depth = 0;
     frame* f = (frame*)base_pointer;
     while(f != 0) {
         if(!kernel::Pager::active().getFlags((virtaddr_t)f).present) return;
 
         file_line_pair p = addr_to_line(f->ret_ip);
-        kprintf("Stack frame 0x%x16 Ret: 0x%x16 %s:%d\n", f, f->ret_ip, p.name, p.line);
+        dmesg("Stack frame 0x%016lx Ret: 0x%016lx %s:%d", f, f->ret_ip, p.name, p.line);
         f = f->next_frame;
+
+        // Limit the stack trace to 32 frames
+        if(depth++ > 32) {
+            dmesg("...");
+            break;
+        }
     }
 }
 
@@ -142,54 +149,55 @@ extern "C" void cpu_state_dump(CPUState* state) {
     asm volatile("mov %%cr2, %0" : "=a"(cr2));
     asm volatile("mov %%cr3, %0" : "=a"(cr3));
 
-    kprintf("+-------- CPU State -------+\n"
-            "| rax = 0x%x16 |\n"
-            "| rbx = 0x%x16 |\n"
-            "| rcx = 0x%x16 |\n"
-            "| rdx = 0x%x16 |\n"
-            "| rsi = 0x%x16 |\n"
-            "| rdi = 0x%x16 |\n"
-            "| rbp = 0x%x16 |\n"
+    dmesg  ("\n+-------- CPU State -------+\n"
+            "| rax = 0x%016lx |\n"
+            "| rbx = 0x%016lx |\n"
+            "| rcx = 0x%016lx |\n"
+            "| rdx = 0x%016lx |\n"
+            "| rsi = 0x%016lx |\n"
+            "| rdi = 0x%016lx |\n"
+            "| rbp = 0x%016lx |\n"
             "+--------------------------+\n"
-            "| r8  = 0x%x16 |\n"
-            "| r9  = 0x%x16 |\n"
-            "| r10 = 0x%x16 |\n"
-            "| r11 = 0x%x16 |\n"
-            "| r12 = 0x%x16 |\n"
-            "| r13 = 0x%x16 |\n"
-            "| r14 = 0x%x16 |\n"
-            "| r15 = 0x%x16 |\n"
+            "| r8  = 0x%016lx |\n"
+            "| r9  = 0x%016lx |\n"
+            "| r10 = 0x%016lx |\n"
+            "| r11 = 0x%016lx |\n"
+            "| r12 = 0x%016lx |\n"
+            "| r13 = 0x%016lx |\n"
+            "| r14 = 0x%016lx |\n"
+            "| r15 = 0x%016lx |\n"
             "+--------------------------+\n"
-            "| rip = 0x%x16 |\n"
-            "| cs  = 0x%x16 |\n"
-            "| flg = 0x%x16 |\n"
-            "| rsp = 0x%x16 |\n"
-            "| ss  = 0x%x16 |\n"
+            "| rip = 0x%016lx |\n"
+            "| cs  = 0x%016lx |\n"
+            "| flg = 0x%016lx |\n"
+            "| rsp = 0x%016lx |\n"
+            "| ss  = 0x%016lx |\n"
             "+--------------------------+\n"
-            "| cr0 = 0x%x16 |\n"
-            "| cr2 = 0x%x16 |\n"
-            "| cr3 = 0x%x16 |\n"
+            "| cr0 = 0x%016lx |\n"
+            "| cr2 = 0x%016lx |\n"
+            "| cr3 = 0x%016lx |\n"
             "+--------------------------+\n"
-            "| iec = 0x%x16 |\n"
+            "| iec = 0x%016lx |\n"
+            "| fs  = 0x%016lx |\n"
             "+--------------------------+\n"
-            "state = 0x%x16\n",
+            "state = 0x%016lx",
             state->rax, state->rbx, state->rcx, state->rdx, state->rsi, state->rdi, state->rbp, state->r8, state->r9, state->r10,
             state->r11, state->r12, state->r13, state->r14, state->r15, state->rip, state->cs, state->rflags, state->rsp, state->ss,
-            cr0, cr2, cr3, state->err_code, state);
+            cr0, cr2, cr3, state->err_code, state->fs, state);
 }
 
+static kernel::SpinLock s_except_log_lock;
 NO_EXPORT void handle_exception(CPUState* state) {
-    kprintf("Exception 0x%x2 on core %d\n", state->int_num, current_core());
+    s_except_log_lock.lock();
+
+    dmesg("Exception 0x%02x on core %d", state->int_num, current_core());
     cpu_state_dump(state);
     file_line_pair p = addr_to_line(state->rip);
-    kprintf("Line: %s:%d\n", p.name, p.line);
+    dmesg("Line: %s:%d", p.name, p.line);
 
-    if(kernel::Thread::current() != 0 && kernel::Thread::current()->f_current_module != 0) kprintf("Current module base 0x%x16\n", kernel::Thread::current()->f_current_module->base());
     trace_stack((void*)state->rbp);
 
-    // Prepare resources for serial debugging
-    kernel::Pager::kernel().unlock();
-    asm volatile("sti");
+    s_except_log_lock.unlock();
     while(true) asm volatile("hlt");
 }
 
@@ -273,6 +281,20 @@ extern "C" void register_handler(u8_t vector, void (*handler)()) {
         handler_entry* last = handlers[vector];
         while(last->next != 0) last = last->next;
         last->next = entry;
+    }
+}
+
+extern "C" void unregister_handler(u8_t vector, void (*handler)()) {
+    handler_entry* prev = 0;
+    for(handler_entry* en = handlers[vector]; en != 0; en = en->next) {
+        if(en->handler == handler) {
+            if(!prev)
+                handlers[vector] = en->next;
+            else
+                prev->next = en->next;
+            break;
+        }
+        prev = en;
     }
 }
 

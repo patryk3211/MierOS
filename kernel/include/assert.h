@@ -8,9 +8,9 @@ extern "C" {
 #endif
 
 #define ASSERT(expr, msg) \
-    if(!(expr)) kprintf("\033[1;31mASSERTION FAILED!\033[0m %s\n", msg)
+    if(!(expr)) dmesg("\033[1;31mASSERTION FAILED!\033[0m %s", msg)
 #define ASSERT_F(expr, msg) \
-    if(!(expr)) kprintf("\033[1;31mASSERTION FAILED! \033[1;34m%s\033[0m:\033[1;37m%d\033[0m %s\n", __FILE__, __LINE__, msg)
+    if(!(expr)) dmesg("\033[1;31mASSERTION FAILED! \033[1;34m%s\033[0m:\033[1;37m%d\033[0m %s", __FILE__, __LINE__, msg)
 #define ASSERT_NOT_REACHED(msg) ASSERT_F(false, msg)
 
 #if defined(__cplusplus)

@@ -114,7 +114,7 @@ bool use_apic;
 void init_pic() {
     if(ioApics.size() == 0) {
         // Fallback to legacy PICs
-        kprintf("[Kernel] Falling back to legacy PIC pair\n");
+        dmesg("[Kernel] Falling back to legacy PIC pair");
         // Reinitialize the PICs
         outb(MASTER_PIC_COMMAND, 0x11);
         outb(SLAVE_PIC_COMMAND, 0x11);
@@ -137,7 +137,7 @@ void init_pic() {
 
         use_apic = false;
     } else {
-        kprintf("[%T] (Kernel) Found %d I/O APIC\n", ioApics.size());
+        dmesg("(Kernel) Found %d I/O APIC", ioApics.size());
 
         // Mask the legacy PICs
         outb(MASTER_PIC_DATA, 0xFF);

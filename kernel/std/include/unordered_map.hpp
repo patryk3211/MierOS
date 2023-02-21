@@ -6,6 +6,7 @@
 #include <pair.hpp>
 #include <stdlib.h>
 #include <types.h>
+#include <vector.hpp>
 
 namespace std {
     template<typename K, typename V, class Hasher = std::hash<K>, class Pred = std::equal_to<K>, class Alloc = std::heap_allocator> class UnorderedMap {
@@ -13,23 +14,38 @@ namespace std {
 
         struct Entry {
             K key;
-            V value;
+            alignas(V) u8_t valueStorage[sizeof(V)];
             Entry* next;
 
-            Entry()
-                : next(0) { }
-            Entry(const K& key, const V& value)
-                : key(key)
-                , value(value)
-                , next(0) { }
-            ~Entry() = default;
+            Entry() = delete;
+            Entry(const K& k)
+                : key(k)
+                , next(0) {
+                new(valueStorage) V();
+            }
+            Entry(const K& k, const V& v)
+                : key(k)
+                , next(0) {
+                new(valueStorage) V(v);
+            }
+            Entry(const Entry&) = delete;
+            Entry(Entry&&) = delete;
+
+            V& value() {
+                return *reinterpret_cast<V*>(valueStorage);
+            }
+
+            ~Entry() {
+                value().~V();
+                next = 0;
+            };
         };
 
         Alloc allocator;
 
-        Entry** bucket;
-        size_t capacity;
-        size_t _size;
+        std::Vector<Entry*> f_bucket;
+        size_t f_capacity;
+        size_t f_size;
 
     public:
         class iterator {
@@ -49,8 +65,8 @@ namespace std {
                 if(entry->next == 0) {
                     Entry* new_entry = 0;
                     ++index;
-                    while(index < map.capacity && new_entry == 0)
-                        new_entry = map.bucket[index++];
+                    while(index < map.f_capacity && new_entry == 0)
+                        new_entry = map.f_bucket[index++];
                     entry = new_entry;
                     if(entry != 0) --index;
                 } else
@@ -65,11 +81,11 @@ namespace std {
             }
 
             Pair<K&, V&> operator*() {
-                return { entry->key, entry->value };
+                return { entry->key, entry->value() };
             }
 
             Pair<K&, V&> operator->() {
-                return { entry->key, entry->value };
+                return { entry->key, entry->value() };
             }
 
             bool operator==(const iterator& other) const {
@@ -86,54 +102,43 @@ namespace std {
         UnorderedMap()
             : UnorderedMap(initial_bucket_size) { }
         UnorderedMap(size_t initial_capacity)
-            : capacity(initial_capacity) {
-            bucket = allocator.template alloc<Entry*>(capacity);
-            memset(bucket, 0, sizeof(Entry*) * capacity);
-            _size = 0;
+            : f_bucket(initial_capacity, nullptr)
+            , f_capacity(initial_capacity) {
+            f_size = 0;
         }
 
         UnorderedMap(const UnorderedMap<K, V>& other)
-            : capacity(other.capacity)
-            , _size(other._size) {
-            bucket = allocator.template alloc<Entry*>(capacity);
-            memset(bucket, 0, sizeof(Entry*) * capacity);
-            for(size_t i = 0; i < capacity; ++i) {
-                if(bucket[i] == 0) continue;
+            : f_bucket(other.f_capacity, nullptr)
+            , f_capacity(other.f_capacity)
+            , f_size(other.f_size) {
+            for(size_t i = 0; i < f_capacity; ++i) {
+                if(f_bucket[i] == 0) continue;
 
-                auto* last = allocator.template alloc<Entry>(other.bucket[i]->key, other.bucket[i]->value);
-                bucket[i] = last;
+                auto* last = allocator.template alloc<Entry>(other.f_bucket[i]->key, other.f_bucket[i]->value());
+                f_bucket[i] = last;
 
-                for(auto* o_entry = other.bucket[i]->next; o_entry != 0; o_entry = o_entry->next) {
-                    auto* entry = allocator.template alloc<Entry>(o_entry->key, o_entry->value);
+                for(auto* o_entry = other.f_bucket[i]->next; o_entry != 0; o_entry = o_entry->next) {
+                    auto* entry = allocator.template alloc<Entry>(o_entry->key, o_entry->value());
                     last->next = entry;
                     last = entry;
                 }
             }
         }
         UnorderedMap<K, V>& operator=(const UnorderedMap<K, V>& other) {
-            for(size_t i = 0; i < capacity; ++i) {
-                Entry* e = bucket[i];
-                while(e != 0) {
-                    Entry* next = e->next;
-                    allocator.free(e);
-                    e = next;
-                }
-            }
-            allocator.free_array(bucket);
+            clear();
 
-            capacity = other.capacity;
-            _size = other._size;
+            f_capacity = other.f_capacity;
+            f_size = other.f_size;
 
-            bucket = allocator.template alloc<Entry*>(capacity);
-            memset(bucket, 0, sizeof(Entry*) * capacity);
-            for(size_t i = 0; i < capacity; ++i) {
-                if(bucket[i] == 0) continue;
+            f_bucket.resize(f_capacity, nullptr);
+            for(size_t i = 0; i < f_capacity; ++i) {
+                if(f_bucket[i] == 0) continue;
 
-                auto* last = allocator.template alloc<Entry>(other.bucket[i]->key, other.bucket[i]->value);
-                bucket[i] = last;
+                auto* last = allocator.template alloc<Entry>(other.f_bucket[i]->key, other.f_bucket[i]->value());
+                f_bucket[i] = last;
 
-                for(auto* o_entry = other.bucket[i]->next; o_entry != 0; o_entry = o_entry->next) {
-                    auto* entry = allocator.template alloc<Entry>(o_entry->key, o_entry->value);
+                for(auto* o_entry = other.f_bucket[i]->next; o_entry != 0; o_entry = o_entry->next) {
+                    auto* entry = allocator.template alloc<Entry>(o_entry->key, o_entry->value());
                     last->next = entry;
                     last = entry;
                 }
@@ -141,60 +146,39 @@ namespace std {
         }
 
         UnorderedMap(UnorderedMap<K, V>&& other)
-            : capacity(other.capacity)
-            , _size(other._size) {
-            bucket = other.bucket;
-            other.bucket = 0;
-        }
+            : f_bucket(std::move(other.f_bucket))
+            , f_capacity(other.f_capacity)
+            , f_size(other.f_size) { }
 
         UnorderedMap<K, V>& operator=(UnorderedMap<K, V>&& other) {
-            for(size_t i = 0; i < capacity; ++i) {
-                Entry* e = bucket[i];
-                while(e != 0) {
-                    Entry* next = e->next;
-                    allocator.free(e);
-                    e = next;
-                }
-            }
-            allocator.free_array(bucket);
+            clear();
 
-            capacity = other.capacity;
-            _size = other._size;
+            f_capacity = other.f_capacity;
+            f_size = other.f_size;
 
-            bucket = other.bucket;
-            other.bucket = 0;
+            f_bucket = std::move(other.bucket);
         }
 
         ~UnorderedMap() {
-            if(bucket == 0) return;
-
-            for(size_t i = 0; i < capacity; ++i) {
-                Entry* e = bucket[i];
-                while(e != 0) {
-                    Entry* next = e->next;
-                    allocator.free(e);
-                    e = next;
-                }
-            }
-            allocator.free_array(bucket);
+            clear();
         }
 
         iterator begin() {
-            for(size_t i = 0; i < capacity; ++i) {
-                if(bucket[i] != 0) return iterator(i, bucket[i], *this);
+            for(size_t i = 0; i < f_capacity; ++i) {
+                if(f_bucket[i] != 0) return iterator(i, f_bucket[i], *this);
             }
             return end();
         }
 
         iterator end() {
-            return iterator(capacity, 0, *this);
+            return iterator(f_capacity, 0, *this);
         }
 
         iterator find(const K& key) {
-            size_t bucket_pos = Hasher {}(key) % capacity;
+            size_t bucket_pos = Hasher {}(key) % f_capacity;
 
-            if(bucket[bucket_pos] != 0) {
-                for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
+            if(f_bucket[bucket_pos] != 0) {
+                for(Entry* entry = f_bucket[bucket_pos]; entry != 0; entry = entry->next) {
                     if(Pred {}(key, entry->key)) {
                         return iterator(bucket_pos, entry, *this);
                     }
@@ -205,15 +189,14 @@ namespace std {
 
         bool insert(Pair<K, V> value) {
             Entry* entry = allocator.template alloc<Entry>(value.key, value.value);
-            entry->next = 0;
 
-            size_t bucket_pos = Hasher {}(value.key) % capacity;
+            size_t bucket_pos = Hasher {}(value.key) % f_capacity;
 
-            if(bucket[bucket_pos] == 0) {
-                bucket[bucket_pos] = entry;
+            if(f_bucket[bucket_pos] == 0) {
+                f_bucket[bucket_pos] = entry;
             } else {
                 Entry* last;
-                for(Entry* lentry = bucket[bucket_pos]; lentry != 0; lentry = lentry->next) {
+                for(Entry* lentry = f_bucket[bucket_pos]; lentry != 0; lentry = lentry->next) {
                     if(Pred {}(value.key, lentry->key)) {
                         // Duplicate key
                         allocator.free(entry);
@@ -223,80 +206,112 @@ namespace std {
                 }
                 last->next = entry;
             }
-            ++_size;
-            /// TODO: [22.01.2022] Implement rehashing.
+            ++f_size;
+
+            if(f_size >= f_capacity * 2)
+                rehash();
             return true;
         }
 
         OptionalRef<V> at(const K& key) {
-            size_t bucket_pos = Hasher {}(key) % capacity;
+            size_t bucket_pos = Hasher {}(key) % f_capacity;
 
-            if(bucket[bucket_pos] == 0) return {};
-            for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
+            if(f_bucket[bucket_pos] == 0) return {};
+            for(Entry* entry = f_bucket[bucket_pos]; entry != 0; entry = entry->next) {
                 if(Pred {}(key, entry->key)) {
                     // This is the value
-                    return entry->value;
+                    return entry->value();
                 }
             }
             return {};
         }
 
         V& operator[](const K& key) {
-            size_t bucket_pos = Hasher {}(key) % capacity;
-            if(bucket[bucket_pos] == 0) {
-                bucket[bucket_pos] = new Entry();
-                bucket[bucket_pos]->key = key;
-                return bucket[bucket_pos]->value;
+            size_t bucket_pos = Hasher {}(key) % f_capacity;
+            if(f_bucket[bucket_pos] == 0) {
+                f_bucket[bucket_pos] = allocator.template alloc<Entry>(key);
+                return f_bucket[bucket_pos]->value();
             }
             Entry* last = 0;
-            for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
+            for(Entry* entry = f_bucket[bucket_pos]; entry != 0; entry = entry->next) {
                 if(Pred {}(key, entry->key)) {
-                    return entry->value;
+                    return entry->value();
                 }
                 last = entry;
             }
 
-            last->next = new Entry();
-            last->next->key = key;
-            return last->next->value;
+            last->next = allocator.template alloc<Entry>(key);
+            return last->next->value();
         }
 
         void erase(const K& key) {
-            size_t bucket_pos = Hasher {}(key) % capacity;
+            size_t bucket_pos = Hasher {}(key) % f_capacity;
 
-            if(bucket[bucket_pos] == 0) return;
+            if(f_bucket[bucket_pos] == 0) return;
             Entry* prev = 0;
-            for(Entry* entry = bucket[bucket_pos]; entry != 0; entry = entry->next) {
+            for(Entry* entry = f_bucket[bucket_pos]; entry != 0; entry = entry->next) {
                 if(Pred {}(key, entry->key)) {
                     // Delete this
                     if(prev == 0)
-                        bucket[bucket_pos] = entry->next;
+                        f_bucket[bucket_pos] = entry->next;
                     else
                         prev->next = entry->next;
                     allocator.free(entry);
+                    --f_size;
                     return;
                 }
                 prev = entry;
             }
         }
 
-        size_t size() const { return _size; }
+        size_t size() const { return f_size; }
 
         void clear() {
-            for(size_t i = 0; i < capacity; ++i) {
-                Entry* e = bucket[i];
+            for(size_t i = 0; i < f_capacity; ++i) {
+                Entry* e = f_bucket[i];
                 while(e != 0) {
                     Entry* next = e->next;
                     allocator.free(e);
                     e = next;
                 }
             }
-            allocator.free_array(bucket);
 
-            bucket = allocator.template alloc<Entry*>(initial_bucket_size);
-            memset(bucket, 0, sizeof(Entry*) * initial_bucket_size);
-            capacity = initial_bucket_size;
-            _size = 0;
+            f_bucket.clear();
+            f_bucket.resize(initial_bucket_size, nullptr);
+            f_capacity = initial_bucket_size;
+            f_size = 0;
+        }
+
+    private:
+        void rehash() {
+            // Adjust capacity to nearest multiple of 64
+            size_t newCap = f_size;
+            if(newCap & 0x3F)
+                newCap = (newCap | 0x3F) + 1;
+
+            std::Vector<Entry*> newBucket(newCap, nullptr);
+            for(size_t i = 0; i < f_capacity; ++i) {
+                Entry* e = f_bucket[i];
+                while(e != 0) {
+                    Entry* next = e->next;
+                    e->next = 0;
+                    
+                    size_t bucketPos = Hasher{}(e->key) % newCap;
+                    if(newBucket[bucketPos]) {
+                        Entry* last = newBucket[bucketPos];
+                        while(last->next != 0)
+                            last = last->next;
+                        last->next = e;
+                    } else {
+                        newBucket[bucketPos] = e;
+                    }
+
+                    e = next;
+                }
+            }
+
+            f_bucket = std::move(newBucket);
+            f_capacity = newCap;
         }
     };
 }

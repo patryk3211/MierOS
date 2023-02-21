@@ -12,6 +12,9 @@ limine
 
 sysroot/usr/include
 sysroot/usr/bin
-sysroot/usr/lib
+sysroot/sbin
+
+sysroot/usr/lib/*
+!sysroot/usr/lib/static-libc-ctor.ld
 
 pass.txt
