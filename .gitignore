@@ -12,6 +12,7 @@ limine
 
 sysroot/usr/include
 sysroot/usr/bin
+sysroot/usr/share
 sysroot/sbin
 
 sysroot/usr/lib/*

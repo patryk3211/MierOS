@@ -10,7 +10,16 @@
 #include <shared_pointer.hpp>
 #include <memory/page/filepage.hpp>
 
+#define __KERNEL__
+#include <asm/signal.h>
+
 namespace kernel {
+    struct SignalAction {
+        void (*handler)(...);
+        int flags;
+        sigmask_t mask;
+    }; 
+
     class Process {
         std::List<Thread*> f_threads;
 
@@ -23,6 +32,22 @@ namespace kernel {
 
         fd_t f_next_fd;
         std::UnorderedMap<fd_t, StreamWrapper> f_streams;
+
+        struct Signal {
+            siginfo_t* info;
+            pid_t deliver_to;
+        };
+
+        Semaphore f_signal_lock;
+        std::Vector<SignalAction> f_signal_actions;
+        std::List<Signal> f_signal_queue;
+
+        uid_t f_uid;
+        uid_t f_euid;
+        gid_t f_gid;
+        gid_t f_egid;
+
+        pid_t f_parent;
 
         struct MemoryEntry {
             enum Type {
@@ -40,14 +65,21 @@ namespace kernel {
 
         RecursiveMutex f_lock;
 
+        Process(Pager* pager);
         Process(virtaddr_t entry_point, Pager* kern_pager);
 
         void set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry);
 
         bool minimize();
+        void reset_signals();
     public:
         Process(virtaddr_t entry_point);
         ~Process();
+
+        uid_t uid();
+        uid_t euid();
+        gid_t gid();
+        gid_t egid();
 
         void die(u32_t exitCode);
 
@@ -55,11 +87,19 @@ namespace kernel {
         Pager& pager() { return *f_pager; }
 
         pid_t pid();
+        pid_t ppid();
 
         std::String<>& cwd() { return f_workingDirectory; }
 
         bool signalled() { return f_signalled; }
         u8_t exit_status() { return f_exitStatus; }
+
+        void signal_lock();
+        void signal_unlock();
+        SignalAction& action(int sigNum);
+        void signal(siginfo_t* info, pid_t threadDelivery = 0);
+        
+        void handle_signal(Thread* onThread);
 
         fd_t add_stream(Stream* stream, fd_t hint = -1);
         void close_stream(fd_t fd);

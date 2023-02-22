@@ -47,9 +47,19 @@ DEF_SYSCALL(execve, filename, argv, envp) {
 DEF_SYSCALL(getid, id) {
     switch(id) {
         case PROCID_PID:
-            return proc.main_thread()->pid();
+            return proc.pid();
         case PROCID_TID:
             return Thread::current()->pid();
+        case PROCID_UID:
+            return proc.uid();
+        case PROCID_EUID:
+            return proc.euid();
+        case PROCID_GID:
+            return proc.gid();
+        case PROCID_EGID:
+            return proc.egid();
+        case PROCID_PARENT:
+            return proc.ppid();
         default:
             return -EINVAL;
     }
@@ -102,6 +112,13 @@ Process* Process::fork() {
     memcpy(child->main_thread()->f_ksp, caller->f_syscall_state, sizeof(CPUState));
     CPUSTATE_RET(child->main_thread()->f_ksp) = 0;
     child->main_thread()->f_ksp->cr3 = child->f_pager->cr3();
+
+    child->f_uid = f_uid;
+    child->f_gid = f_gid;
+    child->f_euid = f_euid;
+    child->f_egid = f_egid;
+
+    child->f_parent = pid();
 
     // Copy the memory space
     f_pager->lock();

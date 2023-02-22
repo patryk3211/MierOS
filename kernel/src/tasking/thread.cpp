@@ -139,6 +139,10 @@ void Thread::minimize() {
     f_syscall_state = 0;
 }
 
+u64_t& Thread::sigmask() {
+    return f_signal_mask;
+}
+
 void Thread::make_ks(virtaddr_t ip, virtaddr_t sp) {
     f_syscall_state = (CPUState*)((virtaddr_t)f_kernel_stack.ptr() + KERNEL_STACK_SIZE - sizeof(CPUState));
 
@@ -164,7 +168,7 @@ virtaddr_t Thread::get_fs() {
 }
 
 void Thread::save_fpu_state() {
-    auto* memory = f_fpu_state.ptr<uint8_t>();
+    auto* memory = f_fpu_state.ptr<u8_t>();
     // We only save the state if the FPU is enabled
     asm volatile(
         "mov %%cr0, %%rax\n"
@@ -178,7 +182,69 @@ void Thread::save_fpu_state() {
 }
 
 void Thread::load_fpu_state() {
-    auto* memory = f_fpu_state.ptr<uint8_t>();
+    auto* memory = f_fpu_state.ptr<u8_t>();
     asm volatile("fxrstor64 %0" :: "m"(*memory));
+}
+
+void Thread::save_signal_state() {
+    ksigcontext_t* state = reinterpret_cast<ksigcontext_t*>(f_ksp->rsp - sizeof(ksigcontext_t));
+
+    state->oldmask = f_signal_mask;
+
+    state->flags = f_ksp->rflags;
+    state->ip = f_ksp->rip;
+    
+    memcpy(state->fpu_state, f_fpu_state.ptr(), 512);
+
+    state->gregs[0] = f_ksp->rax;
+    state->gregs[1] = f_ksp->rbx;
+    state->gregs[2] = f_ksp->rcx;
+    state->gregs[3] = f_ksp->rdx;
+
+    state->gregs[4] = f_ksp->rsi;
+    state->gregs[5] = f_ksp->rdi;
+    state->gregs[6] = f_ksp->rbp;
+    state->gregs[7] = f_ksp->rsp;
+
+    state->gregs[8] = f_ksp->r8;
+    state->gregs[9] = f_ksp->r9;
+    state->gregs[10] = f_ksp->r10;
+    state->gregs[11] = f_ksp->r11;
+    state->gregs[12] = f_ksp->r12;
+    state->gregs[13] = f_ksp->r13;
+    state->gregs[14] = f_ksp->r14;
+    state->gregs[15] = f_ksp->r15;
+
+    f_ksp->rsp -= sizeof(ksigcontext_t);
+}
+
+void Thread::load_signal_state() {
+    ksigcontext_t* state = reinterpret_cast<ksigcontext_t*>(f_ksp->rsp);
+
+    f_signal_mask = state->oldmask;
+
+    f_ksp->rflags = state->flags;
+    f_ksp->rip = state->ip;
+
+    memcpy(f_fpu_state.ptr(), state->fpu_state, 512);
+
+    f_ksp->rax = state->gregs[0];
+    f_ksp->rbx = state->gregs[1];
+    f_ksp->rcx = state->gregs[2];
+    f_ksp->rdx = state->gregs[3];
+
+    f_ksp->rsi = state->gregs[4];
+    f_ksp->rdi = state->gregs[5];
+    f_ksp->rbp = state->gregs[6];
+    f_ksp->rsp = state->gregs[7];
+
+    f_ksp->r8 = state->gregs[8];
+    f_ksp->r9 = state->gregs[9];
+    f_ksp->r10 = state->gregs[10];
+    f_ksp->r11 = state->gregs[11];
+    f_ksp->r12 = state->gregs[12];
+    f_ksp->r13 = state->gregs[13];
+    f_ksp->r14 = state->gregs[14];
+    f_ksp->r15 = state->gregs[15];
 }
 

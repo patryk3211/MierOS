@@ -1,0 +1,56 @@
+#!/bin/bash
+
+VERSION="5.2.15"
+DOWNLOAD_URL="https://ftp.gnu.org/gnu/bash/bash-$VERSION.tar.gz"
+CHECKSUM="4281bb43497f3905a308430a8d6a30a5"
+
+function download_src {
+    curl -L $DOWNLOAD_URL -o bash-src.tar.gz
+}
+
+function decompress {
+    tar -xzf bash-src.tar.gz
+    rm -f bash-src.tar.gz
+
+    mv bash-5.2.15 bash-src
+}
+
+if [ ! -e "bash-src" ]; then
+    # Source directory does not exist
+    if [ -e "bash-src.tar.gz" ]; then
+        # Archive was already downloaded
+        if [ $(md5sum bash-src.tar.gz) == "$CHECKSUM" ]; then
+            # Checksum is valid
+            decompress
+        else
+            # Checksum invalid
+            download_src
+            decompress
+        fi
+    else
+        # Archive doesn't exist
+        download_src
+        decompress
+    fi
+fi
+
+if [ ! -e "build" ]; then
+    # Apply the patch file
+    patch -N -d bash-src -p1 < bash.patch
+
+    pushd bash-src
+    autoconf
+    popd # bash-src
+
+    mkdir build
+fi
+
+pushd build
+
+CFLAGS="$CFLAGS -DNEED_EXTERN_PC"
+../bash-src/configure --host="x86_64-mieros" --prefix=$(realpath $SYSROOT) --disable-threads --disable-nls --enable-static-link
+
+make
+
+popd # build
+

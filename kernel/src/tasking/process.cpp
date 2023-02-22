@@ -9,20 +9,32 @@
 
 using namespace kernel;
 
-Process::Process(virtaddr_t entry_point, Pager* pager)
+Process::Process(Pager* pager)
     : f_pager(pager)
-    , f_workingDirectory("/") {
-    f_threads.push_back(new Thread(entry_point, true, this));
+    , f_workingDirectory("/")
+    , f_signal_lock(1, 1)
+    , f_signal_actions(64) {
     f_next_fd = 0;
     f_first_free = MMAP_MIN_ADDR;
+
+    f_uid = 1;
+    f_gid = 1;
+    f_euid = 1;
+    f_egid = 1;
+
+    f_parent = 0;
+
+    reset_signals();
+}
+
+Process::Process(virtaddr_t entry_point, Pager* pager)
+    : Process(pager) {
+    f_threads.push_back(new Thread(entry_point, true, this));
 }
 
 Process::Process(virtaddr_t entry_point)
-    : f_pager(new Pager())
-    , f_workingDirectory("/") {
+    : Process(new Pager()) {
     f_threads.push_back(new Thread(entry_point, false, this));
-    f_next_fd = 0;
-    f_first_free = MMAP_MIN_ADDR;
 }
 
 Process* Process::construct_kernel_process(virtaddr_t entry_point) {
@@ -31,6 +43,10 @@ Process* Process::construct_kernel_process(virtaddr_t entry_point) {
 
 pid_t Process::pid() {
     return main_thread()->pid();
+}
+
+pid_t Process::ppid() {
+    return f_parent;
 }
 
 void Process::die(u32_t exitCode) {
@@ -136,7 +152,76 @@ bool Process::minimize() {
     // Delete streams
     f_streams.clear();
 
+    // Delete signal handler array
+    f_signal_actions.clear();
+
     return suicide;
+}
+
+void Process::reset_signals() {
+    for(auto& entry : f_signal_actions) {
+        entry.mask = 0;
+        entry.flags = 0;
+        entry.handler = 0;
+    }
+}
+
+void Process::signal_lock() {
+    f_signal_lock.acquire();
+}
+
+void Process::signal_unlock() {
+    f_signal_lock.release();
+}
+
+SignalAction& Process::action(int sigNum) {
+    return f_signal_actions[sigNum];
+}
+
+void Process::signal(siginfo_t* info, pid_t threadDelivery) {
+    // Make sure we unlock this as fast as possible
+    enter_critical();
+    f_signal_lock.acquire();
+    f_signal_queue.push_back({ info, threadDelivery });
+    f_signal_lock.release();
+    leave_critical();
+}
+
+void Process::handle_signal(Thread* onThread) {
+    f_signal_lock.acquire();
+    // Check for signals to handle
+    if(!f_signal_queue.size()) {
+        f_signal_lock.release();
+        return;
+    }
+
+    // Look for a signal that isn't masked on the thread
+    auto iter = f_signal_queue.begin();
+    while(iter != f_signal_queue.end()) {
+        if((iter->deliver_to || iter->deliver_to == onThread->pid()) &&
+           ((1 << iter->info->si_signo) & onThread->sigmask())) {
+            // Handle this signal
+            Signal sig = *iter;
+            f_signal_queue.erase(iter);
+            // We can release the lock once we grab the signal
+            f_signal_lock.release();
+
+            SignalAction& sigAct = action(sig.info->si_signo);
+
+            onThread->save_signal_state();
+            onThread->sigmask() |= sigAct.mask;
+            if(!(sigAct.flags & SA_NODEFER))
+                onThread->sigmask() |= (1 << sig.info->si_signo);
+
+            if(sigAct.flags & SA_RESETHAND)
+                sigAct.handler = 0;
+
+            // TODO: [22.02.2023] Change the current instruction pointer to the signal handler
+            
+            delete sig.info;
+            return;
+        }
+    }
 }
 
 fd_t Process::add_stream(Stream* stream, fd_t hint) {
@@ -516,3 +601,20 @@ void Process::unmap_pages(virtaddr_t addr, size_t length) {
         }
     }
 }
+
+uid_t Process::uid() {
+    return f_uid;
+}
+
+uid_t Process::euid() {
+    return f_euid;
+}
+
+gid_t Process::gid() {
+    return f_gid;
+}
+
+gid_t Process::egid() {
+    return f_egid;
+}
+

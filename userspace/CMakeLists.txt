@@ -15,3 +15,5 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Tstatic-libc-ctor.ld")
 
 add_subdirectory(libs)
 add_subdirectory(programs)
+add_subdirectory(ports)
+

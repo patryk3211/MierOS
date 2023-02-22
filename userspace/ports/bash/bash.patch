@@ -1,0 +1,54 @@
+--- a/support/config.sub	2023-02-21 16:27:58.741319474 +0100
++++ b/support/config.sub	2023-02-21 16:28:07.303259233 +0100
+@@ -1754,7 +1754,7 @@
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
+ 	     | nsk* | powerunix* | genode* | zvmoe* | qnx* | emx* | zephyr* \
+-	     | fiwix* )
++	     | fiwix* | mieros* )
+ 		;;
+ 	# This one is extra strict with allowed versions
+ 	sco3.2v2 | sco3.2v[4-9]* | sco5v6*)
+--- a/support/config.rpath	2023-02-21 16:28:52.715940700 +0100
++++ b/support/config.rpath	2023-02-21 16:29:49.820542324 +0100
+@@ -221,6 +221,8 @@
+         ld_shlibs=no
+       fi
+       ;;
++    mieros*)
++      ;;
+     netbsd*)
+       ;;
+     solaris*)
+@@ -597,6 +599,9 @@
+   knetbsd*-gnu)
+     library_names_spec='$libname$shrext'
+     ;;
++  mieros*)
++    library_names_spec='$libname$shrext'
++    ;;
+   netbsd*)
+     library_names_spec='$libname$shrext'
+     ;;
+--- a/support/config.guess	2023-02-21 16:31:12.648968236 +0100
++++ b/support/config.guess	2023-02-21 16:31:17.788932747 +0100
+@@ -1370,6 +1370,9 @@
+     x86_64:Haiku:*:*)
+ 	GUESS=x86_64-unknown-haiku
+ 	;;
++    x86_64:MierOS:*:*)
++    GUESS=x86_64-unknown-mieros
++    ;;
+     SX-4:SUPER-UX:*:*)
+ 	GUESS=sx4-nec-superux$UNAME_RELEASE
+ 	;;
+--- a/configure.ac	2023-02-21 17:10:07.331198583 +0100
++++ b/configure.ac	2023-02-21 17:13:03.350922538 +0100
+@@ -91,6 +91,7 @@
+ *-qnx*)		opt_bash_malloc=no ;;	# QNX 4.2, QNX [67].x
+ *-nsk*)		opt_bash_malloc=no ;;	# HP NonStop
+ *-haiku*)	opt_bash_malloc=no ;;	# Haiku OS
++*-mieros*)	opt_bash_malloc=no ;;   # MierOS
+ *-genode*)	opt_bash_malloc=no ;;	# Genode has no sbrk
+ esac
+ 

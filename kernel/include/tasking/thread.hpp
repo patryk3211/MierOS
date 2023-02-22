@@ -44,6 +44,8 @@ namespace kernel {
         ThreadState f_state;
         SleepQueue f_state_watchers;
 
+        sigmask_t f_signal_mask;
+
         Process* f_parent;
 
         pid_t f_pid;
@@ -88,10 +90,15 @@ namespace kernel {
         void save_fpu_state();
         void load_fpu_state();
 
+        void save_signal_state();
+        void load_signal_state();
+
         void change_state(ThreadState newState);
         ThreadState get_state(bool sleep);
 
         void minimize();
+
+        u64_t& sigmask();
 
         static Thread* current();
         static Thread* get(pid_t tid);

@@ -53,6 +53,8 @@ set(INITRD_MAPPINGS
     userspace/programs/init/main/init=sbin/init
     userspace/programs/system/modprobe/modprobe=sbin/modprobe
     userspace/programs/system/mdev/mdev=sbin/mdev
+
+    ${SYSROOT_DIR}/usr/bin/dash=bin/dash
 )
 
 add_custom_target(initrd.img ALL "sh" "${CMAKE_SOURCE_DIR}/scripts/make_initrd.sh"

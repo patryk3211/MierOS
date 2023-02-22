@@ -1,0 +1,54 @@
+#!/bin/bash
+
+VERSION="0.5.12"
+DOWNLOAD_URL="https://git.kernel.org/pub/scm/utils/dash/dash.git/snapshot/dash-$VERSION.tar.gz"
+CHECKSUM="6800b5dbfbfdd43ac3df2ba9d31d0706"
+
+function download_src {
+    curl -L $DOWNLOAD_URL -o dash-src.tar.gz
+}
+
+function decompress {
+    tar -xzf dash-src.tar.gz
+    rm -f dash-src.tar.gz
+
+    mv dash-$VERSION dash-src
+}
+
+if [ ! -e "dash-src" ]; then
+    # Source directory does not exist
+    if [ -e "dash-src.tar.gz" ]; then
+        # Archive was already downloaded
+        if [ $(md5sum dash-src.tar.gz) == "$CHECKSUM" ]; then
+            # Checksum is valid
+            decompress
+        else
+            # Checksum invalid
+            download_src
+            decompress
+        fi
+    else
+        # Archive doesn't exist
+        download_src
+        decompress
+    fi
+fi
+
+if [ ! -e "build" ]; then
+    pushd dash-src
+    ./autogen.sh
+    popd # dash-src
+
+    mkdir build
+fi
+
+pushd build
+
+CFLAGS="$CFLAGS -DNEED_EXTERN_PC"
+../dash-src/configure --host="x86_64-mieros" --prefix=$(realpath $SYSROOT/usr)
+
+make
+make install
+
+popd # build
+

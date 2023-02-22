@@ -32,6 +32,8 @@ DEF_SYSCALL(dup, oldfd, newfd, flags);
 DEF_SYSCALL(mount, source, target, fsType, flags, data);
 DEF_SYSCALL(umount, target, flags);
 DEF_SYSCALL(pipe, pipeStorage, flags);
+DEF_SYSCALL(sigmask, how, set, oldSet);
+DEF_SYSCALL(sigaction, sigNum, action, oldAction);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
@@ -56,6 +58,8 @@ extern "C" void init_syscalls() {
     SYSCALL(18, mount);
     SYSCALL(19, umount);
     SYSCALL(20, pipe);
+    SYSCALL(21, sigmask);
+    SYSCALL(22, sigaction);
 
     register_syscall_handler(&run_syscall);
 }

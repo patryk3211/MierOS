@@ -27,6 +27,11 @@ typedef u64_t time_t;
 
 typedef s32_t fd_t;
 
+typedef u32_t uid_t;
+typedef u32_t gid_t;
+
+typedef u64_t sigmask_t;
+
 #if !defined(__cplusplus)
 typedef struct uuid_t {
     u8_t part1[4];
