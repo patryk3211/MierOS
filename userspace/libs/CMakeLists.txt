@@ -3,7 +3,7 @@ execute_process(COMMAND meson setup
     "-Dprefix=/usr"
     "-Ddisable_bsd_option=true"
     "--cross-file" "../${ARCH}-mieros.txt"
-    "-Ddefault_library=static" build
+    "-Ddefault_library=shared" build
 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/mlibc)
 
 add_custom_target(mlibc ALL meson install "--destdir" "${SYSROOT_DIR}" "--only-changed"

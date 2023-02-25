@@ -33,11 +33,18 @@ Scheduler::~Scheduler() {
 }
 
 void Scheduler::pre_syscall(CPUState* current_state) {
-    Thread::current()->f_syscall_state = current_state;
+    auto* thread = Thread::current();
+    thread->f_syscall_state = current_state;
+    thread->f_in_kernel = true;
 }
 
 CPUState* Scheduler::post_syscall() {
-    return Thread::current()->f_syscall_state;
+    auto* thread = Thread::current();
+    thread->f_ksp = thread->f_syscall_state;
+    thread->f_in_kernel = false;
+    
+    thread->parent().handle_signal(thread);
+    return thread->f_ksp;
 }
 
 CPUState* Scheduler::schedule(CPUState* current_state) {
@@ -72,6 +79,9 @@ CPUState* Scheduler::schedule(CPUState* current_state) {
         idle_ksp->next_switch_time = 250; // 250 us
         return idle_ksp;
     } else {
+        // Handle signals before returning to userspace
+        new_thread->parent().handle_signal(new_thread);
+
         f_is_idle = false;
         new_thread->f_state = RUNNING;
         current_thread = new_thread;

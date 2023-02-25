@@ -103,6 +103,17 @@ DEF_SYSCALL(waitpid, pid, status, options) {
     return thread->pid();
 }
 
+DEF_SYSCALL(getcwd, ptr, maxLength) {
+    VALIDATE_PTR(ptr);
+    auto& cwd = proc.cwd();
+
+    if(cwd.length() + 1 > maxLength)
+        return -ERANGE;
+
+    memcpy(reinterpret_cast<void*>(ptr), cwd.c_str(), cwd.length() + 1);
+    return cwd.length();
+}
+
 Process* Process::fork() {
     f_lock.lock();
     Thread* caller = Thread::current();
@@ -293,10 +304,32 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
         base = PIE_START;
     }
 
+    VNodePtr interpFile = nullptr;
+
+    virtaddr_t startAddr = ~0;
+    virtaddr_t endAddr = 0;
+
+    std::Vector<auxv_t> auxVectors;
+
     // Process headers
     for(int i = 0; i < header.phdr_entry_count; ++i) {
         auto& header = programHeaders[i];
         switch(header.type) {
+            case PT_PHDR: {
+                auxv_t vec;
+                vec.a_type = AT_PHDR;
+                vec.a_un.a_ptr = reinterpret_cast<void*>(base + header.vaddr);
+                auxVectors.push_back(vec);
+
+                vec.a_type = AT_PHENT;
+                vec.a_un.a_val = sizeof(Elf64_Phdr);
+                auxVectors.push_back(vec);
+
+                vec.a_type = AT_PHNUM;
+                vec.a_un.a_val = header.mem_size / sizeof(Elf64_Phdr);
+                auxVectors.push_back(vec);
+                break;
+            }
             case PT_LOAD: {
                 if((header.alignment & 0xFFF) != 0) {
                     ASSERT_NOT_REACHED("Alignment <4096 is currently not supported");
@@ -331,10 +364,100 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     alloc_pages(base + ((header.vaddr + (filePages << 12)) & ~0xFFF), pagesLeft, MMAP_FLAG_ZERO, prot);
                 }
 
+                if(startAddr > header.vaddr) startAddr = header.vaddr;
+                if(endAddr < header.vaddr + (pageCount << 12)) endAddr = header.vaddr + (pageCount << 12);
+
+                break;
+            }
+            case PT_INTERP: {
+                size_t nameSize = header.file_size;
+                char* name = new char[nameSize + 1];
+                // Just in case the file doesn't provide a null terminated string
+                name[nameSize] = 0;
+
+                stream.seek(header.offset, SEEK_MODE_BEG);
+                stream.read(name, nameSize);
+                
+                auto result = VFS::instance()->get_file(nullptr, name, { .resolve_link = true, .follow_links = true });
+                if(!result) // TODO: This should not be a kernel panic
+                    panic("Could not find executable interpreter");
+                interpFile = *result;
                 break;
             }
             default: break;
         }
+    }
+
+    virtaddr_t entry = base + header.entry_point;
+    
+    if(interpFile) {
+        // Load the file just like we loaded the executable
+        FileStream interpStream(interpFile);
+        if(!interpStream.open(FILE_OPEN_MODE_READ))
+            panic("Failed to open the exectuable interpreter");
+
+        interpStream.read(&header, sizeof(header));
+        if(!memcmp(validElf, &header, 8)) {
+            // Invalid header magic
+            panic("Invalid header magic");
+        }
+
+        // Put the interpreter on the next page after the end of executable.
+        virtaddr_t interpreterBase = ((base + endAddr) | 0xFFF) + 1;
+        Elf64_Phdr interHeaders[header.phdr_entry_count];
+
+        interpStream.seek(header.phdr_offset, SEEK_MODE_BEG);
+        interpStream.read(interHeaders, header.phdr_entry_count * sizeof(Elf64_Phdr));
+
+        for(size_t i = 0; i < header.phdr_entry_count; ++i) {
+            Elf64_Phdr& header = interHeaders[i];
+            if(header.type == PT_LOAD) {
+                // Load header
+                if((header.alignment & 0xFFF) != 0) {
+                    ASSERT_NOT_REACHED("Alignment <4096 is currently not supported");
+                }
+
+                size_t alignedMemSize = header.mem_size + (header.vaddr & 0xFFF);
+                size_t alignedFileSize = header.file_size + (header.offset & 0xFFF);
+
+                size_t pageCount = (alignedMemSize >> 12) + ((alignedMemSize & 0xFFF) == 0 ? 0 : 1);
+                size_t filePages = (alignedFileSize >> 12) + ((alignedFileSize & 0xFFF) == 0 ? 0 : 1);
+
+                if(filePages > 0) {
+                    // Map a file segment here
+                    FilePage* page = new FilePage(interpFile, interpreterBase + (header.vaddr & ~0xFFF), header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
+
+                    file_pages(interpreterBase + (header.vaddr & ~0xFFF), filePages, page);
+
+                    // We need this since the .bss section will likely intersect
+                    // with some data and we need to guarantee that it is cleared
+                    if(alignedMemSize > alignedFileSize && ((header.vaddr + header.file_size) & 0xFFF)) {
+                        // We need to zero out some memory
+                        memset((void*)(interpreterBase + header.vaddr + header.file_size), 0, 4096 - ((header.vaddr + header.file_size) & 0xFFF));
+                    }
+                }
+
+                size_t pagesLeft = pageCount - filePages;
+                if(pagesLeft > 0) {
+                    // Map anonymous pages here
+                    int prot = 1;
+                    prot |= (header.flags & 2) ? MMAP_PROT_WRITE : 0;
+                    prot |= (header.flags & 1) ? MMAP_PROT_EXEC : 0;
+                    alloc_pages(interpreterBase + ((header.vaddr + (filePages << 12)) & ~0xFFF), pagesLeft, MMAP_FLAG_ZERO, prot);
+                }
+            }
+        }
+
+        auxv_t vec;
+        vec.a_type = AT_BASE;
+        vec.a_un.a_ptr = reinterpret_cast<void*>(interpreterBase);
+        auxVectors.push_back(vec);
+
+        vec.a_type = AT_ENTRY;
+        vec.a_un.a_fnc = reinterpret_cast<void (*)()>(entry);
+        auxVectors.push_back(vec);
+
+        entry = interpreterBase + header.entry_point;
     }
 
     virtaddr_t stackStart = f_pager->getFreeRange(0x7FFF00000000 - PROCESS_STACK_SIZE, PROCESS_STACK_SIZE >> 12);
@@ -342,9 +465,9 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     virtaddr_t stackEnd = stackStart + PROCESS_STACK_SIZE;
 
     // Exec stack setup
+    auxVectors.push_back({ 0, {0} }); // < Null vector
 
-    /// TODO: [10.01.2023] Will also need to take aux vector size into account
-    size_t execStackSize = (4 + argStore.size() + envStore.size()) * sizeof(u64_t);
+    size_t execStackSize = (3 + argStore.size() + envStore.size()) * sizeof(u64_t) + auxVectors.size() * sizeof(auxv_t);
 
     auto getArgStoreSize = [](std::List<std::String<>>& args) {
         size_t size = 0;
@@ -365,8 +488,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     // argc
     execStack[stackOffset++] = argStore.size();
 
-    /// TODO: [10.01.2023] Will also need to take aux vector size into account
-    virtaddr_t infoBlock = (virtaddr_t)execStack + (4 + argStore.size() + envStore.size()) * sizeof(u64_t);
+    virtaddr_t infoBlock = (virtaddr_t)execStack + (3 + argStore.size() + envStore.size()) * sizeof(u64_t) + auxVectors.size() * sizeof(auxv_t);
 
     // argv
     for(auto& arg : argStore) {
@@ -384,10 +506,10 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     }
     execStack[stackOffset++] = 0;
 
-    // null aux vector
-    execStack[stackOffset++] = 0;
+    // Encode aux vectors
+    memcpy(execStack + stackOffset, auxVectors.data(), auxVectors.size() * sizeof(auxv_t));
 
-    thisThread->make_ks(base + header.entry_point, (virtaddr_t)execStack);
+    thisThread->make_ks(entry, (virtaddr_t)execStack);
     f_first_free = MMAP_MIN_ADDR;
 
     f_pager->unlock();

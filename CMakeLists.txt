@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 project(MierOS VERSION 0.0.1)
 
@@ -55,6 +55,10 @@ set(INITRD_MAPPINGS
     userspace/programs/system/mdev/mdev=sbin/mdev
 
     ${SYSROOT_DIR}/usr/bin/dash=bin/dash
+    ${SYSROOT_DIR}/lib/libc.so=lib/libc.so
+    ${SYSROOT_DIR}/lib/ld.so=lib/ld.so
+    ${SYSROOT_DIR}/lib/libdl.so=lib/libdl.so
+    ${SYSROOT_DIR}/lib/librt.so=lib/librt.so
 )
 
 add_custom_target(initrd.img ALL "sh" "${CMAKE_SOURCE_DIR}/scripts/make_initrd.sh"

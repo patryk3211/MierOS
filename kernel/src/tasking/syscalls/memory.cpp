@@ -3,6 +3,8 @@
 #include <streams/filestream.hpp>
 #include <errno.h>
 
+#include <util/profile.hpp>
+
 using namespace kernel;
 
 DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
@@ -17,14 +19,14 @@ DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
 
     if(prot == 0) {
         proc.null_pages(addr, page_len);
-        TRACE("(syscall) Process (pid = %d) mapped %d bytes starting at 0x%016x as NULL", proc.pid(), page_len << 12, addr);
+        TRACE("(syscall) Process (pid = %d) mapped %d bytes starting at 0x%016lx as NULL", proc.pid(), page_len << 12, addr);
         return addr;
     }
 
     if(flags & MMAP_FLAG_ANONYMOUS) {
         // No file backing this mapping
         proc.alloc_pages(addr, page_len, flags, prot);
-        TRACE("(syscall) Process (pid = %d) mapped %d bytes starting at 0x%016x as ANON", proc.pid(), page_len << 12, addr);
+        TRACE("(syscall) Process (pid = %d) mapped %d bytes starting at 0x%016lx as ANON", proc.pid(), page_len << 12, addr);
         return addr;
     }
 
@@ -43,7 +45,7 @@ DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
     FilePage* page = new FilePage(fstream->node(), addr, offset, (flags & MMAP_FLAG_SHARED), (prot & MMAP_PROT_WRITE), (prot & MMAP_PROT_EXEC));
 
     proc.file_pages(addr, page_len, page);
-    TRACE("(syscall) Process (pid = %d) mapped %d bytes starting at 0x%016x to FILE with offset %d", proc.pid(), page_len << 12, addr, offset);
+    TRACE("(syscall) Process (pid = %d) mapped %d bytes starting at 0x%016lx to FILE with offset %d", proc.pid(), page_len << 12, addr, offset);
 
     return addr;
 }
@@ -56,6 +58,6 @@ DEF_SYSCALL(munmap, ptr, length) {
     if(ptr < MMAP_MIN_ADDR || ptr >= KERNEL_START || ptr + (page_len << 12) > KERNEL_START || ptr + (page_len << 12) < ptr) return -EINVAL;
 
     proc.unmap_pages(ptr, page_len);
-    TRACE("(syscall) Process (pid = %d) unmapped %d bytes starting at 0x%016x", proc.pid(), page_len << 12, ptr);
+    TRACE("(syscall) Process (pid = %d) unmapped %d bytes starting at 0x%016lx", proc.pid(), page_len << 12, ptr);
     return 0;
 }

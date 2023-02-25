@@ -134,6 +134,8 @@ DEF_SYSCALL(ioctl, fd, request, arg) {
 DEF_SYSCALL(dup, oldfd, newfd, flags) {
     auto result = proc.dup_stream(oldfd, newfd);
 
+    if(result)
+        TRACE("(syscall) Process (pid = %d) duplicated fd %d onto fd %d", proc.pid(), oldfd, *result);
     return result ? *result : -result.errno();
 }
 
@@ -178,6 +180,7 @@ DEF_SYSCALL(pipe, pipeStorage, flags) {
     ptr[0] = proc.add_stream(result.key);
     ptr[1] = proc.add_stream(result.value);
 
+    TRACE("(syscall) Process (pid = %d) opened new pipe pair (read = %d, write = %d)", proc.pid(), ptr[0], ptr[1]);
     return 0;
 }
 

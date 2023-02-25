@@ -40,7 +40,7 @@ ValueOrError<size_t> SleepQueue::wakeup(size_t count) {
     while(woke++ < count && f_sleeping.size() > 0) {
         auto tid = f_sleeping.pop_front();
         auto* thread = Thread::get(tid);
-        TRACE("(SleepQueue) Waking up thread (tid = %d), thread ptr = 0x%016x", tid, thread);
+        TRACE("(SleepQueue) Waking up thread (tid = %d), thread ptr = 0x%016lx", tid, thread);
         if(thread) thread->wakeup();
     }
 

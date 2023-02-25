@@ -45,6 +45,7 @@ Thread::Thread(u64_t ip, bool isKernel, Process* process)
 
     f_next = 0;
     f_state = RUNNABLE;
+    f_in_kernel = isKernel;
 
     s_threads.insert({ f_pid, this });
 }
@@ -186,8 +187,9 @@ void Thread::load_fpu_state() {
     asm volatile("fxrstor64 %0" :: "m"(*memory));
 }
 
-void Thread::save_signal_state() {
-    ksigcontext_t* state = reinterpret_cast<ksigcontext_t*>(f_ksp->rsp - sizeof(ksigcontext_t));
+ucontext_t* Thread::save_signal_state() {
+    ucontext_t* ucontext = reinterpret_cast<ucontext_t*>(f_ksp->rsp - sizeof(ucontext_t));
+    mcontext_t* state = &ucontext->uc_mcontext;
 
     state->oldmask = f_signal_mask;
 
@@ -215,36 +217,39 @@ void Thread::save_signal_state() {
     state->gregs[14] = f_ksp->r14;
     state->gregs[15] = f_ksp->r15;
 
-    f_ksp->rsp -= sizeof(ksigcontext_t);
+    f_ksp->rsp -= sizeof(ucontext_t);
+
+    return ucontext;
 }
 
 void Thread::load_signal_state() {
-    ksigcontext_t* state = reinterpret_cast<ksigcontext_t*>(f_ksp->rsp);
+    ucontext_t* ucontext = reinterpret_cast<ucontext_t*>(f_syscall_state->rsp);
+    mcontext_t* state = &ucontext->uc_mcontext;
 
     f_signal_mask = state->oldmask;
 
-    f_ksp->rflags = state->flags;
-    f_ksp->rip = state->ip;
+    f_syscall_state->rflags = state->flags;
+    f_syscall_state->rip = state->ip;
 
     memcpy(f_fpu_state.ptr(), state->fpu_state, 512);
 
-    f_ksp->rax = state->gregs[0];
-    f_ksp->rbx = state->gregs[1];
-    f_ksp->rcx = state->gregs[2];
-    f_ksp->rdx = state->gregs[3];
+    f_syscall_state->rax = state->gregs[0];
+    f_syscall_state->rbx = state->gregs[1];
+    f_syscall_state->rcx = state->gregs[2];
+    f_syscall_state->rdx = state->gregs[3];
 
-    f_ksp->rsi = state->gregs[4];
-    f_ksp->rdi = state->gregs[5];
-    f_ksp->rbp = state->gregs[6];
-    f_ksp->rsp = state->gregs[7];
+    f_syscall_state->rsi = state->gregs[4];
+    f_syscall_state->rdi = state->gregs[5];
+    f_syscall_state->rbp = state->gregs[6];
+    f_syscall_state->rsp = state->gregs[7];
 
-    f_ksp->r8 = state->gregs[8];
-    f_ksp->r9 = state->gregs[9];
-    f_ksp->r10 = state->gregs[10];
-    f_ksp->r11 = state->gregs[11];
-    f_ksp->r12 = state->gregs[12];
-    f_ksp->r13 = state->gregs[13];
-    f_ksp->r14 = state->gregs[14];
-    f_ksp->r15 = state->gregs[15];
+    f_syscall_state->r8 = state->gregs[8];
+    f_syscall_state->r9 = state->gregs[9];
+    f_syscall_state->r10 = state->gregs[10];
+    f_syscall_state->r11 = state->gregs[11];
+    f_syscall_state->r12 = state->gregs[12];
+    f_syscall_state->r13 = state->gregs[13];
+    f_syscall_state->r14 = state->gregs[14];
+    f_syscall_state->r15 = state->gregs[15];
 }
 

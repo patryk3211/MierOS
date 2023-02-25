@@ -18,6 +18,7 @@ namespace kernel {
         void (*handler)(...);
         int flags;
         sigmask_t mask;
+        void (*restorer)();
     }; 
 
     class Process {
@@ -38,7 +39,7 @@ namespace kernel {
             pid_t deliver_to;
         };
 
-        Semaphore f_signal_lock;
+        SpinLock f_signal_lock;
         std::Vector<SignalAction> f_signal_actions;
         std::List<Signal> f_signal_queue;
 

@@ -11,6 +11,9 @@
 #include <unordered_map.hpp>
 #include <tasking/sleep_queue.hpp>
 
+#define __KERNEL__
+#include <asm/signal.h>
+
 namespace kernel {
     enum ThreadState {
         // This thread is running
@@ -38,6 +41,7 @@ namespace kernel {
         // Kernel Stack Pointer
         CPUState* f_ksp;
         CPUState* f_syscall_state;
+        bool f_in_kernel;
 
         SpinLock f_lock;
 
@@ -90,7 +94,7 @@ namespace kernel {
         void save_fpu_state();
         void load_fpu_state();
 
-        void save_signal_state();
+        ucontext_t* save_signal_state();
         void load_signal_state();
 
         void change_state(ThreadState newState);

@@ -12,7 +12,6 @@ using namespace kernel;
 Process::Process(Pager* pager)
     : f_pager(pager)
     , f_workingDirectory("/")
-    , f_signal_lock(1, 1)
     , f_signal_actions(64) {
     f_next_fd = 0;
     f_first_free = MMAP_MIN_ADDR;
@@ -167,11 +166,11 @@ void Process::reset_signals() {
 }
 
 void Process::signal_lock() {
-    f_signal_lock.acquire();
+    f_signal_lock.lock();
 }
 
 void Process::signal_unlock() {
-    f_signal_lock.release();
+    f_signal_lock.unlock();
 }
 
 SignalAction& Process::action(int sigNum) {
@@ -181,47 +180,82 @@ SignalAction& Process::action(int sigNum) {
 void Process::signal(siginfo_t* info, pid_t threadDelivery) {
     // Make sure we unlock this as fast as possible
     enter_critical();
-    f_signal_lock.acquire();
+    f_signal_lock.lock();
     f_signal_queue.push_back({ info, threadDelivery });
-    f_signal_lock.release();
+    f_signal_lock.unlock();
     leave_critical();
 }
 
 void Process::handle_signal(Thread* onThread) {
-    f_signal_lock.acquire();
+    if(onThread->f_in_kernel) {
+        // We cannot handle signals for threads that are in the kernel.
+        // TODO: [25.02.2023] We need to implement interruptable syscalls.
+        return;
+    }
+
+    if(!f_signal_lock.try_lock()) {
+        // We failed to acquire the signal lock, we will defer signal handling since
+        // at the moment we are modifying the signal variables (raising a signal, changing a handler, etc.)
+        return;
+    }
     // Check for signals to handle
     if(!f_signal_queue.size()) {
-        f_signal_lock.release();
+        f_signal_lock.unlock();
         return;
     }
 
     // Look for a signal that isn't masked on the thread
     auto iter = f_signal_queue.begin();
     while(iter != f_signal_queue.end()) {
-        if((iter->deliver_to || iter->deliver_to == onThread->pid()) &&
-           ((1 << iter->info->si_signo) & onThread->sigmask())) {
+        if((!iter->deliver_to || iter->deliver_to == onThread->pid()) &&
+           ((1 << iter->info->si_signo) & ~onThread->sigmask())) {
             // Handle this signal
             Signal sig = *iter;
             f_signal_queue.erase(iter);
             // We can release the lock once we grab the signal
-            f_signal_lock.release();
+            f_signal_lock.unlock();
 
             SignalAction& sigAct = action(sig.info->si_signo);
 
-            onThread->save_signal_state();
+            auto* ucontext = onThread->save_signal_state();
             onThread->sigmask() |= sigAct.mask;
             if(!(sigAct.flags & SA_NODEFER))
                 onThread->sigmask() |= (1 << sig.info->si_signo);
 
+            CPUSTATE_IP(onThread->f_ksp) = reinterpret_cast<uintptr_t>(sigAct.handler);
+
+            ucontext->uc_link = 0;
+            ucontext->uc_sigmask = onThread->sigmask();
+            ucontext->uc_stack.ss_sp = 0;
+            ucontext->uc_stack.ss_size = 0;
+            ucontext->uc_stack.ss_flags = 0;
+
+            memcpy(&ucontext->uc_mcontext.info, sig.info, sizeof(siginfo_t));
+
+            // NOTE: [23.02.2023] This is ABI specific code, I don't know where it should go
+            // (probably into the arch code) but it definitely is not here.
+            onThread->f_ksp->rdi = sig.info->si_signo;
+            if(sigAct.flags & SA_SIGINFO) {
+                onThread->f_ksp->rsi = reinterpret_cast<uintptr_t>(&ucontext->uc_mcontext.info);
+                onThread->f_ksp->rdx = reinterpret_cast<uintptr_t>(ucontext);
+            }
+
             if(sigAct.flags & SA_RESETHAND)
                 sigAct.handler = 0;
-
-            // TODO: [22.02.2023] Change the current instruction pointer to the signal handler
             
+            if(sigAct.restorer) {
+                // Put restorer return address on stack
+                onThread->f_ksp->rsp -= sizeof(void(*)());
+                *reinterpret_cast<void (**)()>(onThread->f_ksp->rsp) = sigAct.restorer;
+            }
+
             delete sig.info;
             return;
         }
+        ++iter;
     }
+
+    f_signal_lock.unlock();
 }
 
 fd_t Process::add_stream(Stream* stream, fd_t hint) {
@@ -490,7 +524,7 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
                     f_pager->lock();
                     auto vaddr = f_pager->kmap(new_page.addr(), 1, PageFlags(1, 1, 0, 0, 1, 0));
 
-                    memcpy((void*)vaddr, (void*)(fault_address & !0xFFF), 4096);
+                    memcpy((void*)vaddr, (void*)(fault_address & ~0xFFF), 4096);
 
                     // Remap our new page
                     new_page.ref();

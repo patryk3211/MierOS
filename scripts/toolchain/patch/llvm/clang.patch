@@ -78,8 +78,8 @@
        switch (Target.getEnvironment()) {
        default:
 --- a/clang/lib/Driver/ToolChains/MierOS.cpp	1970-01-01 01:00:00.000000000 +0100
-+++ b/clang/lib/Driver/ToolChains/MierOS.cpp	2023-02-04 12:05:32.635641359 +0100
-@@ -0,0 +1,283 @@
++++ b/clang/lib/Driver/ToolChains/MierOS.cpp	2023-02-24 21:28:31.543597493 +0100
+@@ -0,0 +1,294 @@
 +#include "MierOS.h"
 +#include "CommonArgs.h"
 +#include "clang/Config/config.h"
@@ -174,6 +174,14 @@
 +  else if (Args.hasArg(options::OPT_static))
 +    CmdArgs.push_back("-Bstatic");
 +
++  if (!Args.hasArg(options::OPT_shared, options::OPT_r)) {
++    std::string DynLink = D.DyldPrefix;
++    if (DynLink.empty())
++      DynLink = "/lib/";
++    DynLink += "ld.so";
++    CmdArgs.push_back("-dynamic-linker");
++    CmdArgs.push_back(Args.MakeArgString(DynLink));
++  }
 +
 +  if(Output.isFilename()) {
 +    CmdArgs.push_back("-o");
@@ -201,7 +209,10 @@
 +      CmdArgs.push_back("-Bdynamic");
 +
 +    if (!Args.hasArg(options::OPT_nostartfiles)) {
-+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
++	   if (!Args.hasArg(options::OPT_pie))
++        CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
++	   else
++		 CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("Scrt1.o")));
 +      if (ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT)
 +        CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRT(Args, "crtbegin", ToolChain::FT_Object)));
 +    }

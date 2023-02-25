@@ -42,7 +42,6 @@ DEF_SYSCALL(sigmask, how, set, oldSet) {
                 thread->sigmask() = bitSet;
                 break;
             default:
-                proc.signal_unlock();
                 return -EINVAL;
         }
     }
@@ -63,6 +62,7 @@ DEF_SYSCALL(sigaction, sigNum, action, oldAction) {
 
         act->sa_mask = kact.mask;
         act->sa_flags = kact.flags;
+        act->sa_restorer = kact.restorer;
 
         if(kact.flags & SA_SIGINFO) {
             act->sa_handler = 0;
@@ -79,6 +79,7 @@ DEF_SYSCALL(sigaction, sigNum, action, oldAction) {
 
         kact.mask = act->sa_mask;
         kact.flags = act->sa_flags;
+        kact.restorer = act->sa_restorer;
 
         if(kact.flags & SA_SIGINFO) {
             VALIDATE_PTR(reinterpret_cast<uintptr_t>(act->sa_sigaction));
@@ -89,6 +90,31 @@ DEF_SYSCALL(sigaction, sigNum, action, oldAction) {
         }
     }
 
+    return 0;
+}
+
+DEF_SYSCALL(kill, pid, signal) {
+    if(signal >= 64)
+        return -EINVAL;
+
+    auto* thread = Thread::get(pid);
+    if(!thread || !thread->is_main())
+        return -ESRCH;
+
+    siginfo_t* info = new siginfo_t();
+    info->si_pid = proc.pid();
+    info->si_uid = proc.uid();
+    info->si_signo = signal;
+
+    thread->parent().signal(info);
+
+    TRACE("(syscall) Process (pid = %d) signalled process (pid = %d) with signum = %d", proc.pid(), pid, signal);
+    return 0;
+}
+
+DEF_SYSCALL(sigreturn) {
+    TRACE("(syscall) Process (pid = %d) returning from signal", proc.pid());
+    Thread::current()->load_signal_state();
     return 0;
 }
 

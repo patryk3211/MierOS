@@ -7,6 +7,8 @@
 #include <bits/size_t.h>
 #else
 #include <types.h>
+
+typedef void (*__sighandler)(int);
 #endif
 
 #include <stdint.h>
@@ -55,7 +57,19 @@ struct sigaction {
     void (*sa_sigaction)(int, siginfo_t*, void*);
     sigset_t sa_mask;
     int sa_flags;
+    void (*sa_restorer)();
 };
+
+#define MINSIGSTKSZ 2048
+#define SIGSTKSZ 8192
+#define SS_ONSTACK 1
+#define SS_DISABLE 2
+
+typedef struct {
+    void *ss_sp;
+    size_t ss_size;
+    int ss_flags;
+} stack_t;
 
 #if defined(__x86_64__)
 typedef struct {
@@ -65,7 +79,16 @@ typedef struct {
     uint64_t ip, flags;
 
     uint8_t fpu_state[512];
-} ksigcontext_t;
+
+    siginfo_t info;
+} mcontext_t;
+
+typedef struct ucontext_t {
+    struct ucontext_t* uc_link;
+    sigset_t uc_sigmask;
+    stack_t uc_stack;
+    mcontext_t uc_mcontext;
+} ucontext_t;
 #endif
 
 #if defined(__cplusplus)

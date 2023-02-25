@@ -34,6 +34,9 @@ DEF_SYSCALL(umount, target, flags);
 DEF_SYSCALL(pipe, pipeStorage, flags);
 DEF_SYSCALL(sigmask, how, set, oldSet);
 DEF_SYSCALL(sigaction, sigNum, action, oldAction);
+DEF_SYSCALL(getcwd, ptr, maxLength);
+DEF_SYSCALL(kill, pid, signal);
+DEF_SYSCALL(sigreturn);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
@@ -60,6 +63,9 @@ extern "C" void init_syscalls() {
     SYSCALL(20, pipe);
     SYSCALL(21, sigmask);
     SYSCALL(22, sigaction);
+    SYSCALL(23, getcwd);
+    SYSCALL(24, kill);
+    SYSCALL(25, sigreturn);
 
     register_syscall_handler(&run_syscall);
 }
