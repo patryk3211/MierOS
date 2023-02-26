@@ -5,8 +5,8 @@
 #include <list.hpp>
 #include <streams/filestream.hpp>
 #include <types.h>
-#include <memory/page/filepage.hpp>
-#include <memory/page/memoryfilepage.hpp>
+#include <memory/page/resolved_memory.hpp>
+#include <memory/page/resolvable_memory.hpp>
 
 namespace kernel {
     struct ModuleVNodeDataStorage;
@@ -29,7 +29,7 @@ namespace kernel {
 
         ValueOrError<size_t> (*seek)(u16_t minor, FileStream* filestream, size_t position, int mode);
 
-        PhysicalPage (*resolve_mapping)(u16_t minor, const FilePage& mapping, virtaddr_t addr);
-        void (*sync_mapping)(u16_t minor, const MemoryFilePage& mapping);
+        std::Optional<ResolvedMemoryEntry> (*resolve_mapping)(u16_t minor, const ResolvableMemoryEntry& mapping, virtaddr_t addr);
+        void (*sync_mapping)(u16_t minor, const ResolvedMemoryEntry& mapping);
     };
 }

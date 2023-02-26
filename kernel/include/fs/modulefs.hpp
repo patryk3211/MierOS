@@ -32,8 +32,8 @@ namespace kernel {
 
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
 
-        virtual PhysicalPage resolve_mapping(const FilePage& mapping, virtaddr_t addr);
-        virtual void sync_mapping(const MemoryFilePage& mapping);
+        virtual std::Optional<ResolvedMemoryEntry> resolve_mapping(const ResolvableMemoryEntry& mapping, virtaddr_t addr);
+        virtual void sync_mapping(const ResolvedMemoryEntry& mapping);
 
         FilesystemDriver* get_driver();
     };

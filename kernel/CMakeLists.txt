@@ -48,10 +48,8 @@ set(KERNEL_SOURCES src/init.cpp
                    src/streams/directorystream.cpp
                    src/streams/dmesgstream.cpp
                    src/streams/pipestream.cpp
-                   src/memory/page/unresolvedpage.cpp
-                   src/memory/page/anonpage.cpp
-                   src/memory/page/filepage.cpp
-                   src/memory/page/memoryfilepage.cpp
+                   src/memory/page/resolvable_memory.cpp
+                   src/memory/page/anonymous_memory.cpp
                    src/event/event_manager.cpp
                    src/event/uevent.cpp)
 

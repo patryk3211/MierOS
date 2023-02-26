@@ -86,5 +86,9 @@ namespace std {
 
         operator bool() const { return !!reference; }
         bool operator!() const { return !reference; }
+
+        T& resolve_or(const T& other) {
+            return reference ? *reference : const_cast<T&>(other);
+        }
     };
 }

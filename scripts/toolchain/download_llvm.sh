@@ -11,6 +11,6 @@ scripts/toolchain/download.sh $LLVM_NAME $LLVM_NAME.tar.xz $LLVM_URL none xz cro
 # Patch llvm with our changes
 echo "Patching LLVM..."
 for p in $(find scripts/toolchain/patch/llvm/ -type f); do
-    patch -N -d cross/$EXTRACTED_NAME -p1 < $p
+    patch -b -z '.orig' -N -d cross/$EXTRACTED_NAME -p1 < $p
 done
 

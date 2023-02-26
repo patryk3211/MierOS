@@ -1,5 +1,7 @@
 #include <fs/filesystem.hpp>
 #include <fs/vnode.hpp>
+#include <memory/page/resolved_memory.hpp>
+#include <memory/page/resolvable_memory.hpp>
 
 using namespace kernel;
 
@@ -39,11 +41,11 @@ ValueOrError<size_t> Filesystem::seek(FileStream*, size_t, int) {
     return ENOTSUP;
 }
 
-PhysicalPage Filesystem::resolve_mapping(const FilePage&, virtaddr_t) {
-    return nullptr;
+std::Optional<ResolvedMemoryEntry> Filesystem::resolve_mapping(const ResolvableMemoryEntry&, virtaddr_t) {
+    return { };
 }
 
-void Filesystem::sync_mapping(const MemoryFilePage&) {
+void Filesystem::sync_mapping(const ResolvedMemoryEntry&) {
 
 }
 

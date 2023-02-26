@@ -86,14 +86,6 @@ PhysicalPage::Data* PhysicalPage::leak_ptr() {
     return ptr;
 }
 
-bool& PhysicalPage::copy_on_write() {
-    return data->f_copy_on_write;
-}
-
-const bool& PhysicalPage::copy_on_write() const {
-    return data->f_copy_on_write;
-}
-
 PhysicalPage::operator bool() const {
     return !!*this;
 }

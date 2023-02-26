@@ -2,7 +2,6 @@
 #include <tasking/syscalls/syscall.hpp>
 #include <tasking/scheduler.hpp>
 #include <arch/interrupts.h>
-#include <memory/page/memoryfilepage.hpp>
 #include <tasking/syscalls/map.hpp>
 #include <fs/vfs.hpp>
 #include <vector.hpp>
@@ -133,52 +132,21 @@ Process* Process::fork() {
 
     // Copy the memory space
     f_pager->lock();
-    for(auto entry : f_memorymap) {
-        switch(entry.value->type) {
-            case MemoryEntry::MEMORY: {
-                // Set all writable pages as copy-on-write
-                PhysicalPage& page = *(PhysicalPage*)entry.value->page;
-                if(page.flags().writable && !entry.value->shared) {
-                    page.flags().writable = false;
-                    page.copy_on_write() = true;
-                    f_pager->map(page.addr(), entry.key, 1, page.flags());
-                }
-
-                // Map page to child
-                child->map_page(entry.key, page, entry.value->shared);
-                break;
-            }
-            case MemoryEntry::FILE:
-            case MemoryEntry::EMPTY:
-            case MemoryEntry::ANONYMOUS:
-                // Copy the memory entries
-                child->f_memorymap.insert({ entry.key, entry.value });
-                break;
-            case MemoryEntry::FILE_MEMORY: {
-                MemoryFilePage& page = *(MemoryFilePage*)entry.value->page;
-                if(page.f_flags.writable && !entry.value->shared) {
-                    page.f_copy_on_write = true;
-                    page.f_flags.writable = false;
-                    f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
-                }
-
-                auto memoryEntry = std::make_shared<MemoryEntry>();
-                memoryEntry->page = new MemoryFilePage(page);
-                memoryEntry->type = MemoryEntry::FILE_MEMORY;
-                memoryEntry->shared = entry.value->shared;
-                child->f_memorymap.insert({ entry.key, memoryEntry });
-
-                child->f_pager->lock();
-                child->f_pager->map(page.f_page.addr(), entry.key, 1, page.f_flags);
-                child->f_pager->unlock();
-
-                page.f_page.ref();
-                break;
-            }
+    // First copy the resolved pages
+    for(auto [addr, entry] : f_resolved_memory) {
+        if(entry.f_page_flags.writable && !entry.f_shared) {
+            entry.f_page_flags.writable = false;
+            entry.f_copy_on_write = true;
+            f_pager->map(entry.f_page.addr(), addr, 1, entry.f_page_flags);
         }
+        entry.f_page.flags() = entry.f_page_flags;
+        child->map_page(addr, entry.f_page, entry.f_shared, entry.f_copy_on_write);
     }
     f_pager->unlock();
 
+    // Then copy the resolvable map
+    child->f_resolvable_memory = f_resolvable_memory;
+    
     // Clone streams
     child->f_next_fd = f_next_fd;
     for(auto entry : f_streams) {
@@ -283,18 +251,24 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
     f_pager->lock();
     // Unmap all pages
-    for(auto [key, entry] : f_memorymap) {
-        if(entry->type == MemoryEntry::MEMORY || entry->type == MemoryEntry::FILE_MEMORY) {
-            // Unmap page
-            f_pager->unmap(key, 1);
+    for(auto [addr, entry] : f_resolved_memory) {
+        if(entry.f_file && entry.f_shared) {
+            // File backed memory
+            auto flags = f_pager->getFlags(addr);
+            if(!flags.writable || !flags.dirty) {
+                // No need to flush
+                continue;
+            }
+
+            // Memory is dirty and shared, write back to file
+            entry.f_file->filesystem()->sync_mapping(entry);
         }
-        if(entry->type == MemoryEntry::FILE_MEMORY && entry->shared) {
-            // Flush to file
-            auto resolved_mapping = (MemoryFilePage*)entry->page;
-            resolved_mapping->f_file->filesystem()->sync_mapping(*resolved_mapping);
-        }
+
+        f_pager->unmap(addr, 1);
     }
-    f_memorymap.clear();
+    
+    f_resolved_memory.clear();
+    f_resolvable_memory.clear();
 
     virtaddr_t base = 0;
     if(header.type == ET_DYN) {
@@ -343,9 +317,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
                 if(filePages > 0) {
                     // Map a file segment here
-                    FilePage* page = new FilePage(file, base + (header.vaddr & ~0xFFF), header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
-
-                    file_pages(base + (header.vaddr & ~0xFFF), filePages, page);
+                    file_pages(base + (header.vaddr & ~0xFFF), filePages, file, header.offset & ~0xFFF,
+                               !(header.flags & 2), header.flags & 2, header.flags & 1);
 
                     // We need this since the .bss section will likely intersect
                     // with some data and we need to guarantee that it is cleared
@@ -425,9 +398,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
                 if(filePages > 0) {
                     // Map a file segment here
-                    FilePage* page = new FilePage(interpFile, interpreterBase + (header.vaddr & ~0xFFF), header.offset & ~0xFFF, !(header.flags & 2), header.flags & 2, header.flags & 1);
-
-                    file_pages(interpreterBase + (header.vaddr & ~0xFFF), filePages, page);
+                    file_pages(interpreterBase + (header.vaddr & ~0xFFF), filePages, interpFile, header.offset & ~0xFFF,
+                               !(header.flags & 2), header.flags & 2, header.flags & 1);
 
                     // We need this since the .bss section will likely intersect
                     // with some data and we need to guarantee that it is cleared

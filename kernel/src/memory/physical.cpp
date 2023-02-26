@@ -135,7 +135,11 @@ extern "C" physaddr_t palloc(size_t page_count) {
         for(size_t i = 0; i < page_count; ++i) {
             if(is_page_used(addr + (i << 12))) {
                 found_block = 0;
-                addr += (i + 1) << 12;
+                if(addr == pmm_first_potential_page) {
+                    // Bump address past this allocation.
+                    pmm_first_potential_page = addr + ((i + 1) << 12);
+                }
+                addr += (i + 1) << 12; 
                 break;
             }
         }
@@ -143,10 +147,6 @@ extern "C" physaddr_t palloc(size_t page_count) {
 
         // Mark the block as used.
         for(size_t i = 0; i < page_count; ++i) set_page_status(addr + (i << 12), 1);
-        if(addr == pmm_first_potential_page) {
-            // Bump address past this allocation.
-            pmm_first_potential_page += page_count << 12;
-        }
 
         allocated_ppages += page_count;
         return addr;

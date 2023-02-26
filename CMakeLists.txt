@@ -59,6 +59,10 @@ set(INITRD_MAPPINGS
     ${SYSROOT_DIR}/lib/ld.so=lib/ld.so
     ${SYSROOT_DIR}/lib/libdl.so=lib/libdl.so
     ${SYSROOT_DIR}/lib/librt.so=lib/librt.so
+    ${SYSROOT_DIR}/lib/libc++.so.1=lib/libc++.so.1
+    ${SYSROOT_DIR}/lib/libc++abi.so.1=lib/libc++abi.so.1
+    ${SYSROOT_DIR}/lib/libunwind.so.1=lib/libunwind.so.1
+    ${SYSROOT_DIR}/lib/libpthread.so=lib/libpthread.so
 )
 
 add_custom_target(initrd.img ALL "sh" "${CMAKE_SOURCE_DIR}/scripts/make_initrd.sh"

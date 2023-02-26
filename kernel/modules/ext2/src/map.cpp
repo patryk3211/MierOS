@@ -7,23 +7,40 @@ using namespace kernel;
 
 extern std::UnorderedMap<u16_t, MountInfo> mounted_filesystems;
 
-PhysicalPage resolve_mapping(u16_t minor, const FilePage& mapping, virtaddr_t addr) {
+std::Optional<ResolvedMemoryEntry> resolve_mapping(u16_t minor, const ResolvableMemoryEntry& mapping, virtaddr_t addr) {
     auto mi_opt = mounted_filesystems.at(minor);
     ASSERT_F(mi_opt, "No filesystem is mapped to this minor number");
     auto& mi = *mi_opt;
 
-    ASSERT_F(mi.filesystem == mapping.file()->filesystem(), "Using a filestream from a different filesystem");
+    ASSERT_F(mi.filesystem == mapping.f_file->filesystem(), "Using a filestream from a different filesystem");
 
-    size_t offset = ((addr - mapping.start_addr()) & ~0xFFF) + mapping.offset();
+    size_t offset = ((addr - mapping.f_start) & ~0xFFF) + mapping.f_file_offset;
 
-    auto vnode = mapping.file();
+    auto vnode = mapping.f_file;
 
     // Check if offset is in vnode shared pages
     auto pageOpt = vnode->f_shared_pages.at(offset);
     if(pageOpt) {
         // We have a page
-        // The flags are handled in process resolve function
-        return *pageOpt;
+        ResolvedMemoryEntry entry(*pageOpt);
+        if(mapping.f_shared) {
+            // We only set the entry as file backed if it is shared.
+            // Private entries don't get to be file backed since they
+            // don't affect the file contents.
+            entry.f_file = mapping.f_file;
+            entry.f_file_offset = offset;
+        }
+
+        entry.f_shared = mapping.f_shared;
+        entry.f_page_flags.executable = mapping.f_executable;
+        entry.f_page_flags.writable = mapping.f_writable;
+        if(!mapping.f_shared && mapping.f_writable) {
+            entry.f_copy_on_write = true;
+            entry.f_page_flags.writable = false;
+        } else {
+            entry.f_copy_on_write = false;
+        }
+        return entry;
     }
 
     // We didn't find a page in memory, we have to read it
@@ -71,9 +88,20 @@ PhysicalPage resolve_mapping(u16_t minor, const FilePage& mapping, virtaddr_t ad
     pager.unlock();
 
     // Add page to vnode's shared pages if applicable
-    if(mapping.shared()) {
+    if(mapping.f_shared)
         vnode->f_shared_pages.insert({ offset, page });
+
+    ResolvedMemoryEntry entry(page);
+    if(mapping.f_shared) {
+        entry.f_file = mapping.f_file;
+        entry.f_file_offset = offset;
     }
 
-    return page;
+    entry.f_shared = mapping.f_shared;
+    entry.f_page_flags.writable = mapping.f_writable;
+    entry.f_page_flags.executable = mapping.f_executable;
+    // If the entry is not shared then we haven't put in into the vnodes pages
+    // and we can freely write to it.
+    entry.f_copy_on_write = false;
+    return entry;
 }

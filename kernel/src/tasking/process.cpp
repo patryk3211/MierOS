@@ -3,9 +3,8 @@
 #include <tasking/process.hpp>
 #include <tasking/scheduler.hpp>
 #include <tasking/syscalls/map.hpp>
-#include <memory/page/anonpage.hpp>
 #include <locking/locker.hpp>
-#include <memory/page/memoryfilepage.hpp>
+#include <memory/page/anonymous_memory.hpp>
 
 using namespace kernel;
 
@@ -89,19 +88,22 @@ bool Process::minimize() {
 
     // Get rid of memory mappings
     f_pager->lock();
-    for(auto [key, entry] : f_memorymap) {
-        if(entry->type == MemoryEntry::FILE_MEMORY && entry->shared) {
-            // Flush to file
-            auto resolved_mapping = (MemoryFilePage*)entry->page;
-            // Transfer the dirty flag
-            auto flags = f_pager->getFlags(key);
-            resolved_mapping->f_dirty = flags.dirty;
-            // Sync a file mapping
-            resolved_mapping->f_file->filesystem()->sync_mapping(*resolved_mapping);
+    for(auto [addr, entry] : f_resolved_memory) {
+        if(entry.f_file && entry.f_shared) {
+            // File backed memory
+            auto flags = f_pager->getFlags(addr);
+            if(!flags.writable || !flags.dirty) {
+                // No need to flush
+                continue;
+            }
+
+            // Memory is dirty and shared, write back to file
+            entry.f_file->filesystem()->sync_mapping(entry);
         }
     }
+
     f_pager->unlock();
-    f_memorymap.clear();
+    f_resolved_memory.clear();
 
     if(suicide) {
         if(main_thread() != thisThread) {
@@ -318,92 +320,70 @@ ValueOrError<fd_t> Process::dup_stream(fd_t oldFd, fd_t newFd) {
     return newFd;
 }
 
-void Process::set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry) {
-    Locker lock(f_lock);
-
-    auto currentEntryOpt = f_memorymap.at(addr);
-    if(currentEntryOpt)
-        unmap_pages(addr, 1);
-    f_memorymap.insert({ addr, entry });
-}
-
-void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared) {
+void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared, bool copyOnWrite) {
     Locker lock(f_lock);
     f_pager->lock();
 
     page.ref();
     f_pager->map(page.addr(), addr, 1, page.flags());
-
-    auto ptr = std::make_shared<MemoryEntry>();
-    ptr->type = MemoryEntry::MEMORY;
-    ptr->page = new PhysicalPage(page);
-    ptr->shared = shared;
-
     f_pager->unlock();
-    set_page_mapping(addr, ptr);
 
-    if(f_first_free == addr)
-        f_first_free = addr + 4096;
+    ResolvedMemoryEntry entry(page);
+    entry.f_shared = shared;
+    entry.f_copy_on_write = copyOnWrite;
+    f_resolved_memory.insert({ addr, entry });
 }
 
 void Process::alloc_pages(virtaddr_t addr, size_t length, int flags, int prot) {
+    ASSERT_F((addr & 0xFFF) == 0, "Address must be aligned to 4096 bytes");
+    ASSERT_F(prot != 0, "Protection on anonymous pages must not be zero");
+
     Locker lock(f_lock);
 
-    if((flags & MMAP_FLAG_SHARED) && prot != 0) {
-        // Shared mapping
-        for(size_t i = 0; i < length; ++i) {
-            auto ptr = std::make_shared<MemoryEntry>();
+    std::SharedPtr<ResolvableMemoryEntry> entry;
 
-            ptr->type = MemoryEntry::ANONYMOUS;
-            ptr->shared = true;
-            ptr->page = new SharedAnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0), flags & MMAP_FLAG_ZERO);
-
-            set_page_mapping(addr + (i << 12), ptr);
-        }
+    bool shared = flags & MMAP_FLAG_SHARED;
+    if(shared) {
+        entry = std::make_shared<SharedAnonymousMemory>(addr, length);
     } else {
-        auto ptr = std::make_shared<MemoryEntry>();
-
-        ptr->type = MemoryEntry::ANONYMOUS;
-        ptr->shared = false;
-        ptr->page = new AnonymousPage(PageFlags(1, prot & MMAP_PROT_WRITE, 1, prot & MMAP_PROT_EXEC, 0, 0), flags & MMAP_FLAG_ZERO);
-
-        for(size_t i = 0; i < length; ++i)
-            set_page_mapping(addr + (i << 12), ptr);
+        entry = std::make_shared<AnonymousMemory>();
     }
 
-    if(f_first_free == addr)
-        f_first_free = addr + (length << 12);
+    entry->f_shared = shared;
+    entry->f_writable = prot & MMAP_PROT_WRITE;
+    entry->f_executable = prot & MMAP_PROT_EXEC;
+
+    f_resolvable_memory[addr] = entry;
+    f_resolvable_memory.insert({ addr + (length << 12), nullptr });
 }
 
 void Process::null_pages(virtaddr_t addr, size_t length) {
     Locker lock(f_lock);
 
-    auto ptr = std::make_shared<MemoryEntry>();
-
-    ptr->type = MemoryEntry::EMPTY;
-    ptr->shared = false;
-    ptr->page = nullptr;
-
-    for(size_t i = 0; i < length; ++i)
-        set_page_mapping(addr + (i << 12), ptr);
-
-    if(f_first_free == addr)
-        f_first_free = addr + (length << 12);
+    // Default implementation of ResolvableMemoryEntry never resolves into a page if it's not backed by a file
+    f_resolvable_memory[addr] = std::make_shared<ResolvableMemoryEntry>();
+    f_resolvable_memory.insert({ addr + (length << 12), nullptr });
 }
 
-void Process::file_pages(virtaddr_t addr, size_t length, FilePage* page) {
+void Process::file_pages(virtaddr_t addr, size_t length, VNodePtr file, size_t fileOffset, bool shared, bool write, bool execute) {
+    ASSERT_F((addr & 0xFFF) == 0, "Address must be aligned to 4096 bytes");
+    ASSERT_F((fileOffset & 0xFFF) == 0, "File offset must be aligned to 4096 bytes");
+
     Locker lock(f_lock);
 
-    auto ptr = std::make_shared<MemoryEntry>();
-    ptr->type = MemoryEntry::FILE;
-    ptr->shared = page->shared();
-    ptr->page = page;
+    auto entry = std::make_shared<ResolvableMemoryEntry>();
+    entry->f_file = file;
+    entry->f_file_offset = fileOffset;
 
-    for(size_t i = 0; i < length; ++i)
-        set_page_mapping(addr + (i << 12), ptr);
+    entry->f_start = addr;
+    entry->f_length = length;
 
-    if(f_first_free == addr)
-        f_first_free = addr + (length << 12);
+    entry->f_shared = shared;
+    entry->f_writable = write;
+    entry->f_executable = execute;
+
+    f_resolvable_memory[addr] = entry;
+    f_resolvable_memory.insert({ addr + (length << 12), nullptr });
 }
 
 bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
@@ -412,176 +392,75 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
 
     Locker locker(f_lock);
 
-    // Get our mapping
-    auto mappingOpt = f_memorymap.at(fault_address & ~0xFFF);
+    if(code & 1) {
+        // Page is present
+        auto pageOpt = f_resolved_memory.at(fault_address & ~0xFFF);
+        ASSERT_F(pageOpt, "Page is missing from the resolved memory map of the process");
 
-    // This is not mapped to anything
-    if(!mappingOpt) return false;
-    auto& mapping = *mappingOpt;
+        auto& page = *pageOpt;
+        if((code & 2) && page.f_copy_on_write) {
+            // Writing to a Copy-on-write page
+            ASSERT_F(!page.f_shared, "A shared page cannot be copy-on-write");
 
-    switch(mapping->type) {
-        case MemoryEntry::MEMORY: {
-            auto* page = (PhysicalPage*)mapping->page;
-
-            // Did we write a Copy-on-write page?
-            if((code & 0x02) && page->copy_on_write()) {
-                if(page->ref_count() > 1) {
-                    // Copy the page
-                    PhysicalPage new_page;
-                    f_pager->lock();
-                    auto vaddr = f_pager->kmap(new_page.addr(), 1, PageFlags(1, 1, 0, 0, 1, 0));
-
-                    memcpy((void*)vaddr, (void*)(fault_address & ~0xFFF), 4096);
-
-                    // Remap our new page
-                    new_page.ref();
-                    new_page.flags() = page->flags();
-                    new_page.flags().writable = true;
-                    f_pager->map(new_page.addr(), fault_address & ~0xFFF, 1, new_page.flags());
-
-                    // Unmap the temp mapping
-                    f_pager->unmap(vaddr, 1);
-                    f_pager->unlock();
-
-                    // Change the page in mappings
-                    page->unref();
-                    delete page;
-                    mapping->page = new PhysicalPage(new_page);
-                } else {
-                    // We can just set the page as writable since it's the last reference
-                    f_pager->lock();
-                    page->copy_on_write() = false;
-                    page->flags().writable = true;
-                    f_pager->map(page->addr(), fault_address & ~0xFFF, 1, page->flags());
-                    f_pager->unlock();
-                }
-                return true;
-            }
-
-            if(!(code & 0x01)) {
-                // This page was not present when the fault happened but it is now.
-                // Most likely another thread has caused a fault for this address
-                // and it has been handled succesfully, so we don't have to
-                // handle it again.
-                return true;
-            }
-
-            // We did some bad stuff
-            return false;
-        }
-        case MemoryEntry::EMPTY:
-            // You don't mess with the null pages
-            return false;
-        case MemoryEntry::ANONYMOUS: {
-            // Resolve the entry
-            auto page = ((UnresolvedPage*)mapping->page)->resolve(fault_address);
-            if(!page) return false;
-
-            map_page(fault_address & ~0xFFF, page, mapping->shared);
-            memset((void*)(fault_address & ~0xFFF), 0, 4096);
-            return true;
-        }
-        case MemoryEntry::FILE: {
-            // Resolve a file mapping
-            auto* file_mapping = (FilePage*)mapping->page;
-            auto page = file_mapping->resolve(fault_address);
-            if(!page) return false;
-
-            size_t offset = (fault_address - file_mapping->start_addr()) & ~0xFFF;
-            MemoryFilePage* resolved_mapping = new MemoryFilePage(file_mapping->file(), page, offset);
-
-            resolved_mapping->f_flags = file_mapping->flags();
-
-            if(page.ref_count() != 0 && !file_mapping->shared() && file_mapping->writable()) {
-                // Make a copy-on-write file mapping
-                resolved_mapping->f_copy_on_write = true;
-                resolved_mapping->f_flags.writable = false;
-            }
-
-            // Map the page
-            auto ptr = std::make_shared<MemoryEntry>();
-            ptr->type = MemoryEntry::FILE_MEMORY;
-            ptr->shared = file_mapping->shared();
-            ptr->page = resolved_mapping;
-
+            // Copy the page
+            PhysicalPage new_page;
             f_pager->lock();
-            page.ref();
+            auto vaddr = f_pager->kmap(new_page.addr(), 1, PageFlags(1, 1, 0, 0, 1, 0));
 
-            f_pager->map(page.addr(), fault_address & ~0xFFF, 1, resolved_mapping->f_flags);
+            memcpy((void*)vaddr, (void*)(fault_address & ~0xFFF), 4096);
+
+            // Remap our new page
+            new_page.ref();
+            new_page.flags() = page.f_page_flags;
+            new_page.flags().writable = true;
+            f_pager->map(new_page.addr(), fault_address & ~0xFFF, 1, new_page.flags());
+
+            // Unmap the temp mapping
+            f_pager->unmap(vaddr, 1);
             f_pager->unlock();
 
-            set_page_mapping(fault_address & ~0xFFF, ptr);
+            // Change the page in mappings
+            page.f_page.unref();
+            
+            // Create a new entry
+            auto entry = ResolvedMemoryEntry(new_page);
+            entry.f_copy_on_write = false;
+            entry.f_shared = false;
+            page = entry;
+
             return true;
         }
-        case MemoryEntry::FILE_MEMORY: {
-            auto* file_mapping = (MemoryFilePage*)mapping->page;
-            auto& page = file_mapping->f_page;
-
-            if((code & 0x02) && file_mapping->f_copy_on_write) {
-                if(page.ref_count() > 1) {
-                    // Copy the page
-                    PhysicalPage new_page;
-                    f_pager->lock();
-                    auto vaddr = f_pager->kmap(new_page.addr(), 1, PageFlags(1, 1, 0, 0, 1, 0));
-
-                    memcpy((void*)vaddr, (void*)(fault_address & ~0xFFF), 4096);
-
-                    // Remap our new page
-                    new_page.ref();
-                    file_mapping->f_flags.writable = true;
-                    f_pager->map(new_page.addr(), fault_address & ~0xFFF, 1, file_mapping->f_flags);
-
-                    // Unmap the temp mapping
-                    f_pager->unmap(vaddr, 1);
-                    f_pager->unlock();
-
-                    // Change the page in mappings
-                    page.unref();
-                    file_mapping->f_page = new_page;
-                    file_mapping->f_copy_on_write = false;
-                } else {
-                    // We steal this page from vnode's shared pages
-                    auto& vnode = file_mapping->f_file;
-                    /// TODO: I don't know but this might cause concurrency issues if stuff happens at the wrong time
-                    vnode->f_shared_pages.erase(file_mapping->f_offset);
-
-                    // Remap
-                    f_pager->lock();
-                    file_mapping->f_flags.writable = true;
-                    file_mapping->f_copy_on_write = false;
-                    f_pager->map(page.addr(), fault_address & ~0xFFF, 1, file_mapping->f_flags);
-                    f_pager->unlock();
-                }
-                return true;
-            }
-
-            // You are using your file mapping incorrectly, stop it.
-            return false;
+    } else {
+        if(f_resolved_memory.at(fault_address & ~0xFFF)) {
+            // This page was not present when the fault happened but it is now.
+            // Most likely another thread has caused a fault for this address
+            // and it has been handled succesfully, so we don't have to
+            // handle it again.
+            return true;
         }
+
+        // Page is not present
+        auto entryOpt = f_resolvable_memory.at_range(fault_address & ~0xFFF);
+        auto& ptr = entryOpt.resolve_or(nullptr);
+
+        if(!ptr)
+            return false;
+
+        auto resolved = ptr->resolve(fault_address & ~0xFFF);
+        if(!resolved)
+            return false;
+
+        resolved->f_page.ref();
+        
+        f_pager->lock();
+        f_pager->map(resolved->f_page.addr(), fault_address & ~0xFFF, 1, resolved->f_page_flags);
+        f_pager->unlock();
+
+        f_resolved_memory.insert({ fault_address & ~0xFFF, *resolved });
+        return true;
     }
 
     return false;
-}
-
-Process::MemoryEntry::~MemoryEntry() {
-    if(page != 0) {
-        switch(type) {
-            case MemoryEntry::ANONYMOUS:
-                delete (AnonymousPage*)page;
-                break;
-            case MemoryEntry::MEMORY:
-                delete (PhysicalPage*)page;
-                break;
-            case MemoryEntry::EMPTY:
-                break;
-            case MemoryEntry::FILE:
-                delete (FilePage*)page;
-                break;
-            case MemoryEntry::FILE_MEMORY:
-                delete (MemoryFilePage*)page;
-                break;
-        }
-    }
 }
 
 virtaddr_t Process::get_free_addr(virtaddr_t hint, size_t length) {
@@ -590,17 +469,24 @@ virtaddr_t Process::get_free_addr(virtaddr_t hint, size_t length) {
     virtaddr_t addr = hint != 0 ? hint : f_first_free;
 
     while(addr < KERNEL_START) {
+        bool free = true;
+
         for(size_t i = 0; i < length; ++i) {
-            auto val = f_memorymap.at(addr + (i << 12));
-            if(val) {
-                addr += 4096 * (i + 1);
-                goto again;
+            // Check in both resolved and resolvable maps to see
+            // if the address is already in use.
+            if(f_resolved_memory.at(addr + (i << 12)) ||
+               f_resolvable_memory.at_range(addr + (i << 12)).resolve_or(nullptr)) {
+                if(f_first_free == addr)
+                    f_first_free = addr + ((i + 1) << 12);
+                addr += (i + 1) << 12;
+                free = false;
+                break;
             }
         }
-        return addr;
-    again:;
-    }
 
+        if(free)
+            return addr;
+    }
     return 0;
 }
 
@@ -608,9 +494,9 @@ void Process::unmap_pages(virtaddr_t addr, size_t length) {
     Locker lock(f_lock);
     Locker pager_lock(*f_pager);
 
-    for(size_t i = 0; i < length; ++i) {
+    /*for(size_t i = 0; i < length; ++i) {
         virtaddr_t key = addr + (i << 12);
-        auto entryOpt = f_memorymap.at(key);
+        auto entryOpt = f_memory_map.at(key);
         if(entryOpt) {
             auto& entry = *entryOpt;
             switch(entry->type) {
@@ -631,9 +517,11 @@ void Process::unmap_pages(virtaddr_t addr, size_t length) {
                     break;
                 } default: break;
             }
-            f_memorymap.erase(key);
+            //f_memory_map.erase(key);
         }
-    }
+    }*/
+
+    panic("IMPLEMENT THIS");
 }
 
 uid_t Process::uid() {

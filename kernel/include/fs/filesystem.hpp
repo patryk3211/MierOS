@@ -4,13 +4,14 @@
 #include <list.hpp>
 #include <shared_pointer.hpp>
 #include <types.h>
-#include <memory/ppage.hpp>
 
 namespace kernel {
     class FileStream;
     class VNode;
-    class FilePage;
-    struct MemoryFilePage;
+    
+    struct ResolvedMemoryEntry;
+    struct ResolvableMemoryEntry;
+
     typedef std::SharedPtr<VNode> VNodePtr;
 
     struct FilesystemFlags {
@@ -71,8 +72,8 @@ namespace kernel {
 
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
 
-        virtual PhysicalPage resolve_mapping(const FilePage& mapping, virtaddr_t addr);
-        virtual void sync_mapping(const MemoryFilePage& mapping);
+        virtual std::Optional<ResolvedMemoryEntry> resolve_mapping(const ResolvableMemoryEntry& mapping, virtaddr_t addr);
+        virtual void sync_mapping(const ResolvedMemoryEntry& mapping);
 
         virtual ValueOrError<int> ioctl(FileStream* stream, u64_t request, void* arg);
 

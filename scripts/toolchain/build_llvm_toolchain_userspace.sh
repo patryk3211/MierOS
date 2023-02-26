@@ -24,7 +24,7 @@ if [ ! -e "cross/host-llvm" -o "$1" == "rebuild" ]; then
 
     pushd llvm-hosted-build
     if ninja clang lld; then
-        if ninja compiler-rt cxx cxxabi unwind; then
+        if ninja compiler-rt unwind cxx cxxabi; then
             ninja install-clang install-lld \
                   install-compiler-rt install-cxx install-cxxabi \
                   install-unwind install-clang-resource-headers \
@@ -32,6 +32,8 @@ if [ ! -e "cross/host-llvm" -o "$1" == "rebuild" ]; then
         fi
     fi
     popd # llvm-hosted-build
+
+    cp -v host-llvm/lib/x86_64-pc-mieros-elf/*.so.* ../sysroot/lib
 
     popd # cross
 fi

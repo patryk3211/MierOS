@@ -8,7 +8,9 @@
 #include <memory/ppage.hpp>
 #include <tasking/syscall.h>
 #include <shared_pointer.hpp>
-#include <memory/page/filepage.hpp>
+#include <range_map.hpp>
+#include <memory/page/resolved_memory.hpp>
+#include <memory/page/resolvable_memory.hpp>
 
 #define __KERNEL__
 #include <asm/signal.h>
@@ -50,26 +52,14 @@ namespace kernel {
 
         pid_t f_parent;
 
-        struct MemoryEntry {
-            enum Type {
-                MEMORY, ANONYMOUS, FILE, FILE_MEMORY, EMPTY
-            } type;
-            void* page;
-            bool shared;
-
-            ~MemoryEntry();
-        };
-
         virtaddr_t f_first_free;
-        /// TODO: [07.02.2023] Change from UnorderedMap to RangeMap (to be implemented)
-        std::UnorderedMap<virtaddr_t, std::SharedPtr<MemoryEntry>> f_memorymap;
+        std::UnorderedMap<virtaddr_t, ResolvedMemoryEntry> f_resolved_memory;
+        std::RangeMap<virtaddr_t, std::SharedPtr<ResolvableMemoryEntry>> f_resolvable_memory;
 
         RecursiveMutex f_lock;
 
         Process(Pager* pager);
         Process(virtaddr_t entry_point, Pager* kern_pager);
-
-        void set_page_mapping(virtaddr_t addr, std::SharedPtr<MemoryEntry>& entry);
 
         bool minimize();
         void reset_signals();
@@ -111,10 +101,10 @@ namespace kernel {
         ValueOrError<void> execve(const VNodePtr& file, char* argv[], char* envp[]);
 
         virtaddr_t get_free_addr(virtaddr_t hint, size_t length);
-        void map_page(virtaddr_t addr, PhysicalPage& page, bool shared);
+        void map_page(virtaddr_t addr, PhysicalPage& page, bool shared, bool copyOnWrite);
         void alloc_pages(virtaddr_t addr, size_t length, int flags, int prot);
         void null_pages(virtaddr_t addr, size_t length);
-        void file_pages(virtaddr_t addr, size_t length, FilePage* page);
+        void file_pages(virtaddr_t addr, size_t length, VNodePtr file, size_t fileOffset, bool shared, bool write, bool execute);
         void unmap_pages(virtaddr_t addr, size_t length);
 
         bool handle_page_fault(virtaddr_t fault_address, u32_t code);

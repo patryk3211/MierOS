@@ -1,5 +1,6 @@
 #include <fs/initrdfs.hpp>
-#include <memory/page/filepage.hpp>
+#include <memory/page/resolved_memory.hpp>
+#include <memory/page/resolvable_memory.hpp>
 
 using namespace kernel;
 
@@ -213,19 +214,37 @@ ValueOrError<void> InitRdFilesystem::umount() {
     return { };
 }
 
-PhysicalPage InitRdFilesystem::resolve_mapping(const FilePage& mapping, virtaddr_t addr) {
-    size_t offset = ((addr - mapping.start_addr()) & ~0xFFF) + mapping.offset();
+std::Optional<ResolvedMemoryEntry> InitRdFilesystem::resolve_mapping(const ResolvableMemoryEntry& mapping, virtaddr_t addr) {
+    size_t offset = ((addr - mapping.f_start) & ~0xFFF) + mapping.f_file_offset;
 
-    auto vnode = mapping.file();
+    auto vnode = mapping.f_file;
 
     auto pageOpt = vnode->f_shared_pages.at(offset);
-    if(pageOpt)
-        return *pageOpt;
+    if(pageOpt) {
+        ResolvedMemoryEntry entry(*pageOpt);
+        if(mapping.f_shared) {
+            // We only set the entry as file backed if it is shared.
+            // Private entries don't get to be file backed since they
+            // don't affect the file contents.
+            entry.f_file = mapping.f_file;
+            entry.f_file_offset = offset;
+        }
 
+        entry.f_shared = mapping.f_shared;
+        entry.f_page_flags.executable = mapping.f_executable;
+        entry.f_page_flags.writable = mapping.f_writable;
+        if(!mapping.f_shared && mapping.f_writable) {
+            entry.f_copy_on_write = true;
+            entry.f_page_flags.writable = false;
+        } else {
+            entry.f_copy_on_write = false;
+        }
+        return entry;
+    }
 
     auto* vnode_data = reinterpret_cast<InitRdVNodeData*>(vnode->fs_data);
     if(!vnode_data)
-        return nullptr;
+        return { };
 
     PhysicalPage page;
     page.flags() = PageFlags(true, true, false, false, true, false);
@@ -248,10 +267,21 @@ PhysicalPage InitRdFilesystem::resolve_mapping(const FilePage& mapping, virtaddr
     pager.unmap(ptr, 1);
     pager.unlock();
 
-    if(mapping.shared()) {
+    if(mapping.f_shared)
         vnode->f_shared_pages.insert({ offset, page });
+
+    ResolvedMemoryEntry entry(page);
+    if(mapping.f_shared) {
+        entry.f_file = mapping.f_file;
+        entry.f_file_offset = offset;
     }
 
-    return page;
+    entry.f_shared = mapping.f_shared;
+    entry.f_page_flags.writable = mapping.f_writable;
+    entry.f_page_flags.executable = mapping.f_executable;
+    // If the entry is not shared then we haven't put in into the vnodes pages
+    // and we can freely write to it.
+    entry.f_copy_on_write = false;
+    return entry;
 }
 

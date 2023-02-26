@@ -42,9 +42,8 @@ DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {
     }
 
     FileStream* fstream = (FileStream*)stream;
-    FilePage* page = new FilePage(fstream->node(), addr, offset, (flags & MMAP_FLAG_SHARED), (prot & MMAP_PROT_WRITE), (prot & MMAP_PROT_EXEC));
 
-    proc.file_pages(addr, page_len, page);
+    proc.file_pages(addr, page_len, fstream->node(), offset, (flags & MMAP_FLAG_SHARED), (prot & MMAP_PROT_WRITE), (prot & MMAP_PROT_EXEC));
     TRACE("(syscall) Process (pid = %d) mapped %d bytes starting at 0x%016lx to FILE with offset %d", proc.pid(), page_len << 12, addr, offset);
 
     return addr;

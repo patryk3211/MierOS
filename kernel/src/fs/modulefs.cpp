@@ -67,15 +67,15 @@ ValueOrError<size_t> ModuleFilesystem::seek(FileStream* stream, size_t position,
     RUN_FUNC(seek, stream, position, mode);
 }
 
-PhysicalPage ModuleFilesystem::resolve_mapping(const FilePage& mapping, virtaddr_t addr) {
+std::Optional<ResolvedMemoryEntry> ModuleFilesystem::resolve_mapping(const ResolvableMemoryEntry& mapping, virtaddr_t addr) {
     auto* func = f_driver->resolve_mapping;
     if(func)
         return func(f_minor, mapping, addr);
     else
-        return nullptr;
+        return { };
 }
 
-void ModuleFilesystem::sync_mapping(const MemoryFilePage& mapping) {
+void ModuleFilesystem::sync_mapping(const ResolvedMemoryEntry& mapping) {
     auto* func = f_driver->sync_mapping;
     if(func != 0) func(f_minor, mapping);
 }
