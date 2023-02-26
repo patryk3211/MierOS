@@ -34,7 +34,8 @@ union PageStructuresEntry {
 
 #define BASE_MAPPING_ADDRESS 0x1000
 
-#define REFRESH_TLB asm volatile("mov %%cr3, %%rax; mov %%rax, %%cr3" ::: "rax");
+#define REFRESH_TLB() asm volatile("mov %%cr3, %%rax; mov %%rax, %%cr3" ::: "rax")
+#define INVALIDATE_PAGE(addr) asm volatile("invlpg (%0)" :: "r"((u64_t)(addr)))
 
 NO_EXPORT physaddr_t Pager::kernel_pd[2] = { 0, 0 };
 NO_EXPORT std::List<Pager*> Pager::pagers;
@@ -48,14 +49,14 @@ Pager::Pager() {
     // Allocate a PML4
     int index = aquireWorkpageIndex();
     CONTROL_PAGE[index].raw = pml4 | 0x03;
-    REFRESH_TLB;
+    INVALIDATE_PAGE(WORKPAGE(index));
     memset(WORKPAGE(index), 0, 4096);
 
     // Allocate a PDPT
     int index2 = aquireWorkpageIndex();
     physaddr_t pdpt = palloc(1);
     CONTROL_PAGE[index2].raw = pdpt | 0x03;
-    REFRESH_TLB;
+    INVALIDATE_PAGE(WORKPAGE(index2));
     memset(WORKPAGE(index2), 0, 4096);
 
     // Map the kernel pages
@@ -173,7 +174,7 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
     if(pml4_work == -1) {
         pml4_work = getWorkpage(0);
         CONTROL_PAGE[pml4_work].raw = pml4 | 0x8000000000000003;
-        REFRESH_TLB;
+        INVALIDATE_PAGE(WORKPAGE(pml4_work));
     }
 
     bool remap = false;
@@ -185,14 +186,14 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
         if(WORKPAGE(pml4_work)[new_pml4e].structured.present) {
             physaddr_t pdpt_addr = WORKPAGE(pml4_work)[new_pml4e].structured.address << 12;
             CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000003;
-            REFRESH_TLB;
+            INVALIDATE_PAGE(WORKPAGE(pdpt_work));
         } else {
             physaddr_t pdpt_addr = palloc(1);
             WORKPAGE(pml4_work)
             [new_pml4e].raw
                 = pdpt_addr | 0x07;
             CONTROL_PAGE[pdpt_work].raw = pdpt_addr | 0x8000000000000003;
-            REFRESH_TLB;
+            INVALIDATE_PAGE(WORKPAGE(pdpt_work));
             memset(WORKPAGE(pdpt_work), 0, 4096);
         }
     }
@@ -205,14 +206,14 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
         if(WORKPAGE(pdpt_work)[new_pdpte].structured.present) {
             physaddr_t pd_addr = WORKPAGE(pdpt_work)[new_pdpte].structured.address << 12;
             CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000003;
-            REFRESH_TLB;
+            INVALIDATE_PAGE(WORKPAGE(pd_work));
         } else {
             physaddr_t pd_addr = palloc(1);
             WORKPAGE(pdpt_work)
             [new_pdpte].raw
                 = pd_addr | 0x07;
             CONTROL_PAGE[pd_work].raw = pd_addr | 0x8000000000000003;
-            REFRESH_TLB;
+            INVALIDATE_PAGE(WORKPAGE(pd_work));
             memset(WORKPAGE(pd_work), 0, 4096);
         }
     }
@@ -224,14 +225,14 @@ void Pager::mapStructures(int new_pml4e, int new_pdpte, int new_pde) {
         if(WORKPAGE(pd_work)[new_pde].structured.present) {
             physaddr_t pt_addr = WORKPAGE(pd_work)[new_pde].structured.address << 12;
             CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000003;
-            REFRESH_TLB;
+            INVALIDATE_PAGE(WORKPAGE(pt_work));
         } else {
             physaddr_t pt_addr = palloc(1);
             WORKPAGE(pd_work)
             [new_pde].raw
                 = pt_addr | 0x07;
             CONTROL_PAGE[pt_work].raw = pt_addr | 0x8000000000000003;
-            REFRESH_TLB;
+            INVALIDATE_PAGE(WORKPAGE(pt_work));
             memset(WORKPAGE(pt_work), 0, 4096);
         }
     }
@@ -302,8 +303,9 @@ void Pager::map(physaddr_t phys, virtaddr_t virt, size_t length, PageFlags flags
         entry.structured.global = flags.global;
         entry.structured.cache_disabled = flags.cache_disable;
         entry.structured.dirty = flags.dirty;
+
+        INVALIDATE_PAGE((virt + i) << 12);
     }
-    REFRESH_TLB;
 
     if(kernel) kernel_locker.unlock();
 }
@@ -333,8 +335,9 @@ void Pager::flags(virtaddr_t virt, size_t length, PageFlags flags) {
         entry.structured.global = flags.global;
         entry.structured.cache_disabled = flags.cache_disable;
         entry.structured.dirty = flags.dirty;
+
+        INVALIDATE_PAGE((virt + i) << 12);
     }
-    REFRESH_TLB;
 
     if(kernel) kernel_locker.unlock();
 }
@@ -372,6 +375,8 @@ physaddr_t Pager::unmap(virtaddr_t virt, size_t length) {
         PageStructuresEntry& entry = WORKPAGE(pt_work)[pte];
         if(addr == 0) addr = entry.structured.address << 12;
         entry.raw = 0;
+
+        INVALIDATE_PAGE((virt + i) << 12);
     }
 
     if(virt < first_potential_kernel_page && virt >= KERNEL_START) first_potential_kernel_page = virt;

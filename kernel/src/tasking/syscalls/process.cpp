@@ -8,6 +8,8 @@
 #include <elf.h>
 #include <asm/procid.h>
 
+#include <util/profile.hpp>
+
 using namespace kernel;
 
 DEF_SYSCALL(exit, exitCode) {
@@ -132,19 +134,21 @@ Process* Process::fork() {
 
     // Copy the memory space
     f_pager->lock();
-    // First copy the resolved pages
+    // Change private writable pages into copy-on-write and
+    // add a reference to all physical pages
     for(auto [addr, entry] : f_resolved_memory) {
         if(entry.f_page_flags.writable && !entry.f_shared) {
             entry.f_page_flags.writable = false;
             entry.f_copy_on_write = true;
-            f_pager->map(entry.f_page.addr(), addr, 1, entry.f_page_flags);
+            f_pager->flags(addr, 1, entry.f_page_flags);
         }
+        entry.f_page.ref();
         entry.f_page.flags() = entry.f_page_flags;
-        child->map_page(addr, entry.f_page, entry.f_shared, entry.f_copy_on_write);
     }
     f_pager->unlock();
 
-    // Then copy the resolvable map
+    // Copy the memory maps
+    child->f_resolved_memory = f_resolved_memory;
     child->f_resolvable_memory = f_resolvable_memory;
     
     // Clone streams
@@ -255,16 +259,14 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
         if(entry.f_file && entry.f_shared) {
             // File backed memory
             auto flags = f_pager->getFlags(addr);
-            if(!flags.writable || !flags.dirty) {
-                // No need to flush
-                continue;
+            if(flags.writable && flags.dirty) {
+                // Memory is dirty and shared, write back to file
+                entry.f_file->filesystem()->sync_mapping(entry);
             }
-
-            // Memory is dirty and shared, write back to file
-            entry.f_file->filesystem()->sync_mapping(entry);
         }
 
         f_pager->unmap(addr, 1);
+        entry.f_page.unref();
     }
     
     f_resolved_memory.clear();
@@ -280,7 +282,6 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
     VNodePtr interpFile = nullptr;
 
-    virtaddr_t startAddr = ~0;
     virtaddr_t endAddr = 0;
 
     std::Vector<auxv_t> auxVectors;
@@ -337,7 +338,6 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                     alloc_pages(base + ((header.vaddr + (filePages << 12)) & ~0xFFF), pagesLeft, MMAP_FLAG_ZERO, prot);
                 }
 
-                if(startAddr > header.vaddr) startAddr = header.vaddr;
                 if(endAddr < header.vaddr + (pageCount << 12)) endAddr = header.vaddr + (pageCount << 12);
 
                 break;
@@ -355,6 +355,7 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
                 if(!result) // TODO: This should not be a kernel panic
                     panic("Could not find executable interpreter");
                 interpFile = *result;
+                delete[] name;
                 break;
             }
             default: break;

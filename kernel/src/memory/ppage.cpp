@@ -17,6 +17,7 @@ PhysicalPage::~PhysicalPage() {
 
     // Only free the page once all references to the object itself are gone
     if(data->f_obj_ref_count.fetch_sub(1) == 1) {
+        ASSERT_F(data->f_ref_count.load() == 0 && data->f_addr != 0, "Leaking a physical page");
         if(data->f_ref_count.load() == 0 && data->f_addr != 0) {
             pfree(data->f_addr, 1);
             data->f_addr = 0;

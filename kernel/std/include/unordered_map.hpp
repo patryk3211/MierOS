@@ -132,7 +132,7 @@ namespace std {
 
             f_bucket.resize(f_capacity, nullptr);
             for(size_t i = 0; i < f_capacity; ++i) {
-                if(f_bucket[i] == 0) continue;
+                if(other.f_bucket[i] == 0) continue;
 
                 auto* last = allocator.template alloc<Entry>(other.f_bucket[i]->key, other.f_bucket[i]->value());
                 f_bucket[i] = last;
@@ -143,6 +143,8 @@ namespace std {
                     last = entry;
                 }
             }
+
+            return *this;
         }
 
         UnorderedMap(UnorderedMap<K, V>&& other)
@@ -157,6 +159,7 @@ namespace std {
             f_size = other.f_size;
 
             f_bucket = std::move(other.bucket);
+            return *this;
         }
 
         ~UnorderedMap() {

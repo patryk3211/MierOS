@@ -92,18 +92,18 @@ bool Process::minimize() {
         if(entry.f_file && entry.f_shared) {
             // File backed memory
             auto flags = f_pager->getFlags(addr);
-            if(!flags.writable || !flags.dirty) {
-                // No need to flush
-                continue;
+            if(flags.writable && flags.dirty) {
+                // Memory is dirty and shared, write back to file
+                entry.f_file->filesystem()->sync_mapping(entry);
             }
-
-            // Memory is dirty and shared, write back to file
-            entry.f_file->filesystem()->sync_mapping(entry);
         }
+
+        entry.f_page.unref();
     }
 
     f_pager->unlock();
     f_resolved_memory.clear();
+    f_resolvable_memory.clear();
 
     if(suicide) {
         if(main_thread() != thisThread) {
@@ -320,6 +320,8 @@ ValueOrError<fd_t> Process::dup_stream(fd_t oldFd, fd_t newFd) {
     return newFd;
 }
 
+#include <util/profile.hpp>
+
 void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared, bool copyOnWrite) {
     Locker lock(f_lock);
     f_pager->lock();
@@ -421,7 +423,6 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
 
             // Change the page in mappings
             page.f_page.unref();
-            
             // Create a new entry
             auto entry = ResolvedMemoryEntry(new_page);
             entry.f_copy_on_write = false;
@@ -431,11 +432,19 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
             return true;
         }
     } else {
-        if(f_resolved_memory.at(fault_address & ~0xFFF)) {
-            // This page was not present when the fault happened but it is now.
-            // Most likely another thread has caused a fault for this address
-            // and it has been handled succesfully, so we don't have to
-            // handle it again.
+        if(auto opt = f_resolved_memory.at(fault_address & ~0xFFF); opt) {
+            Locker pageLock(*f_pager);
+            if(f_pager->getFlags(fault_address & ~0xFFF).present) {
+                // This page was not present when the fault happened but it is now.
+                // Most likely another thread has caused a fault for this address
+                // and it has been handled succesfully, so we don't have to
+                // handle it again.
+                return true;
+            }
+
+            // This fault is a result of the fork syscall. The page is resolved
+            // and ready to be used but it is not mapped in to save time.
+            f_pager->map(opt->f_page.addr(), fault_address & ~0xFFF, 1, opt->f_page_flags);
             return true;
         }
 

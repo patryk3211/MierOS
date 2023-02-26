@@ -22,6 +22,8 @@ static std::unordered_map<std::string, Module> module_map;
 static std::unordered_map<std::string, std::string> hashed_aliases;
 static std::list<std::pair<std::string, std::string>> pattern_aliases;
 
+// NOTE: This method takes a very long time. For some reason opening and reading
+// the file takes about 100ms (!).
 void load_module_deps() {
     std::ifstream file(module_directory + "/modules.dep");
 

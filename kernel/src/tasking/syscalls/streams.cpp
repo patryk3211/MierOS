@@ -85,7 +85,7 @@ DEF_SYSCALL(read, fd, ptr, length) {
     auto ret = stream->read((void*)ptr, length);
     if(!ret)
         return -ret.errno();
-    TRACE("(syscall) Process (pid = %d) read from fd %d to 0x%016x, requested length of %d, actual read size = %d",
+    TRACE("(syscall) Process (pid = %d) read from fd %d to 0x%016lx, requested length of %d, actual read size = %d",
             proc.main_thread()->pid(), fd, ptr, length, *ret);
     return *ret;
 }
@@ -99,7 +99,7 @@ DEF_SYSCALL(write, fd, ptr, length) {
     auto ret = stream->write((const void*)ptr, length);
     if(!ret)
         return -ret.errno();
-    TRACE("(syscall) Process (pid = %d) write to fd %d from 0x%016x, requested length of %d, actual write size = %d",
+    TRACE("(syscall) Process (pid = %d) write to fd %d from 0x%016lx, requested length of %d, actual write size = %d",
             proc.main_thread()->pid(), fd, ptr, length, *ret);
     return *ret;
 }
