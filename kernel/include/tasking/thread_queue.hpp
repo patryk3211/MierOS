@@ -83,7 +83,7 @@ namespace kernel {
 
         bool erase(Thread* thread) {
             Thread* prev = 0;
-            for(Thread* t = first; t != 0; ++t) {
+            for(Thread* t = first; t != 0; t = t->f_next) {
                 if(t == thread) {
                     if(prev == 0)
                         first = t->f_next;
