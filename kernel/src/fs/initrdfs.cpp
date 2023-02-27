@@ -215,73 +215,13 @@ ValueOrError<void> InitRdFilesystem::umount() {
 }
 
 std::Optional<ResolvedMemoryEntry> InitRdFilesystem::resolve_mapping(const ResolvableMemoryEntry& mapping, virtaddr_t addr) {
-    size_t offset = ((addr - mapping.f_start) & ~0xFFF) + mapping.f_file_offset;
+    return Filesystem::mapping_resolve_helper(mapping, addr, [](const VNodePtr& file, size_t offset, void* buffer, size_t length) -> bool {
+        auto* vnode_data = reinterpret_cast<InitRdVNodeData*>(file->fs_data);
+        if(!vnode_data)
+            return false;
 
-    auto vnode = mapping.f_file;
-
-    auto pageOpt = vnode->f_shared_pages.at(offset);
-    if(pageOpt) {
-        ResolvedMemoryEntry entry(*pageOpt);
-        if(mapping.f_shared) {
-            // We only set the entry as file backed if it is shared.
-            // Private entries don't get to be file backed since they
-            // don't affect the file contents.
-            entry.f_file = mapping.f_file;
-            entry.f_file_offset = offset;
-        }
-
-        entry.f_shared = mapping.f_shared;
-        entry.f_page_flags.executable = mapping.f_executable;
-        entry.f_page_flags.writable = mapping.f_writable;
-        if(!mapping.f_shared && mapping.f_writable) {
-            entry.f_copy_on_write = true;
-            entry.f_page_flags.writable = false;
-        } else {
-            entry.f_copy_on_write = false;
-        }
-        return entry;
-    }
-
-    auto* vnode_data = reinterpret_cast<InitRdVNodeData*>(vnode->fs_data);
-    if(!vnode_data)
-        return { };
-
-    PhysicalPage page;
-    page.flags() = PageFlags(true, true, false, false, true, false);
-
-    auto& pager = Pager::active();
-    pager.lock();
-    virtaddr_t ptr = pager.kmap(page.addr(), 1, page.flags());
-
-    ssize_t lengthLeft = vnode->size() - offset;
-    if(lengthLeft > 0) {
-        if(lengthLeft > 4096)
-            lengthLeft = 4096;
-        memcpy((void*)ptr, (u8_t*)vnode_data->ptr + 512 + offset, lengthLeft);
-        if(lengthLeft < 4096)
-            memset((u8_t*)ptr + lengthLeft, 0, 4096 - lengthLeft);
-    } else {
-        memset((u8_t*)ptr, 0, 4096);
-    }
-
-    pager.unmap(ptr, 1);
-    pager.unlock();
-
-    if(mapping.f_shared)
-        vnode->f_shared_pages.insert({ offset, page });
-
-    ResolvedMemoryEntry entry(page);
-    if(mapping.f_shared) {
-        entry.f_file = mapping.f_file;
-        entry.f_file_offset = offset;
-    }
-
-    entry.f_shared = mapping.f_shared;
-    entry.f_page_flags.writable = mapping.f_writable;
-    entry.f_page_flags.executable = mapping.f_executable;
-    // If the entry is not shared then we haven't put in into the vnodes pages
-    // and we can freely write to it.
-    entry.f_copy_on_write = false;
-    return entry;
+        memcpy(buffer, (u8_t*)vnode_data->ptr + 512 + offset, length);
+        return true;
+    });
 }
 

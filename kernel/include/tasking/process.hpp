@@ -100,12 +100,12 @@ namespace kernel {
         Process* fork();
         ValueOrError<void> execve(const VNodePtr& file, char* argv[], char* envp[]);
 
-        virtaddr_t get_free_addr(virtaddr_t hint, size_t length);
+        virtaddr_t get_free_addr(virtaddr_t hint, size_t pageLength);
         void map_page(virtaddr_t addr, PhysicalPage& page, bool shared, bool copyOnWrite);
-        void alloc_pages(virtaddr_t addr, size_t length, int flags, int prot);
-        void null_pages(virtaddr_t addr, size_t length);
-        void file_pages(virtaddr_t addr, size_t length, VNodePtr file, size_t fileOffset, bool shared, bool write, bool execute);
-        void unmap_pages(virtaddr_t addr, size_t length);
+        void alloc_pages(virtaddr_t addr, size_t pageLength, int flags, int prot);
+        void null_pages(virtaddr_t addr, size_t pageLength);
+        void file_pages(virtaddr_t addr, size_t byteLength, VNodePtr file, size_t fileOffset, bool shared, bool write, bool execute);
+        void unmap_pages(virtaddr_t addr, size_t pageLength);
 
         bool handle_page_fault(virtaddr_t fault_address, u32_t code);
 

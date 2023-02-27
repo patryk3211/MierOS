@@ -22,11 +22,11 @@ std::Optional<ResolvedMemoryEntry> AnonymousMemory::resolve(virtaddr_t) {
 SharedAnonymousMemory::SharedAnonymousMemory(virtaddr_t start, size_t length)
     : f_pages(length, { }) {
     f_start = start;
-    f_length = length;
+    f_length = length * 4096;
 }
 
 std::Optional<ResolvedMemoryEntry> SharedAnonymousMemory::resolve(virtaddr_t addr) {
-    if(addr < f_start || addr >= (f_start + (f_length << 12)))
+    if(addr < f_start || addr >= f_start + f_length)
         return { };
 
     size_t pageOffset = (addr - f_start) >> 12;

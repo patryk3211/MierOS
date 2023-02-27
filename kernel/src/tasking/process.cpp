@@ -384,8 +384,12 @@ void Process::file_pages(virtaddr_t addr, size_t length, VNodePtr file, size_t f
     entry->f_writable = write;
     entry->f_executable = execute;
 
+    // Align to 4096 bytes
+    if(length & 0xFFF)
+        length = (length | 0xFFF) + 1;
+
     f_resolvable_memory[addr] = entry;
-    f_resolvable_memory.insert({ addr + (length << 12), nullptr });
+    f_resolvable_memory.insert({ addr + length, nullptr });
 }
 
 bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
@@ -463,9 +467,19 @@ bool Process::handle_page_fault(virtaddr_t fault_address, u32_t code) {
         
         f_pager->lock();
         f_pager->map(resolved->f_page.addr(), fault_address & ~0xFFF, 1, resolved->f_page_flags);
+        f_resolved_memory.insert({ fault_address & ~0xFFF, *resolved });
+
+        if(!ptr->f_shared && ptr->f_writable) {
+            size_t mappingOffset = (fault_address & ~0xFFF) - ptr->f_start;
+            ssize_t mappingLeft = ptr->f_length - mappingOffset;
+            if(mappingLeft < 4096) {
+                if(mappingLeft < 0)
+                    mappingLeft = 0;
+                memset((u8_t*)(fault_address & ~0xFFF) + mappingLeft, 0, 4096 - mappingLeft);
+            }
+        }
         f_pager->unlock();
 
-        f_resolved_memory.insert({ fault_address & ~0xFFF, *resolved });
         return true;
     }
 

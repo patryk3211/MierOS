@@ -318,15 +318,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
                 if(filePages > 0) {
                     // Map a file segment here
-                    file_pages(base + (header.vaddr & ~0xFFF), filePages, file, header.offset & ~0xFFF,
+                    file_pages(base + (header.vaddr & ~0xFFF), alignedFileSize, file, header.offset & ~0xFFF,
                                !(header.flags & 2), header.flags & 2, header.flags & 1);
-
-                    // We need this since the .bss section will likely intersect
-                    // with some data and we need to guarantee that it is cleared
-                    if(alignedMemSize > alignedFileSize && ((header.vaddr + header.file_size) & 0xFFF)) {
-                        // We need to zero out some memory
-                        memset((void*)(base + header.vaddr + header.file_size), 0, 4096 - ((header.vaddr + header.file_size) & 0xFFF));
-                    }
                 }
 
                 size_t pagesLeft = pageCount - filePages;
@@ -399,15 +392,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
 
                 if(filePages > 0) {
                     // Map a file segment here
-                    file_pages(interpreterBase + (header.vaddr & ~0xFFF), filePages, interpFile, header.offset & ~0xFFF,
+                    file_pages(interpreterBase + (header.vaddr & ~0xFFF), alignedFileSize, interpFile, header.offset & ~0xFFF,
                                !(header.flags & 2), header.flags & 2, header.flags & 1);
-
-                    // We need this since the .bss section will likely intersect
-                    // with some data and we need to guarantee that it is cleared
-                    if(alignedMemSize > alignedFileSize && ((header.vaddr + header.file_size) & 0xFFF)) {
-                        // We need to zero out some memory
-                        memset((void*)(interpreterBase + header.vaddr + header.file_size), 0, 4096 - ((header.vaddr + header.file_size) & 0xFFF));
-                    }
                 }
 
                 size_t pagesLeft = pageCount - filePages;
