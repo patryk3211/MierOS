@@ -28,6 +28,7 @@ namespace kernel {
         unsigned char type() const { return f_type; }
 
         int& flags() { return f_flags; }
+        const int& flags() const { return f_flags; }
 
         /**
          * @brief Read the given amount of bytes into the buffer.

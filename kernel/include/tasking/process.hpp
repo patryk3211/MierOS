@@ -11,8 +11,6 @@
 #include <range_map.hpp>
 #include <memory/page/resolved_memory.hpp>
 #include <memory/page/resolvable_memory.hpp>
-
-#define __KERNEL__
 #include <asm/signal.h>
 
 namespace kernel {
@@ -92,10 +90,11 @@ namespace kernel {
         
         void handle_signal(Thread* onThread);
 
-        fd_t add_stream(Stream* stream, fd_t hint = -1);
-        void close_stream(fd_t fd);
+        fd_t add_stream(Stream* stream);
+        ValueOrError<void> close_stream(fd_t fd);
         Stream* get_stream(fd_t fd);
-        ValueOrError<fd_t> dup_stream(fd_t oldFd, fd_t newFd);
+        ValueOrError<fd_t> dup_stream(fd_t oldFd, fd_t newFd, int flags);
+        ValueOrError<StreamWrapper&> get_stream_wrapper(fd_t fd);
 
         Process* fork();
         ValueOrError<void> execve(const VNodePtr& file, char* argv[], char* envp[]);

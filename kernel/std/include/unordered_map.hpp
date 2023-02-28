@@ -247,10 +247,10 @@ namespace std {
             return last->next->value();
         }
 
-        void erase(const K& key) {
+        bool erase(const K& key) {
             size_t bucket_pos = Hasher {}(key) % f_capacity;
 
-            if(f_bucket[bucket_pos] == 0) return;
+            if(f_bucket[bucket_pos] == 0) return false;
             Entry* prev = 0;
             for(Entry* entry = f_bucket[bucket_pos]; entry != 0; entry = entry->next) {
                 if(Pred {}(key, entry->key)) {
@@ -261,10 +261,11 @@ namespace std {
                         prev->next = entry->next;
                     allocator.free(entry);
                     --f_size;
-                    return;
+                    return true;
                 }
                 prev = entry;
             }
+            return false;
         }
 
         size_t size() const { return f_size; }

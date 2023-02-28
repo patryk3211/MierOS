@@ -68,6 +68,13 @@ namespace kernel {
          */
         size_t stream_write(const void* buffer, size_t length);
 
+        /**
+         * @brief Flush input buffer
+         *
+         * Discards all data pending in the input buffer
+         */
+        void flush_input();
+
     private:
         bool handle_conditions(u16_t c);
         size_t translate_character_input(u16_t c, char* result);

@@ -207,6 +207,7 @@ namespace kernel {
         }
     };
 
+    // Void value
     template<> class ValueOrError<void> {
         int error;
 
@@ -236,6 +237,71 @@ namespace kernel {
 
         err_t errno() {
             return error;
+        }
+
+        operator bool() {
+            return error == 0;
+        }
+    };
+
+    // Reference value
+    template<typename T> class ValueOrError<T&> {
+        T& ref;
+        int error;
+
+    public:
+        ValueOrError(T& value)
+            : ref(value)
+            , error(0) { }
+
+        // Shut up compiler, I know what I'm doing
+        // If you are using the value before checking if it is
+        // not an error it's your fault for triggering undefined behaviour
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wnull-dereference"
+        ValueOrError(err_t errno)
+            : ref(*(T*)0)
+            , error(errno) { }
+        #pragma GCC diagnostic pop
+
+        ValueOrError(const ValueOrError<T&>& other) {
+            error = other.error;
+            ref = other.ref;
+        }
+
+        ValueOrError(ValueOrError<T>&& other) {
+            error = other.error;
+            ref = other.ref;
+        }
+
+        ValueOrError& operator=(const ValueOrError<T>& other) {
+            error = other.error;
+            ref = other.ref;
+            return *this;
+        }
+
+        ValueOrError& operator=(ValueOrError<T>&& other) {
+            error = other.error;
+            ref = other.ref;
+            return *this;
+        }
+
+        ~ValueOrError() = default;
+
+        T& value() {
+            return ref;
+        }
+
+        err_t errno() {
+            return error;
+        }
+
+        T& operator*() {
+            return value();
+        }
+
+        T* operator->() {
+            return &value();
         }
 
         operator bool() {

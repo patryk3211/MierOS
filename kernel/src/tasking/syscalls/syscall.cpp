@@ -37,6 +37,7 @@ DEF_SYSCALL(sigaction, sigNum, action, oldAction);
 DEF_SYSCALL(getcwd, ptr, maxLength);
 DEF_SYSCALL(kill, pid, signal);
 DEF_SYSCALL(sigreturn);
+DEF_SYSCALL(fdflags, fd, flags);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
@@ -66,6 +67,7 @@ extern "C" void init_syscalls() {
     SYSCALL(23, getcwd);
     SYSCALL(24, kill);
     SYSCALL(25, sigreturn);
+    SYSCALL(26, fdflags);
 
     register_syscall_handler(&run_syscall);
 }

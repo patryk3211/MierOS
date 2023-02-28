@@ -8,28 +8,34 @@ StreamWrapper::StreamWrapper(Stream* base)
     f_data = new DataStorage();
     f_data->f_base = base;
     f_data->f_referenceCount.store(1);
+    flags() = base->flags();
 }
         
 StreamWrapper::StreamWrapper(const StreamWrapper& other)
     : Stream(other.type())
     , f_data(other.f_data) {
     f_data->f_referenceCount.fetch_add(1);
+    flags() = other.flags();
 }
 
 StreamWrapper::StreamWrapper(StreamWrapper&& other)
     : Stream(other.type())
-    , f_data(other.leak()) { }
+    , f_data(other.leak()) {
+    flags() = other.flags();
+}
 
 StreamWrapper& StreamWrapper::operator=(const StreamWrapper& other) {
     clear();
     f_data = other.f_data;
     f_data->f_referenceCount.fetch_add(1);
+    flags() = other.flags();
     return *this;
 }
 
 StreamWrapper& StreamWrapper::operator=(StreamWrapper&& other) {
     clear();
     f_data = other.leak();
+    flags() = other.flags();
     return *this;
 }
 

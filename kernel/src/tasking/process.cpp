@@ -5,6 +5,7 @@
 #include <tasking/syscalls/map.hpp>
 #include <locking/locker.hpp>
 #include <memory/page/anonymous_memory.hpp>
+#include <asm/fcntl.h>
 
 using namespace kernel;
 
@@ -260,33 +261,29 @@ void Process::handle_signal(Thread* onThread) {
     f_signal_lock.unlock();
 }
 
-fd_t Process::add_stream(Stream* stream, fd_t hint) {
+fd_t Process::add_stream(Stream* stream) {
     Locker lock(f_lock);
 
-    if(hint != -1) {
-        auto current = f_streams.at(hint);
-        if(current)
-            f_streams.erase(hint);
-        f_streams.insert({ hint, stream });
-        return hint;
-    } else {
-        fd_t fd = f_next_fd;
-        while(f_streams.find(fd) != f_streams.end())
-            ++fd;
+    fd_t fd = f_next_fd;
+    while(f_streams.find(fd) != f_streams.end())
+        ++fd;
 
-        f_streams.insert({ fd, stream });
-        if(fd == f_next_fd)
-            f_next_fd = fd + 1;
-        return fd;
-    }
+    f_streams.insert({ fd, stream });
+    if(fd == f_next_fd)
+        f_next_fd = fd + 1;
+    return fd;
 }
 
-void Process::close_stream(fd_t fd) {
+ValueOrError<void> Process::close_stream(fd_t fd) {
     Locker lock(f_lock);
 
-    f_streams.erase(fd);
-    if(fd < f_next_fd)
-        f_next_fd = fd;
+    if(f_streams.erase(fd)) {
+        if(fd < f_next_fd)
+            f_next_fd = fd;
+        return { };
+    } else {
+        return EBADF;
+    }
 }
 
 Stream* Process::get_stream(fd_t fd) {
@@ -300,7 +297,7 @@ Stream* Process::get_stream(fd_t fd) {
     return &val->base();
 }
 
-ValueOrError<fd_t> Process::dup_stream(fd_t oldFd, fd_t newFd) {
+ValueOrError<fd_t> Process::dup_stream(fd_t oldFd, fd_t newFd, int flags) {
     Locker lock(f_lock);
 
     auto val = f_streams.at(oldFd);
@@ -308,19 +305,35 @@ ValueOrError<fd_t> Process::dup_stream(fd_t oldFd, fd_t newFd) {
         return EBADF;
 
     if(newFd != -1) {
-        if(f_streams.at(newFd))
-            f_streams.erase(newFd);
+        if(flags & DUP_SOFT) {
+            while(f_streams.find(newFd) != f_streams.end())
+                ++newFd;
+            if(newFd == f_next_fd)
+                f_next_fd = newFd + 1;
+        } else {
+            if(f_streams.at(newFd))
+                f_streams.erase(newFd);
+        }
     } else {
         newFd = f_next_fd;
         while(f_streams.find(newFd) != f_streams.end())
             ++newFd;
+        if(newFd == f_next_fd)
+            f_next_fd = newFd + 1;
     }
 
     f_streams.insert({ newFd, *val });
+    if(flags & O_CLOEXEC) {
+        auto& wrapper = *f_streams.at(newFd);
+        wrapper.flags() |= O_CLOEXEC;
+    }
     return newFd;
 }
 
-#include <util/profile.hpp>
+ValueOrError<StreamWrapper&> Process::get_stream_wrapper(fd_t fd) {
+    auto refOpt = f_streams.at(fd);
+    return refOpt ? ValueOrError<StreamWrapper&>(*refOpt) : EBADF;
+}
 
 void Process::map_page(virtaddr_t addr, PhysicalPage& page, bool shared, bool copyOnWrite) {
     Locker lock(f_lock);

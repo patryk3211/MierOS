@@ -19,8 +19,7 @@ static const u16_t serial_ports[] = {
     // I will not add the rest of the com ports for now
 };
 
-static u32_t working_ports;
-//static VNodePtr device_nodes[sizeof(serial_ports) / sizeof(u16_t)];
+u32_t working_ports;
 Port* device_ports[sizeof(serial_ports) / sizeof(u16_t)];
 
 extern u16_t major;
@@ -76,6 +75,22 @@ bool configure_serial(u16_t port) {
     return true;
 }
 
+void termios_apply(Port* port, termios* settings) {
+    // Apply settings to helper
+    memcpy(port->termiosHelper.termios(), settings, sizeof(termios));
+
+    // Reconfigure the port based on provided settings
+}
+
+void Port::set_termios(void *ptr, int when) {
+    if(when == SET_IMMEDIATE) {
+        termios_apply(this, reinterpret_cast<termios*>(ptr));
+    } else {
+        memcpy(&pendingSettings, ptr, sizeof(termios));
+        setWhen = when;
+    }
+}
+
 void serial_interrupt() {
     size_t portIdx = 0;
     for(auto ports = working_ports; ports; ports >>= 1, ++portIdx) {
@@ -86,7 +101,8 @@ void serial_interrupt() {
         if(!(intStat & 1))
             continue;
 
-        u16_t port = device_ports[portIdx]->ioPort;
+        auto& device = device_ports[portIdx];
+        u16_t port = device->ioPort;
 
         u8_t intReason = (intStat >> 1) & 0x7;
         if(intReason == 0x02) {
@@ -97,18 +113,37 @@ void serial_interrupt() {
                 u8_t statusByte = 0;
                 statusByte |= (lineStatus & 0x0C) ? 0x01 : 0x00;
                 statusByte |= (lineStatus & 0x10) ? 0x02 : 0x00;
-                device_ports[portIdx]->termiosHelper.character_received(dataByte | ((u16_t)statusByte << 8));
+                device->termiosHelper.character_received(dataByte | ((u16_t)statusByte << 8));
             }
         } else if(intReason == 0x01) {
             // Transmitter Empty
             // Write data until transmit holding buffer is full
+            
+            // If anything was written to the data register
+            // then we will receive another interrupt.
+            bool written = false;
             while(inb(port + LINE_STATUS_REGISTER) & 0x20) {
                 u8_t dataByte;
-                bool success = device_ports[portIdx]->outputBuffer.read(&dataByte, false);
+                bool success = device->outputBuffer.read(&dataByte, false);
                 if(!success)
                     break;
 
                 outb(port + DATA_REGISTER, dataByte);
+                written = true;
+            }
+
+            if(!written) {
+                device->transmitting = false;
+                // Nothing was written so the buffer must be empty.
+                if(device->setWhen & SET_DRAIN) {
+                    // Apply the pending termios settings
+                    termios_apply(device, &device->pendingSettings);
+
+                    // Flush input if needed
+                    if(device->setWhen & SET_FLUSH)
+                        device->termiosHelper.flush_input();
+                    device->setWhen = 0;
+                }
             }
         }
     }
@@ -120,6 +155,7 @@ bool termios_write_callback(void* arg, u8_t c) {
         // Transmit holding register is empty, we need to
         // send data so that an interrupt chain starts.
         outb(port->ioPort + DATA_REGISTER, c);
+        port->transmitting = true;
         return true;
     } else {
         return port->outputBuffer.write(c, true);
@@ -135,11 +171,14 @@ extern "C" int init() {
             name[4] = '0' + i;
 
             // Configure a devfs node
-            DeviceFilesystem::instance()->add_dev(name, major, i, VNode::CHARACTER_DEVICE);
+            auto result = DeviceFilesystem::instance()->add_dev(name, major, i, VNode::CHARACTER_DEVICE);
 
-            device_ports[i] = new Port(serial_ports[i], 256, &termios_write_callback);
+            if(result) {
+                device_ports[i] = new Port(serial_ports[i], 256, &termios_write_callback);
+                device_ports[i]->deviceNode = *result;
 
-            working_ports |= 1 << i;
+                working_ports |= 1 << i;
+            }
         }
     }
 

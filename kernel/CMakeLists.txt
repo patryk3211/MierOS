@@ -95,6 +95,7 @@ add_custom_command(TARGET kernel.bin POST_BUILD
                     COMMENT "Exporting debug line symbols...")
 
 add_compile_definitions(${ARCH}=1)
+add_compile_definitions(__KERNEL__)
 
 if(${DEBUG})
     add_compile_definitions(DEBUG=true)

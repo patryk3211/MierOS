@@ -1,6 +1,4 @@
 #include <tasking/syscalls/syscall.hpp>
-
-#define __KERNEL__
 #include <asm/signal.h>
 
 using namespace kernel;

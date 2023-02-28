@@ -10,8 +10,6 @@
 #include <types.h>
 #include <unordered_map.hpp>
 #include <tasking/sleep_queue.hpp>
-
-#define __KERNEL__
 #include <asm/signal.h>
 
 namespace kernel {

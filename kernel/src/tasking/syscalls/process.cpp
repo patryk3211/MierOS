@@ -8,8 +8,6 @@
 #include <elf.h>
 #include <asm/procid.h>
 
-#include <util/profile.hpp>
-
 using namespace kernel;
 
 DEF_SYSCALL(exit, exitCode) {
@@ -478,7 +476,8 @@ ValueOrError<void> Process::execve(const VNodePtr& file, char* argv[], char* env
     std::List<fd_t> toClose;
     auto iter = f_streams.begin();
     while(iter != f_streams.end()) {
-        if((*iter).value.base().flags() & O_CLOEXEC) {
+        // We use stream wrapper flags for the O_CLOEXEC flag.
+        if((*iter).value.flags() & O_CLOEXEC) {
             toClose.push_back((*iter).key);
         }
         ++iter;

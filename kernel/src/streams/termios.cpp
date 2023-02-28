@@ -266,3 +266,9 @@ void TermiosHelper::write_output(char c) {
     f_write_cb(f_arg, c);
 }
 
+void TermiosHelper::flush_input() {
+    f_read_head = 0;
+    f_write_head = 0;
+    f_line_head = 0;
+}
+

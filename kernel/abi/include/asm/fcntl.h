@@ -29,6 +29,8 @@
 #define O_TMPFILE   0x080000
 #define O_DIRECT    0x100000
 
+#define DUP_SOFT    0x000001
+
 #define F_DUPFD 1
 #define F_DUPFD_CLOEXEC 2
 #define F_GETFD 3
@@ -42,6 +44,12 @@
 #define F_SETOWN 11
 
 #define FD_CLOEXEC 1
+
+#define FDF_OP_MASK 0x70000000
+#define FDF_GETS    0x10000000
+#define FDF_GETD    0x20000000
+#define FDF_SETS    0x30000000
+#define FDF_SETD    0x40000000
 
 #define F_SEAL_SHRINK 0x0002
 #define F_SEAL_GROW   0x0004

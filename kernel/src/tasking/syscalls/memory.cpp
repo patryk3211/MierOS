@@ -3,8 +3,6 @@
 #include <streams/filestream.hpp>
 #include <errno.h>
 
-#include <util/profile.hpp>
-
 using namespace kernel;
 
 DEF_SYSCALL(mmap, ptr, length, prot, flags, fd, offset) {

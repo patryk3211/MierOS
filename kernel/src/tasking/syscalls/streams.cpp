@@ -71,9 +71,9 @@ DEF_SYSCALL(openat, name, flags, mode, dirfd) {
 }
 
 DEF_SYSCALL(close, fd) {
-    proc.close_stream(fd);
+    auto result = proc.close_stream(fd);
     TRACE("(syscall) Process (pid = %d) closed fd = %d", proc.main_thread()->pid(), fd);
-    return 0;
+    return result ? 0 : -result.errno();
 }
 
 DEF_SYSCALL(read, fd, ptr, length) {
@@ -132,7 +132,7 @@ DEF_SYSCALL(ioctl, fd, request, arg) {
 }
 
 DEF_SYSCALL(dup, oldfd, newfd, flags) {
-    auto result = proc.dup_stream(oldfd, newfd);
+    auto result = proc.dup_stream(oldfd, newfd, flags);
 
     if(result)
         TRACE("(syscall) Process (pid = %d) duplicated fd %d onto fd %d", proc.pid(), oldfd, *result);
@@ -181,6 +181,41 @@ DEF_SYSCALL(pipe, pipeStorage, flags) {
     ptr[1] = proc.add_stream(result.value);
 
     TRACE("(syscall) Process (pid = %d) opened new pipe pair (read = %d, write = %d)", proc.pid(), ptr[0], ptr[1]);
+    return 0;
+}
+
+const int F_STATUS_FLAG_MASK = O_APPEND | O_ASYNC | O_DIRECT | O_NOATIME | O_NONBLOCK;
+DEF_SYSCALL(fdflags, fd, flags) {
+    auto wrapper = proc.get_stream_wrapper(fd);
+    if(!wrapper)
+        return wrapper.errno();
+
+    switch(flags & FDF_OP_MASK) {
+        case FDF_GETS:
+            return wrapper->base().flags();
+        case FDF_GETD: {
+            auto flags = wrapper->flags();
+            // Translate O_CLOEXEC into FD_CLOEXEC
+            return (flags & O_CLOEXEC) ? FD_CLOEXEC : 0;
+        }
+        case FDF_SETS: {
+            // First clear the modifiable flags in the stream
+            wrapper->base().flags() &= ~F_STATUS_FLAG_MASK;
+            // And then apply the modifiable flags onto the stream
+            wrapper->base().flags() |= flags & F_STATUS_FLAG_MASK;
+            // TODO: [28.02.2023] We might want to notify the underlying filesystem of the flag change.
+        }
+        case FDF_SETD: {
+            // Set or clear the CLOEXEC flag
+            if(flags & FD_CLOEXEC) {
+                wrapper->flags() |= O_CLOEXEC;
+            } else {
+                wrapper->flags() &= ~O_CLOEXEC;
+            }
+        }
+        default:
+            return EINVAL;
+    }
     return 0;
 }
 

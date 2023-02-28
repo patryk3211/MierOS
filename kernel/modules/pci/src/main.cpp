@@ -18,10 +18,10 @@ std::List<PCI_Device> pci_devices;
 
 extern void detect_pci();
 
-static kernel::VNodePtr sysfs_deviceRoot = nullptr;
-static kernel::VNodePtr sysfs_busRoot = nullptr;
-static kernel::VNodePtr sysfs_busDriversRoot = nullptr;
-static kernel::VNodePtr sysfs_busDevicesRoot = nullptr;
+kernel::VNodePtr sysfs_deviceRoot = nullptr;
+kernel::VNodePtr sysfs_busRoot = nullptr;
+kernel::VNodePtr sysfs_busDriversRoot = nullptr;
+kernel::VNodePtr sysfs_busDevicesRoot = nullptr;
 
 #define SYSFS_ADD_NODE(root, location, dataFormat, ...) { \
         auto nodeData = kernel::SystemFilesystem::instance()->add_node((root), (location)); \

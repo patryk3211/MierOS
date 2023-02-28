@@ -1,8 +1,13 @@
 #pragma once
 
+#include "asm/termios.h"
 #include "fifo.hpp"
 #include <fs/filesystem.hpp>
 #include <streams/termios.hpp>
+
+#define SET_IMMEDIATE   1
+#define SET_DRAIN       2
+#define SET_FLUSH       4
 
 struct Port {
     u16_t ioPort;
@@ -10,8 +15,11 @@ struct Port {
 
     FIFO outputBuffer;
     //FIFO inputBuffer;
+    bool transmitting;
 
     kernel::TermiosHelper termiosHelper;
+    termios pendingSettings;
+    int setWhen;
 
     kernel::VNodePtr deviceNode;
 
@@ -20,8 +28,11 @@ struct Port {
         , outputBuffer(bufferCapacity)
         , termiosHelper(writeCallback, this)
         , deviceNode(nullptr) {
-        //, inputBuffer(bufferCapacity) {
         openCount = 0;
+        setWhen = 0;
+        transmitting = false;
     }
+
+    void set_termios(void* ptr, int when);
 };
 

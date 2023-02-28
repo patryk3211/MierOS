@@ -38,7 +38,7 @@ std::Pair<u16_t, DeviceFunctionTable*> DeviceFilesystem::get_function_table(VNod
 
 #define RUN_FUNC(node, func, ...) {\
     auto result = get_function_table(node); \
-    if(!result.key) \
+    if(!result.value) \
         return ENODEV; \
     auto* f = result.value->func; \
     if(!f) \

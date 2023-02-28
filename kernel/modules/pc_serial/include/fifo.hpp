@@ -43,5 +43,9 @@ public:
         f_read_head = (f_read_head + 1) % f_capacity;
         return true;
     }
+
+    bool empty() {
+        return f_read_head == f_write_head;
+    }
 };
 
