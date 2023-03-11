@@ -95,19 +95,41 @@ DEF_SYSCALL(kill, pid, signal) {
     if(signal >= 64)
         return -EINVAL;
 
-    auto* thread = Thread::get(pid);
-    if(!thread || !thread->is_main())
-        return -ESRCH;
+    if(pid > 0) {
+        auto* thread = Thread::get(pid);
+        if(!thread || !thread->is_main())
+            return -ESRCH;
 
-    siginfo_t* info = new siginfo_t();
-    info->si_pid = proc.pid();
-    info->si_uid = proc.uid();
-    info->si_signo = signal;
+        auto info = std::make_shared<siginfo_t>();
+        memset(info.ptr(), 0, sizeof(siginfo_t));
+        info->si_pid = proc.pid();
+        info->si_uid = proc.uid();
+        info->si_signo = signal;
 
-    thread->parent().signal(info);
+        thread->parent().signal(info);
 
-    TRACE("(syscall) Process (pid = %d) signalled process (pid = %d) with signum = %d", proc.pid(), pid, signal);
-    return 0;
+        TRACE("(syscall) Process (pid = %d) signalled process (pid = %d) with signum = %d", proc.pid(), pid, signal);
+        return 0;
+    } else {
+        ProcessGroup& group = proc.group();
+        if(pid != 0) {
+            auto gptr = ProcessGroup::get_group(-pid);
+            if(!gptr)
+                return -ESRCH;
+            group = *gptr;
+        }
+
+        auto info = std::make_shared<siginfo_t>();
+        memset(info.ptr(), 0, sizeof(siginfo_t));
+        info->si_pid = proc.pid();
+        info->si_uid = proc.uid();
+        info->si_signo = signal;
+
+        group.signal(info);
+
+        TRACE("(syscall) Process (pid = %d) signalled process group (id = %d) with signum = %d", proc.pid(), -pid, signal);
+        return 0;
+    }
 }
 
 DEF_SYSCALL(sigreturn) {

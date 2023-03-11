@@ -36,6 +36,8 @@ namespace kernel {
 
         virtual ValueOrError<int> ioctl(FileStream* stream, u64_t request, void* arg);
 
+        virtual ValueOrError<void> stat(VNodePtr node, mieros_stat* stat);
+
         ValueOrError<u32_t> block_read(VNodePtr bdev, u64_t lba, u32_t sector_count, void* buffer);
         ValueOrError<u32_t> block_write(VNodePtr bdev, u64_t lba, u32_t sector_count, const void* buffer);
 
@@ -47,3 +49,4 @@ namespace kernel {
         std::Pair<u16_t, DeviceFunctionTable*> get_function_table(VNodePtr node);
     };
 }
+

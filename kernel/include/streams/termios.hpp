@@ -20,6 +20,8 @@ namespace kernel {
         size_t f_read_head;
         u8_t* f_input_buffer;
 
+        pid_t f_process_group;
+
     public:
         TermiosHelper(char_write_cb_t* writeCallback, void* callbackArg);
         ~TermiosHelper();
@@ -74,6 +76,8 @@ namespace kernel {
          * Discards all data pending in the input buffer
          */
         void flush_input();
+
+        pid_t& process_group();
 
     private:
         bool handle_conditions(u16_t c);

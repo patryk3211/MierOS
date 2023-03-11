@@ -7,6 +7,7 @@
 #include <vector.hpp>
 #include <elf.h>
 #include <asm/procid.h>
+#include <asm/wait.h>
 
 using namespace kernel;
 
@@ -64,42 +65,78 @@ DEF_SYSCALL(getid, id) {
     }
 }
 
-#define WNOHANG 1
-#define WUNTRACED 2
-#define WSTOPPED 2
-#define WEXITED 4
-#define WCONTINUED 8
-
 DEF_SYSCALL(waitpid, pid, status, options) {
-    // TODO: [14.02.2023] We need to make sure that the process at pid is
-    // a child of the calling process.
-    auto* thread = Thread::get(pid);
-    if(!thread)
-        return ECHILD;
-
-    if(!thread->is_main())
-        return EINVAL;
-
     if(status)
         VALIDATE_PTR(status);
-
     int statusValue = 0;
+    pid_t returnValue = 0;
 
-    // TODO: [15.02.2023] We need to allow for groups of children to be handled.
-    TRACE("(syscall) Wait pid called for to get state of pid = %d, caller pid = %d", pid, proc.pid());
-    auto state = thread->get_state(!(options & WNOHANG));
-    if(state == DEAD) {
-        // Encode status data
-        auto& proc = thread->parent();
-        statusValue |= proc.exit_status() << 8;
+    bool sleep = !(options & WNOHANG);
+
+    long signedPid = static_cast<long>(pid); 
+    if(signedPid > 0) {
+        // Wait for the given child
+        auto* thread = Thread::get(signedPid);
+        if(!thread ||
+           !thread->is_main() ||
+           thread->parent().ppid() != proc.pid())
+            return -ECHILD;
+
+        TRACE("(syscall) Wait pid called to get state of pid = %d, caller pid = %d", pid, proc.pid());
+        auto state = thread->get_state(sleep);
+        if(state == DEAD) {
+            // Encode status data
+            statusValue = thread->parent().state_status();
+        }
+
+        returnValue = thread->parent().pid();
+    } else if(signedPid < -1) {
+        // Wait for any child in group of id
+        auto group = ProcessGroup::get_group(-signedPid);
+        if(!group)
+            return -ECHILD;
+        
+        GroupSleepQueue::WaitInfo info;
+        TRACE("(syscall) Wait pid called on group (id = %d), caller pid = %d", -signedPid, proc.pid());
+        auto result = group->wait(&info, proc.pid(), sleep);
+        if(!result)
+            return -result.errno();
+
+        statusValue = info.f_waker_status;
+        returnValue = info.f_waker_pid;
+    } else if(signedPid == 0) {
+        // Wait for any child in group of parent
+        GroupSleepQueue::WaitInfo info;
+        TRACE("(syscall) Wait pid called to wait for children in group of caller (pid = %d, pgid = %d)", proc.pid(), proc.pgid());
+        auto result = proc.group().wait(&info, proc.pid(), sleep);
+        if(!result)
+            return -result.errno();
+
+        statusValue = info.f_waker_status;
+        returnValue = info.f_waker_pid;
+    } else if(signedPid == -1) {
+        // Wait for any child
+        GroupSleepQueue::WaitInfo info;
+        TRACE("(syscall) Wait pid called to wait for any child of caller (pid = %d)", proc.pid());
+        proc.wait_for_child(&info, sleep);
+
+        statusValue = info.f_waker_status;
+        returnValue = info.f_waker_pid;
+    } else {
+        // This should never happen
+        ASSERT_NOT_REACHED("(waitpid) Unknown pid branch");
     }
 
     if(status)
-        *((int*)status) = statusValue;
+        *reinterpret_cast<int*>(status) = statusValue;
 
-    // TODO: [15.02.2023] Delete the thread if it died.
+    if(WIFEXITED(statusValue)) {
+        auto* deadThread = Thread::get(returnValue);
+        ASSERT_F(deadThread, "A process has exited but it didn't leave a zombie thread");
+        Process::cleanup_process(&deadThread->parent());
+    }
 
-    return thread->pid();
+    return returnValue;
 }
 
 DEF_SYSCALL(getcwd, ptr, maxLength) {
@@ -113,6 +150,31 @@ DEF_SYSCALL(getcwd, ptr, maxLength) {
     return cwd.length();
 }
 
+DEF_SYSCALL(getpgid, pid) {
+    if(pid == 0)
+        pid = proc.pid();
+
+    auto* thread = Thread::get(pid);
+    if(!thread || !thread->is_main())
+        return -ESRCH;
+
+    return thread->parent().pgid();
+}
+
+DEF_SYSCALL(setpgid, pid, pgid) {
+    if(pid == 0)
+        pid = proc.pid();
+    if(pgid == 0)
+        pgid = pid;
+
+    auto* thread = Thread::get(pid);
+    if(!thread || !thread->is_main())
+        return -ESRCH;
+
+    auto result = thread->parent().set_group(pgid);
+    return result ? 0 : -result.errno();
+}
+
 Process* Process::fork() {
     f_lock.lock();
     Thread* caller = Thread::current();
@@ -123,12 +185,15 @@ Process* Process::fork() {
     CPUSTATE_RET(child->main_thread()->f_ksp) = 0;
     child->main_thread()->f_ksp->cr3 = child->f_pager->cr3();
 
+    f_children.push_back(child);
+
     child->f_uid = f_uid;
     child->f_gid = f_gid;
     child->f_euid = f_euid;
     child->f_egid = f_egid;
 
-    child->f_parent = pid();
+    child->f_parent = this;
+    child->f_group = f_group;
 
     // Copy the memory space
     f_pager->lock();

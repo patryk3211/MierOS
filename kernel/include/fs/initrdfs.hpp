@@ -23,6 +23,8 @@ namespace kernel {
         virtual ValueOrError<size_t> write(FileStream* stream, const void* buffer, size_t length);
 
         virtual ValueOrError<size_t> seek(FileStream* stream, size_t position, int mode);
+
+        virtual ValueOrError<void> stat(VNodePtr node, mieros_stat* stat);
         
         virtual std::Optional<ResolvedMemoryEntry> resolve_mapping(const ResolvableMemoryEntry& mapping, virtaddr_t addr);
     private:

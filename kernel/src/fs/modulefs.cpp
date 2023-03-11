@@ -67,6 +67,10 @@ ValueOrError<size_t> ModuleFilesystem::seek(FileStream* stream, size_t position,
     RUN_FUNC(seek, stream, position, mode);
 }
 
+ValueOrError<void> ModuleFilesystem::stat(VNodePtr node, mieros_stat *stat) {
+    RUN_FUNC(stat, node, stat);
+}
+
 std::Optional<ResolvedMemoryEntry> ModuleFilesystem::resolve_mapping(const ResolvableMemoryEntry& mapping, virtaddr_t addr) {
     auto* func = f_driver->resolve_mapping;
     if(func)
@@ -79,3 +83,4 @@ void ModuleFilesystem::sync_mapping(const ResolvedMemoryEntry& mapping) {
     auto* func = f_driver->sync_mapping;
     if(func != 0) func(f_minor, mapping);
 }
+

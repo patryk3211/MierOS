@@ -78,6 +78,17 @@ ValueOrError<int> DeviceFilesystem::ioctl(FileStream* stream, u64_t request, voi
     RUN_FUNC(stream->node(), ioctl, request, arg);
 }
 
+ValueOrError<void> DeviceFilesystem::stat(VNodePtr node, mieros_stat* stat) {
+    node->stat(stat);
+
+    if(node->type() == VNode::BLOCK_DEVICE || node->type() == VNode::CHARACTER_DEVICE) {
+        auto* numbers = static_cast<DevFs_DevData*>(node->fs_data);
+        stat->f_rdev = (numbers->major << 16) | numbers->minor;
+    }
+
+    return { };
+}
+
 ValueOrError<VNodePtr> DeviceFilesystem::add_dev(const char* path, u16_t major, u16_t minor, VNode::Type deviceType) {
     ASSERT_F(major != 0, "Cannot have a major number of 0");
 

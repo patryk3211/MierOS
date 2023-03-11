@@ -4,6 +4,9 @@
 #include <defines.h>
 #include <fs/vnode.hpp>
 #include <asm/ioctls.h>
+#include <asm/fcntl.h>
+#include <tasking/thread.hpp>
+#include <tasking/process.hpp>
 
 using namespace kernel;
 
@@ -21,6 +24,16 @@ ValueOrError<void> dev_open(u16_t minor, FileStream* stream, int mode) {
     CHECK_DEV(minor);
 
     ++device_ports[minor]->openCount;
+
+    if(!(stream->flags() & O_NOCTTY)) {
+        auto& proc = Thread::current()->parent();
+        auto& cttyRef = proc.ctty();
+        if(!cttyRef) {
+            // Make this the controlling terminal of the process
+            cttyRef = stream->node();
+            device_ports[minor]->termiosHelper.process_group() = proc.pgid();
+        }
+    }
     return { };
 }
 
@@ -65,6 +78,12 @@ ValueOrError<int> dev_ioctl(u16_t minor, u64_t request, void* arg) {
             return 0;
         case TCSETSF:
             device_ports[minor]->set_termios(arg, SET_DRAIN | SET_FLUSH);
+            return 0;
+        case TIOCGPGRP:
+            *static_cast<pid_t*>(arg) = device_ports[minor]->termiosHelper.process_group();
+            return 0;
+        case TIOCSPGRP:
+            device_ports[minor]->termiosHelper.process_group() = *static_cast<pid_t*>(arg);
             return 0;
         default:
             return EINVAL;

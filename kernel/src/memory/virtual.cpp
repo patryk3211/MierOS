@@ -88,6 +88,7 @@ Pager::~Pager() {
         }
     }
     /// TODO: [21.01.2022] Free all page structures
+    dmesg("Pager destructor not fully implemented (leaking memory)");
 }
 
 extern "C" void* _kernel_end;

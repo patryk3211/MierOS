@@ -219,3 +219,30 @@ DEF_SYSCALL(fdflags, fd, flags) {
     return 0;
 }
 
+DEF_SYSCALL(stat, path, statPtr, dirfd, flags) {
+    VALIDATE_PTR(path);
+    VALIDATE_PTR(statPtr);
+
+    VNodePtr root = nullptr;
+    std::String<> resolvePath = reinterpret_cast<char*>(path);
+    if(resolvePath[0] != '/') {
+        if((fd_t)dirfd == AT_FDCWD) {
+            resolvePath = proc.cwd() + resolvePath;
+        } else {
+            auto* stream = proc.get_stream(dirfd);
+            if(!stream || stream->type() != STREAM_TYPE_FILE)
+                return -EBADF;
+
+            root = static_cast<FileStream*>(stream)->node();
+        }
+    }
+
+    bool followLink = !(flags & AT_SYMLINK_NOFOLLOW);
+    auto ret = VFS::instance()->get_file(root, resolvePath.c_str(), { .resolve_link = followLink, .follow_links = true });
+    if(!ret)
+        return -ret.errno();
+
+    auto result = (*ret)->filesystem()->stat(*ret, reinterpret_cast<mieros_stat*>(statPtr));
+    return result ? 0 : -result.errno();
+}
+

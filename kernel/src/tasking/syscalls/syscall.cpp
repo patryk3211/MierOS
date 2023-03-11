@@ -38,6 +38,9 @@ DEF_SYSCALL(getcwd, ptr, maxLength);
 DEF_SYSCALL(kill, pid, signal);
 DEF_SYSCALL(sigreturn);
 DEF_SYSCALL(fdflags, fd, flags);
+DEF_SYSCALL(getpgid, pid);
+DEF_SYSCALL(setpgid, pid, pgid);
+DEF_SYSCALL(stat, path, statPtr, dirfd, flags);
 
 extern "C" void init_syscalls() {
     memset(syscall_table, 0, sizeof(syscall_table));
@@ -68,6 +71,9 @@ extern "C" void init_syscalls() {
     SYSCALL(24, kill);
     SYSCALL(25, sigreturn);
     SYSCALL(26, fdflags);
+    SYSCALL(27, getpgid);
+    SYSCALL(28, setpgid);
+    SYSCALL(29, stat);
 
     register_syscall_handler(&run_syscall);
 }

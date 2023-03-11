@@ -2,6 +2,8 @@
 #include <streams/termios.hpp>
 #include <stdlib.h>
 
+#include <dmesg.h>
+
 using namespace kernel;
 
 TermiosHelper::TermiosHelper(char_write_cb_t* writeCallback, void* callbackArg) {
@@ -25,22 +27,30 @@ TermiosHelper::TermiosHelper(char_write_cb_t* writeCallback, void* callbackArg) 
     f_termios.c_cc[VSTART] =   021;
     f_termios.c_cc[VSTOP] =    023;
     f_termios.c_cc[VSUSP] =    032;
+
+    f_termios.c_iflag = IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON;
+    f_termios.c_oflag = OPOST | ONLCR | OCRNL;
+    f_termios.c_lflag = ECHO | ECHOE | ECHONL | ICANON | ISIG | IEXTEN;
+
+    f_process_group = 0;
 }
 
 TermiosHelper::~TermiosHelper() {
     
 }
 
+pid_t& TermiosHelper::process_group() {
+    return f_process_group;
+}
+
 termios* TermiosHelper::termios() {
     return &f_termios;
 }
 
-#define MATCH_CC(cc, c) f_termios.c_cc[(cc)] && f_termios.c_cc[(cc)] == (c)
+#define MATCH_CC(cc, c) (f_termios.c_cc[(cc)] && f_termios.c_cc[(cc)] == (c))
 
 void TermiosHelper::character_received(u16_t data) {
     u8_t character = data & 0xFF;
-
-    write_output(character);
 
     if(!handle_conditions(data))
         return;
@@ -57,6 +67,9 @@ void TermiosHelper::character_received(u16_t data) {
             return;
     }
 
+    if(f_termios.c_lflag & ECHO)
+        write_output(character);
+
     // Signals
     if(f_termios.c_lflag & ISIG) {
         if(!handle_signal(character))
@@ -69,8 +82,19 @@ void TermiosHelper::character_received(u16_t data) {
             return;
     }
 
+    // Ignore CR
+    if((f_termios.c_iflag & IGNCR) && character == '\r')
+        return;
+
     for(size_t i = 0; i < length; ++i)
         write_input(output[i]);
+
+    if(f_termios.c_lflag & ICANON) {
+        if(character == '\n' ||
+           MATCH_CC(VEOL, character) ||
+           MATCH_CC(VEOF, character))
+            f_line_head = f_write_head;
+    }
 }
 
 size_t TermiosHelper::stream_read(void* buffer, size_t length) {
@@ -116,10 +140,6 @@ bool TermiosHelper::handle_conditions(u16_t data) {
         if(f_termios.c_iflag & IGNPAR)
             return false;
     }
-
-    // Ignore CR
-    if((f_termios.c_iflag & IGNCR) && (data & 0xFF) == '\r')
-        return false;
 
     return true;
 }
@@ -171,27 +191,26 @@ size_t TermiosHelper::translate_character_input(u16_t c, char* result) {
 bool TermiosHelper::handle_canon(u16_t c) {
     u8_t character = c & 0xFF;
 
-    if(MATCH_CC(VEOF, character)) {
-        // Output a line delimiter and pass the line to process
-        write_input('\r');
-        f_line_head = f_write_head;
-        return false;
-    } else if(MATCH_CC(VEOL, character)) {
-        // Pass line to process
-        f_line_head = f_write_head;
-        return false;
+    if(character == '\n' && !(f_termios.c_lflag & ECHO) && (f_termios.c_lflag & ECHONL))
+        write_output('\n');
+
+    // Line delimiters are handled later
+    if(character == '\n' ||
+       MATCH_CC(VEOL, character) ||
+       MATCH_CC(VEOF, character))
+        return true;
+
+    if(MATCH_CC(VKILL, character)) {
+        
     } else if(MATCH_CC(VERASE, character)) {
-
-    } else if(MATCH_CC(VKILL, character)) {
-
-    } else if(character == '\r') {
-        // Pass the line to process
-        f_line_head = f_write_head;
-        return false;
-    } else if(character == '\b') {
-        if(f_line_head > f_write_head) {
+        // Delete character
+        if(f_write_head != f_line_head) {
             write_output('\b');
-            --f_write_head;
+            if(f_termios.c_lflag & ECHOE) {
+                write_output(' ');
+                write_output('\b');
+            }
+            f_write_head = (f_write_head - 1) % 4096;
         }
         return false;
     }
@@ -245,9 +264,6 @@ char TermiosHelper::read_input() {
 
 void TermiosHelper::write_output(char c) {
     if(f_termios.c_oflag & OPOST) {
-        if(c == '\n' && (f_termios.c_oflag & ONLCR)) {
-            f_write_cb(f_arg, '\r');
-        }
         if(c == '\r') {
             if(f_termios.c_oflag & ONLRET)
                 return;
@@ -258,9 +274,11 @@ void TermiosHelper::write_output(char c) {
             }
 
             if(f_termios.c_oflag & OCRNL) {
-                f_write_cb(f_arg, '\n');
-                return;
+                c = '\n';
             }
+        }
+        if(c == '\n' && (f_termios.c_oflag & ONLCR)) {
+            f_write_cb(f_arg, '\r');
         }
     }
     f_write_cb(f_arg, c);

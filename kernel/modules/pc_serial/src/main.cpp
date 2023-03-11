@@ -96,13 +96,13 @@ void serial_interrupt() {
     for(auto ports = working_ports; ports; ports >>= 1, ++portIdx) {
         if(!(ports & 1))
             continue;
-        
-        u8_t intStat = inb(INT_STATUS_REGISTER);
-        if(!(intStat & 1))
-            continue;
 
         auto& device = device_ports[portIdx];
         u16_t port = device->ioPort;
+        
+        u8_t intStat = inb(port + INT_STATUS_REGISTER);
+        if(intStat & 1)
+            continue;
 
         u8_t intReason = (intStat >> 1) & 0x7;
         if(intReason == 0x02) {

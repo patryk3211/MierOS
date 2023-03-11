@@ -19,6 +19,34 @@ namespace std {
         template<typename T> T& get() { return *static_cast<T*>(data()); }
     };
 
+    template<typename T> class SharedPtr;
+    template<typename T> class WeakPtr {
+        GenericDataStorage* f_data;
+
+        WeakPtr(GenericDataStorage* data)
+            : f_data(data) { }
+    public:
+        ~WeakPtr() = default;
+
+        WeakPtr(const WeakPtr<T>& other)
+            : f_data(other.f_data) { }
+        WeakPtr(WeakPtr<T>&& other)
+            : f_data(other.f_data) { }
+
+        WeakPtr<T>& operator=(const WeakPtr<T>& other) {
+            f_data = other.f_data;
+            return *this;
+        }
+        WeakPtr<T>& operator=(WeakPtr<T>&& other) {
+            f_data = other.f_data;
+            return *this;
+        }
+
+        SharedPtr<T> shared();
+
+        friend SharedPtr<T>;
+    };
+
     template<typename T> class SharedPtr {
         struct TypedDataStorage : public GenericDataStorage {
             using DestructorOpt = std::Optional<std::Function<void(T&)>>;
@@ -46,6 +74,11 @@ namespace std {
         };
 
         GenericDataStorage* f_data;
+
+        SharedPtr(GenericDataStorage* data)
+            : f_data(data) {
+            f_data->f_ref_count.fetch_add(1);
+        }
 
     public:
         SharedPtr() {
@@ -136,14 +169,21 @@ namespace std {
         operator bool() const { return f_data != 0; }
         bool operator!() const { return f_data == 0; }
 
+        WeakPtr<T> weak() {
+            return WeakPtr<T>(f_data);
+        }
+
         template<typename C, typename... Args> friend SharedPtr<C> make_shared(Args...);
+        friend WeakPtr<T>;
     };
 
+    template<typename T> SharedPtr<T> WeakPtr<T>::shared() {
+        return SharedPtr<T>(f_data);
+    }
+
     template<typename C, typename... Args> SharedPtr<C> make_shared(Args... args) {
-        auto ptr = SharedPtr<C>(nullptr);
         auto* typed = new typename SharedPtr<C>::TypedDataStorage({ });
         new(typed->f_storage) C(args...);
-        ptr.f_data = typed;
-        return ptr;
+        return SharedPtr<C>(typed);
     }
 }

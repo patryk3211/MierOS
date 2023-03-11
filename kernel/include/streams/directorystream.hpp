@@ -1,15 +1,12 @@
 #pragma once
 
-#include <streams/stream.hpp>
+#include <streams/filestream.hpp>
 #include <fs/vnode.hpp>
 
 namespace kernel {
-    #define STREAM_TYPE_DIRECTORY 2
-    class DirectoryStream : public Stream {
-        VNodePtr f_directory;
+    class DirectoryStream : public FileStream {
         std::List<VNodePtr> f_directories;
         std::List<VNodePtr>::iterator f_current_entry;
-        bool f_open;
 
     public:
         DirectoryStream(const VNodePtr& directory);
@@ -18,6 +15,7 @@ namespace kernel {
         ValueOrError<void> open();
 
         virtual ValueOrError<size_t> read(void* buffer, size_t length) override;
+        virtual ValueOrError<size_t> write(const void* buffer, size_t length) override;
         virtual ValueOrError<size_t> seek(size_t offset, int mode) override;
     };
 }

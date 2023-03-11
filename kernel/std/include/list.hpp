@@ -201,8 +201,8 @@ namespace std {
         T& front() { return static_cast<Entry*>(head.next)->value; }
         T& back() { return static_cast<Entry*>(tail.prev)->value; }
 
-        bool empty() { return length == 0; }
-        unsigned int size() { return length; }
+        bool empty() const { return length == 0; }
+        unsigned int size() const { return length; }
 
         void clear() {
             Entry* e = static_cast<Entry*>(head.next);

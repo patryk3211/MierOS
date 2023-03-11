@@ -127,6 +127,9 @@ void Thread::change_state(ThreadState newState) {
     // Thanks to what we do in the SleepQueue::sleep method we don't have to
     // worry about deadlocks in single processor systems.
     f_state_watchers.wakeup();
+    if(is_main())
+        f_parent->notify_state_change(f_state);
+
     leave_critical();
 }
 

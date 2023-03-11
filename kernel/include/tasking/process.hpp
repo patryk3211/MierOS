@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tasking/sleep_queue.hpp"
 #include <list.hpp>
 #include <streams/streamwrapper.hpp>
 #include <string.hpp>
@@ -12,6 +13,7 @@
 #include <memory/page/resolved_memory.hpp>
 #include <memory/page/resolvable_memory.hpp>
 #include <asm/signal.h>
+#include <tasking/process_group.hpp>
 
 namespace kernel {
     struct SignalAction {
@@ -26,8 +28,7 @@ namespace kernel {
 
         Pager* f_pager;
 
-        u8_t f_exitStatus;
-        bool f_signalled;
+        u32_t f_status;
 
         std::String<> f_workingDirectory;
 
@@ -35,7 +36,7 @@ namespace kernel {
         std::UnorderedMap<fd_t, StreamWrapper> f_streams;
 
         struct Signal {
-            siginfo_t* info;
+            std::SharedPtr<siginfo_t> info;
             pid_t deliver_to;
         };
 
@@ -48,11 +49,17 @@ namespace kernel {
         gid_t f_gid;
         gid_t f_egid;
 
-        pid_t f_parent;
+        Process* f_parent;
+        std::SharedPtr<ProcessGroup> f_group;
+        std::List<Process*> f_children;
+
+        VNodePtr f_terminal;
 
         virtaddr_t f_first_free;
         std::UnorderedMap<virtaddr_t, ResolvedMemoryEntry> f_resolved_memory;
         std::RangeMap<virtaddr_t, std::SharedPtr<ResolvableMemoryEntry>> f_resolvable_memory;
+
+        GroupSleepQueue f_children_wait;
 
         RecursiveMutex f_lock;
 
@@ -63,7 +70,7 @@ namespace kernel {
         void reset_signals();
     public:
         Process(virtaddr_t entry_point);
-        ~Process();
+        ~Process() = default;
 
         uid_t uid();
         uid_t euid();
@@ -77,16 +84,17 @@ namespace kernel {
 
         pid_t pid();
         pid_t ppid();
+        pid_t pgid();
 
         std::String<>& cwd() { return f_workingDirectory; }
+        VNodePtr& ctty() { return f_terminal; }
 
-        bool signalled() { return f_signalled; }
-        u8_t exit_status() { return f_exitStatus; }
+        u32_t state_status() { return f_status; }
 
         void signal_lock();
         void signal_unlock();
         SignalAction& action(int sigNum);
-        void signal(siginfo_t* info, pid_t threadDelivery = 0);
+        void signal(std::SharedPtr<siginfo_t> sig, pid_t threadDelivery = 0);
         
         void handle_signal(Thread* onThread);
 
@@ -108,7 +116,14 @@ namespace kernel {
 
         bool handle_page_fault(virtaddr_t fault_address, u32_t code);
 
+        ProcessGroup& group();
+        ValueOrError<void> set_group(pid_t id);
+
+        ValueOrError<void> wait_for_child(GroupSleepQueue::WaitInfo* info, bool sleep);
+        void notify_state_change(ThreadState state);
+
         static Process* construct_kernel_process(virtaddr_t entry_point);
+        static void cleanup_process(Process* proc);
 
         friend class Scheduler;
     };

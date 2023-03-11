@@ -9,6 +9,7 @@
 namespace kernel {
     class VNode;
     class FileStream : public Stream {
+    protected:
         std::SharedPtr<VNode> f_file;
         bool f_open;
 
@@ -16,7 +17,7 @@ namespace kernel {
         void* fs_data;
 
         FileStream(const std::SharedPtr<VNode>& file);
-        ~FileStream();
+        virtual ~FileStream();
 
         ValueOrError<void> open(int mode);
 

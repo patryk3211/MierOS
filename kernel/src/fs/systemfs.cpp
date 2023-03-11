@@ -82,6 +82,11 @@ ValueOrError<size_t> SystemFilesystem::seek(FileStream* stream, size_t position,
     return old_offset;
 }
 
+ValueOrError<void> SystemFilesystem::stat(VNodePtr node, mieros_stat* stat) {
+    node->stat(stat);
+    return { };
+}
+
 ValueOrError<SysFsVNodeData*> SystemFilesystem::add_node(VNodePtr root, const char* path) {
     auto result = resolve_path(path, root);
     if(!result)

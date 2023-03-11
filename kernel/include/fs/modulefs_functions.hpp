@@ -29,7 +29,10 @@ namespace kernel {
 
         ValueOrError<size_t> (*seek)(u16_t minor, FileStream* filestream, size_t position, int mode);
 
+        ValueOrError<void> (*stat)(u16_t minor, VNodePtr file, mieros_stat* statPtr);
+
         std::Optional<ResolvedMemoryEntry> (*resolve_mapping)(u16_t minor, const ResolvableMemoryEntry& mapping, virtaddr_t addr);
         void (*sync_mapping)(u16_t minor, const ResolvedMemoryEntry& mapping);
     };
 }
+

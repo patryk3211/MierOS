@@ -69,6 +69,8 @@ namespace kernel {
         void add_child(VNodePtr child);
 
         void mount(VNodePtr location);
+
+        void stat(mieros_stat* statPtr);
     };
 
     typedef std::SharedPtr<VNode> VNodePtr;

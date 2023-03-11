@@ -6,13 +6,15 @@
 #include <locking/locker.hpp>
 #include <memory/page/anonymous_memory.hpp>
 #include <asm/fcntl.h>
+#include <asm/wait.h>
 
 using namespace kernel;
 
 Process::Process(Pager* pager)
     : f_pager(pager)
     , f_workingDirectory("/")
-    , f_signal_actions(64) {
+    , f_signal_actions(64)
+    , f_terminal(nullptr) {
     f_next_fd = 0;
     f_first_free = MMAP_MIN_ADDR;
 
@@ -29,11 +31,15 @@ Process::Process(Pager* pager)
 Process::Process(virtaddr_t entry_point, Pager* pager)
     : Process(pager) {
     f_threads.push_back(new Thread(entry_point, true, this));
+
+    f_group = ProcessGroup::get_make_group(pid());
 }
 
 Process::Process(virtaddr_t entry_point)
     : Process(new Pager()) {
     f_threads.push_back(new Thread(entry_point, false, this));
+
+    f_group = ProcessGroup::get_make_group(pid());
 }
 
 Process* Process::construct_kernel_process(virtaddr_t entry_point) {
@@ -45,14 +51,29 @@ pid_t Process::pid() {
 }
 
 pid_t Process::ppid() {
-    return f_parent;
+    return f_parent->pid();
+}
+
+pid_t Process::pgid() {
+    return f_group->id();
+}
+
+ProcessGroup& Process::group() {
+    return *f_group;
+}
+
+ValueOrError<void> Process::set_group(pid_t id) {
+    if(f_group->id() == id)
+        return { };
+
+    f_group = ProcessGroup::get_make_group(id);
+    return { };
 }
 
 void Process::die(u32_t exitCode) {
     f_lock.lock();
 
-    f_exitStatus = exitCode & 0xFF;
-    f_signalled = false;
+    f_status = W_EXITCODE(exitCode, 0);
 
     // Reduce the memory footprint of this process
     bool suicide = minimize();
@@ -157,6 +178,14 @@ bool Process::minimize() {
     // Delete signal handler array
     f_signal_actions.clear();
 
+    // Change the parent of children
+    for(auto& child : f_children) {
+        // New parent is the parent of this process
+        child->f_parent = f_parent;
+        f_parent->f_children.push_back(child);
+    }
+    f_children.clear();
+
     return suicide;
 }
 
@@ -180,7 +209,7 @@ SignalAction& Process::action(int sigNum) {
     return f_signal_actions[sigNum];
 }
 
-void Process::signal(siginfo_t* info, pid_t threadDelivery) {
+void Process::signal(std::SharedPtr<siginfo_t> info, pid_t threadDelivery) {
     // Make sure we unlock this as fast as possible
     enter_critical();
     f_signal_lock.lock();
@@ -233,7 +262,7 @@ void Process::handle_signal(Thread* onThread) {
             ucontext->uc_stack.ss_size = 0;
             ucontext->uc_stack.ss_flags = 0;
 
-            memcpy(&ucontext->uc_mcontext.info, sig.info, sizeof(siginfo_t));
+            memcpy(&ucontext->uc_mcontext.info, sig.info.ptr(), sizeof(siginfo_t));
 
             // NOTE: [23.02.2023] This is ABI specific code, I don't know where it should go
             // (probably into the arch code) but it definitely is not here.
@@ -252,7 +281,6 @@ void Process::handle_signal(Thread* onThread) {
                 *reinterpret_cast<void (**)()>(onThread->f_ksp->rsp) = sigAct.restorer;
             }
 
-            delete sig.info;
             return;
         }
         ++iter;
@@ -560,6 +588,39 @@ void Process::unmap_pages(virtaddr_t addr, size_t length) {
     panic("IMPLEMENT THIS");
 }
 
+ValueOrError<void> Process::wait_for_child(GroupSleepQueue::WaitInfo* info, bool sleep) {
+    bool foundChild = false;
+    for(auto& child : f_children) {
+        auto status = child->main_thread()->get_state(false);
+        if(status == DEAD) {
+            info->f_waker_pid = child->pid();
+            info->f_waker_status = child->f_status;
+            return { };
+        }
+        foundChild = true;
+    }
+
+    if(!foundChild)
+        return ESRCH;
+
+    if(sleep) {
+        f_children_wait.sleep(info, 0);
+    } else {
+        info->f_waker_status = 0;
+        info->f_waker_pid = 0;
+    }
+
+    return { };
+}
+
+void Process::notify_state_change(ThreadState state) {
+    if(state == DEAD) {
+        GroupSleepQueue::WaitInfo info = { pid(), static_cast<int>(f_status) };
+        f_group->notify_wait(info, ppid());
+        f_parent->f_children_wait.wakeup(info, 0);
+    }
+}
+
 uid_t Process::uid() {
     return f_uid;
 }
@@ -574,5 +635,25 @@ gid_t Process::gid() {
 
 gid_t Process::egid() {
     return f_egid;
+}
+
+void Process::cleanup_process(Process* proc) {
+    proc->f_group->remove(proc);
+
+    // Remove process from parent children list
+    auto iter = proc->f_parent->f_children.begin();
+    while(iter != proc->f_parent->f_children.end()) {
+        if(*iter == proc) {
+            proc->f_parent->f_children.erase(iter);
+            break;
+        }
+        ++iter;
+    }
+
+    // Remove the main thread
+    delete proc->main_thread();
+
+    // Delete the process object itself
+    delete proc;
 }
 

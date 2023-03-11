@@ -4,6 +4,7 @@
 #include <list.hpp>
 #include <shared_pointer.hpp>
 #include <types.h>
+#include <asm/stat.h>
 
 namespace kernel {
     class FileStream;
@@ -80,6 +81,8 @@ namespace kernel {
         virtual ValueOrError<VNodePtr> symlink(VNodePtr root, const char* name, const char* dest);
         //virtual ValueOrError<VNodePtr> link(VNodePtr root, const char* name, VNodePtr dest);
         virtual ValueOrError<VNodePtr> mkdir(VNodePtr root, const char* name);
+
+        virtual ValueOrError<void> stat(VNodePtr node, mieros_stat* stat);
 
         static std::Optional<ResolvedMemoryEntry> mapping_resolve_helper(const ResolvableMemoryEntry& mapping, virtaddr_t addr, bool (*readBytes)(const VNodePtr& file, size_t offset, void* buffer, size_t length));
     };

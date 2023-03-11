@@ -4,14 +4,12 @@
 using namespace kernel;
 
 DirectoryStream::DirectoryStream(const VNodePtr& directory)
-    : Stream(STREAM_TYPE_DIRECTORY)
-    , f_directory(directory)
+    : FileStream(directory)
     , f_current_entry(f_directories.end()) {
-    f_open = false;
 }
 
 ValueOrError<void> DirectoryStream::open() {
-    auto result = VFS::instance()->get_files(f_directory, "", { });
+    auto result = VFS::instance()->get_files(f_file, "", { });
     if(!result)
         return result.errno();
 
@@ -85,6 +83,10 @@ ValueOrError<size_t> DirectoryStream::read(void* buffer, size_t length) {
     }
 
     return readBytes;
+}
+
+ValueOrError<size_t> DirectoryStream::write(const void*, size_t) {
+    return ENOTSUP;
 }
 
 ValueOrError<size_t> DirectoryStream::seek(size_t, int) {

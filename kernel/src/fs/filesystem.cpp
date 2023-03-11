@@ -136,3 +136,8 @@ std::Optional<ResolvedMemoryEntry> Filesystem::mapping_resolve_helper(const Reso
     return entry;
 }
 
+
+ValueOrError<void> Filesystem::stat(VNodePtr, mieros_stat*) {
+    return ENOTSUP;
+}
+

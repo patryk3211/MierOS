@@ -210,6 +210,11 @@ ValueOrError<size_t> InitRdFilesystem::seek(FileStream* stream, size_t position,
     return old_offset;
 }
 
+ValueOrError<void> InitRdFilesystem::stat(VNodePtr node, mieros_stat* stat) {
+    node->stat(stat);
+    return { };
+}
+
 ValueOrError<void> InitRdFilesystem::umount() {
     return { };
 }

@@ -26,6 +26,7 @@ set(KERNEL_SOURCES src/init.cpp
                    src/tasking/scheduler.cpp
                    src/tasking/process.cpp
                    src/tasking/sleep_queue.cpp
+                   src/tasking/process_group.cpp
                    src/tasking/futex.cpp
                    src/locking/recursive_mutex.cpp
                    src/locking/semaphore.cpp
